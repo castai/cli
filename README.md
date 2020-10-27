@@ -62,6 +62,6 @@ kubectl config get-contexts
 
 It's possible to override some global flags by setting environment variables.
 
-* CASTAI_API_ACCESS_TOKEN
+* CASTAI_API_TOKEN
 * CASTAI_DEBUG
 * CASTAI_API_URL
