@@ -2,18 +2,24 @@
 
 CAST AI Command Line Interface
 ```
+CAST AI Command Line Interface
+
 Usage:
   cast [command]
 
 Available Commands:
-  cluster     Operations on clusters
+  cluster     Manage clusters
+  firewall    Manage firewall
   help        Help about any command
   login       Login to CAST AI
+  version     Print version
 
 Flags:
       --api-url string   CAST AI Api URL (default "https://api.cast.ai/v1")
       --debug            Enable debug mode to log api calls
   -h, --help             help for cast
+
+Use "cast [command] --help" for more information about a command.
 ```
 
 ### Basic usage
