@@ -18,10 +18,10 @@ package cmd
 import (
 	"context"
 	"fmt"
-	"log"
 	"net/http"
 	"time"
 
+	log "github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
 
 	"github.com/castai/cast-cli/internal/client"
@@ -39,13 +39,12 @@ var loginCmd = &cobra.Command{
 			log.Fatalf("🤭 login failed: %v\n", err)
 			return
 		}
-		fmt.Println("👌 login successful")
 	},
 }
 
 func handleLogin(token string) error {
 	// Store valid access token to file.
-	if err := config.StoreAccessToken(token); err != nil {
+	if err := config.StoreCredentials(token); err != nil {
 		return err
 	}
 

@@ -21,13 +21,13 @@ const (
 )
 
 func New() (*sdk.ClientWithResponses, error) {
-	apiToken, err := config.GetAccessToken()
+	apiToken, err := config.GetCredentials()
 	if err != nil {
 		return nil, err
 	}
 
 	tr := http.DefaultTransport
-	if config.GlobalFlags.Debug {
+	if config.Debug() {
 		tr = &loggingTransport{}
 	}
 	httpClientOption := func(client *sdk.Client) error {
@@ -39,11 +39,11 @@ func New() (*sdk.ClientWithResponses, error) {
 	}
 
 	apiTokenOption := sdk.WithRequestEditorFn(func(ctx context.Context, req *http.Request) error {
-		req.Header.Set("X-API-Key", apiToken.Token)
+		req.Header.Set("X-API-Key", apiToken.AccessToken)
 		return nil
 	})
 
-	apiClient, err := sdk.NewClientWithResponses(config.GlobalFlags.ApiURL, httpClientOption, apiTokenOption)
+	apiClient, err := sdk.NewClientWithResponses(config.ApiURL(), httpClientOption, apiTokenOption)
 	if err != nil {
 		return nil, err
 	}

@@ -88,6 +88,9 @@ func WithRequestEditorFn(fn RequestEditorFn) ClientOption {
 
 // The interface specification for the client above.
 type ClientInterface interface {
+	// ListAuditEvents request
+	ListAuditEvents(ctx context.Context) (*http.Response, error)
+
 	// LoginCallback request
 	LoginCallback(ctx context.Context) (*http.Response, error)
 
@@ -127,6 +130,16 @@ type ClientInterface interface {
 
 	// GetCloudCredentials request
 	GetCloudCredentials(ctx context.Context, credentialsId CredentialsId) (*http.Response, error)
+
+	// DeleteFirewall request  with any body
+	DeleteFirewallWithBody(ctx context.Context, contentType string, body io.Reader) (*http.Response, error)
+
+	DeleteFirewall(ctx context.Context, body DeleteFirewallJSONRequestBody) (*http.Response, error)
+
+	// CreateOrUpdateFirewall request  with any body
+	CreateOrUpdateFirewallWithBody(ctx context.Context, contentType string, body io.Reader) (*http.Response, error)
+
+	CreateOrUpdateFirewall(ctx context.Context, body CreateOrUpdateFirewallJSONRequestBody) (*http.Response, error)
 
 	// DeleteGslb request  with any body
 	DeleteGslbWithBody(ctx context.Context, contentType string, body io.Reader) (*http.Response, error)
@@ -172,6 +185,9 @@ type ClientInterface interface {
 	// GetClusterHealth request
 	GetClusterHealth(ctx context.Context, clusterId ClusterId) (*http.Response, error)
 
+	// GetClusterIngressController request
+	GetClusterIngressController(ctx context.Context, clusterId ClusterId) (*http.Response, error)
+
 	// GetClusterKubeconfig request
 	GetClusterKubeconfig(ctx context.Context, clusterId ClusterId) (*http.Response, error)
 
@@ -204,6 +220,21 @@ type ClientInterface interface {
 
 	// ListRegions request
 	ListRegions(ctx context.Context) (*http.Response, error)
+}
+
+func (c *Client) ListAuditEvents(ctx context.Context) (*http.Response, error) {
+	req, err := NewListAuditEventsRequest(c.Server)
+	if err != nil {
+		return nil, err
+	}
+	req = req.WithContext(ctx)
+	if c.RequestEditor != nil {
+		err = c.RequestEditor(ctx, req)
+		if err != nil {
+			return nil, err
+		}
+	}
+	return c.Client.Do(req)
 }
 
 func (c *Client) LoginCallback(ctx context.Context) (*http.Response, error) {
@@ -403,6 +434,66 @@ func (c *Client) DeleteCloudCredentials(ctx context.Context, credentialsId Crede
 
 func (c *Client) GetCloudCredentials(ctx context.Context, credentialsId CredentialsId) (*http.Response, error) {
 	req, err := NewGetCloudCredentialsRequest(c.Server, credentialsId)
+	if err != nil {
+		return nil, err
+	}
+	req = req.WithContext(ctx)
+	if c.RequestEditor != nil {
+		err = c.RequestEditor(ctx, req)
+		if err != nil {
+			return nil, err
+		}
+	}
+	return c.Client.Do(req)
+}
+
+func (c *Client) DeleteFirewallWithBody(ctx context.Context, contentType string, body io.Reader) (*http.Response, error) {
+	req, err := NewDeleteFirewallRequestWithBody(c.Server, contentType, body)
+	if err != nil {
+		return nil, err
+	}
+	req = req.WithContext(ctx)
+	if c.RequestEditor != nil {
+		err = c.RequestEditor(ctx, req)
+		if err != nil {
+			return nil, err
+		}
+	}
+	return c.Client.Do(req)
+}
+
+func (c *Client) DeleteFirewall(ctx context.Context, body DeleteFirewallJSONRequestBody) (*http.Response, error) {
+	req, err := NewDeleteFirewallRequest(c.Server, body)
+	if err != nil {
+		return nil, err
+	}
+	req = req.WithContext(ctx)
+	if c.RequestEditor != nil {
+		err = c.RequestEditor(ctx, req)
+		if err != nil {
+			return nil, err
+		}
+	}
+	return c.Client.Do(req)
+}
+
+func (c *Client) CreateOrUpdateFirewallWithBody(ctx context.Context, contentType string, body io.Reader) (*http.Response, error) {
+	req, err := NewCreateOrUpdateFirewallRequestWithBody(c.Server, contentType, body)
+	if err != nil {
+		return nil, err
+	}
+	req = req.WithContext(ctx)
+	if c.RequestEditor != nil {
+		err = c.RequestEditor(ctx, req)
+		if err != nil {
+			return nil, err
+		}
+	}
+	return c.Client.Do(req)
+}
+
+func (c *Client) CreateOrUpdateFirewall(ctx context.Context, body CreateOrUpdateFirewallJSONRequestBody) (*http.Response, error) {
+	req, err := NewCreateOrUpdateFirewallRequest(c.Server, body)
 	if err != nil {
 		return nil, err
 	}
@@ -656,6 +747,21 @@ func (c *Client) GetClusterHealth(ctx context.Context, clusterId ClusterId) (*ht
 	return c.Client.Do(req)
 }
 
+func (c *Client) GetClusterIngressController(ctx context.Context, clusterId ClusterId) (*http.Response, error) {
+	req, err := NewGetClusterIngressControllerRequest(c.Server, clusterId)
+	if err != nil {
+		return nil, err
+	}
+	req = req.WithContext(ctx)
+	if c.RequestEditor != nil {
+		err = c.RequestEditor(ctx, req)
+		if err != nil {
+			return nil, err
+		}
+	}
+	return c.Client.Do(req)
+}
+
 func (c *Client) GetClusterKubeconfig(ctx context.Context, clusterId ClusterId) (*http.Response, error) {
 	req, err := NewGetClusterKubeconfigRequest(c.Server, clusterId)
 	if err != nil {
@@ -836,6 +942,33 @@ func (c *Client) ListRegions(ctx context.Context) (*http.Response, error) {
 	return c.Client.Do(req)
 }
 
+// NewListAuditEventsRequest generates requests for ListAuditEvents
+func NewListAuditEventsRequest(server string) (*http.Request, error) {
+	var err error
+
+	queryUrl, err := url.Parse(server)
+	if err != nil {
+		return nil, err
+	}
+
+	basePath := fmt.Sprintf("/audit")
+	if basePath[0] == '/' {
+		basePath = basePath[1:]
+	}
+
+	queryUrl, err = queryUrl.Parse(basePath)
+	if err != nil {
+		return nil, err
+	}
+
+	req, err := http.NewRequest("GET", queryUrl.String(), nil)
+	if err != nil {
+		return nil, err
+	}
+
+	return req, nil
+}
+
 // NewLoginCallbackRequest generates requests for LoginCallback
 func NewLoginCallbackRequest(server string) (*http.Request, error) {
 	var err error
@@ -903,6 +1036,22 @@ func NewLoginRequest(server string, params *LoginParams) (*http.Request, error) 
 	if params.Auth0returnTo != nil {
 
 		if queryFrag, err := runtime.StyleParam("form", true, "auth0returnTo", *params.Auth0returnTo); err != nil {
+			return nil, err
+		} else if parsed, err := url.ParseQuery(queryFrag); err != nil {
+			return nil, err
+		} else {
+			for k, v := range parsed {
+				for _, v2 := range v {
+					queryValues.Add(k, v2)
+				}
+			}
+		}
+
+	}
+
+	if params.ScreenHint != nil {
+
+		if queryFrag, err := runtime.StyleParam("form", true, "screenHint", *params.ScreenHint); err != nil {
 			return nil, err
 		} else if parsed, err := url.ParseQuery(queryFrag); err != nil {
 			return nil, err
@@ -1265,6 +1414,84 @@ func NewGetCloudCredentialsRequest(server string, credentialsId CredentialsId) (
 		return nil, err
 	}
 
+	return req, nil
+}
+
+// NewDeleteFirewallRequest calls the generic DeleteFirewall builder with application/json body
+func NewDeleteFirewallRequest(server string, body DeleteFirewallJSONRequestBody) (*http.Request, error) {
+	var bodyReader io.Reader
+	buf, err := json.Marshal(body)
+	if err != nil {
+		return nil, err
+	}
+	bodyReader = bytes.NewReader(buf)
+	return NewDeleteFirewallRequestWithBody(server, "application/json", bodyReader)
+}
+
+// NewDeleteFirewallRequestWithBody generates requests for DeleteFirewall with any type of body
+func NewDeleteFirewallRequestWithBody(server string, contentType string, body io.Reader) (*http.Request, error) {
+	var err error
+
+	queryUrl, err := url.Parse(server)
+	if err != nil {
+		return nil, err
+	}
+
+	basePath := fmt.Sprintf("/firewall")
+	if basePath[0] == '/' {
+		basePath = basePath[1:]
+	}
+
+	queryUrl, err = queryUrl.Parse(basePath)
+	if err != nil {
+		return nil, err
+	}
+
+	req, err := http.NewRequest("DELETE", queryUrl.String(), body)
+	if err != nil {
+		return nil, err
+	}
+
+	req.Header.Add("Content-Type", contentType)
+	return req, nil
+}
+
+// NewCreateOrUpdateFirewallRequest calls the generic CreateOrUpdateFirewall builder with application/json body
+func NewCreateOrUpdateFirewallRequest(server string, body CreateOrUpdateFirewallJSONRequestBody) (*http.Request, error) {
+	var bodyReader io.Reader
+	buf, err := json.Marshal(body)
+	if err != nil {
+		return nil, err
+	}
+	bodyReader = bytes.NewReader(buf)
+	return NewCreateOrUpdateFirewallRequestWithBody(server, "application/json", bodyReader)
+}
+
+// NewCreateOrUpdateFirewallRequestWithBody generates requests for CreateOrUpdateFirewall with any type of body
+func NewCreateOrUpdateFirewallRequestWithBody(server string, contentType string, body io.Reader) (*http.Request, error) {
+	var err error
+
+	queryUrl, err := url.Parse(server)
+	if err != nil {
+		return nil, err
+	}
+
+	basePath := fmt.Sprintf("/firewall")
+	if basePath[0] == '/' {
+		basePath = basePath[1:]
+	}
+
+	queryUrl, err = queryUrl.Parse(basePath)
+	if err != nil {
+		return nil, err
+	}
+
+	req, err := http.NewRequest("POST", queryUrl.String(), body)
+	if err != nil {
+		return nil, err
+	}
+
+	req.Header.Add("Content-Type", contentType)
 	return req, nil
 }
 
@@ -1716,6 +1943,40 @@ func NewGetClusterHealthRequest(server string, clusterId ClusterId) (*http.Reque
 	return req, nil
 }
 
+// NewGetClusterIngressControllerRequest generates requests for GetClusterIngressController
+func NewGetClusterIngressControllerRequest(server string, clusterId ClusterId) (*http.Request, error) {
+	var err error
+
+	var pathParam0 string
+
+	pathParam0, err = runtime.StyleParam("simple", false, "clusterId", clusterId)
+	if err != nil {
+		return nil, err
+	}
+
+	queryUrl, err := url.Parse(server)
+	if err != nil {
+		return nil, err
+	}
+
+	basePath := fmt.Sprintf("/kubernetes/clusters/%s/ingress-controller", pathParam0)
+	if basePath[0] == '/' {
+		basePath = basePath[1:]
+	}
+
+	queryUrl, err = queryUrl.Parse(basePath)
+	if err != nil {
+		return nil, err
+	}
+
+	req, err := http.NewRequest("GET", queryUrl.String(), nil)
+	if err != nil {
+		return nil, err
+	}
+
+	return req, nil
+}
+
 // NewGetClusterKubeconfigRequest generates requests for GetClusterKubeconfig
 func NewGetClusterKubeconfigRequest(server string, clusterId ClusterId) (*http.Request, error) {
 	var err error
@@ -2100,6 +2361,9 @@ func WithBaseURL(baseURL string) ClientOption {
 
 // ClientWithResponsesInterface is the interface specification for the client with responses above.
 type ClientWithResponsesInterface interface {
+	// ListAuditEvents request
+	ListAuditEventsWithResponse(ctx context.Context) (*ListAuditEventsResponse, error)
+
 	// LoginCallback request
 	LoginCallbackWithResponse(ctx context.Context) (*LoginCallbackResponse, error)
 
@@ -2139,6 +2403,16 @@ type ClientWithResponsesInterface interface {
 
 	// GetCloudCredentials request
 	GetCloudCredentialsWithResponse(ctx context.Context, credentialsId CredentialsId) (*GetCloudCredentialsResponse, error)
+
+	// DeleteFirewall request  with any body
+	DeleteFirewallWithBodyWithResponse(ctx context.Context, contentType string, body io.Reader) (*DeleteFirewallResponse, error)
+
+	DeleteFirewallWithResponse(ctx context.Context, body DeleteFirewallJSONRequestBody) (*DeleteFirewallResponse, error)
+
+	// CreateOrUpdateFirewall request  with any body
+	CreateOrUpdateFirewallWithBodyWithResponse(ctx context.Context, contentType string, body io.Reader) (*CreateOrUpdateFirewallResponse, error)
+
+	CreateOrUpdateFirewallWithResponse(ctx context.Context, body CreateOrUpdateFirewallJSONRequestBody) (*CreateOrUpdateFirewallResponse, error)
 
 	// DeleteGslb request  with any body
 	DeleteGslbWithBodyWithResponse(ctx context.Context, contentType string, body io.Reader) (*DeleteGslbResponse, error)
@@ -2184,6 +2458,9 @@ type ClientWithResponsesInterface interface {
 	// GetClusterHealth request
 	GetClusterHealthWithResponse(ctx context.Context, clusterId ClusterId) (*GetClusterHealthResponse, error)
 
+	// GetClusterIngressController request
+	GetClusterIngressControllerWithResponse(ctx context.Context, clusterId ClusterId) (*GetClusterIngressControllerResponse, error)
+
 	// GetClusterKubeconfig request
 	GetClusterKubeconfigWithResponse(ctx context.Context, clusterId ClusterId) (*GetClusterKubeconfigResponse, error)
 
@@ -2218,14 +2495,44 @@ type ClientWithResponsesInterface interface {
 	ListRegionsWithResponse(ctx context.Context) (*ListRegionsResponse, error)
 }
 
-// TODO: <castai customization> to have common interface
+// TODO: <castai customization> to have common interface. https://github.com/deepmap/oapi-codegen/issues/240
 type Response interface {
 	Status() string
 	StatusCode() int
 	GetBody() []byte
 }
 
-// TODO: </castai customization> to have common interface
+// TODO: </castai customization> to have common interface. https://github.com/deepmap/oapi-codegen/issues/240
+
+type ListAuditEventsResponse struct {
+	Body         []byte
+	HTTPResponse *http.Response
+	JSON200      *AuditEventList
+}
+
+// Status returns HTTPResponse.Status
+func (r ListAuditEventsResponse) Status() string {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.Status
+	}
+	return http.StatusText(0)
+}
+
+// StatusCode returns HTTPResponse.StatusCode
+func (r ListAuditEventsResponse) StatusCode() int {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.StatusCode
+	}
+	return 0
+}
+
+// TODO: <castai customization> to have common interface. https://github.com/deepmap/oapi-codegen/issues/240
+// Body returns body of byte array
+func (r ListAuditEventsResponse) GetBody() []byte {
+	return r.Body
+}
+
+// TODO: </castai customization> to have common interface. https://github.com/deepmap/oapi-codegen/issues/240
 
 type LoginCallbackResponse struct {
 	Body         []byte
@@ -2248,13 +2555,13 @@ func (r LoginCallbackResponse) StatusCode() int {
 	return 0
 }
 
-// TODO: <castai customization> to have common interface
+// TODO: <castai customization> to have common interface. https://github.com/deepmap/oapi-codegen/issues/240
 // Body returns body of byte array
 func (r LoginCallbackResponse) GetBody() []byte {
 	return r.Body
 }
 
-// TODO: </castai customization> to have common interface
+// TODO: </castai customization> to have common interface. https://github.com/deepmap/oapi-codegen/issues/240
 
 type LoginResponse struct {
 	Body         []byte
@@ -2277,13 +2584,13 @@ func (r LoginResponse) StatusCode() int {
 	return 0
 }
 
-// TODO: <castai customization> to have common interface
+// TODO: <castai customization> to have common interface. https://github.com/deepmap/oapi-codegen/issues/240
 // Body returns body of byte array
 func (r LoginResponse) GetBody() []byte {
 	return r.Body
 }
 
-// TODO: </castai customization> to have common interface
+// TODO: </castai customization> to have common interface. https://github.com/deepmap/oapi-codegen/issues/240
 
 type LogoutResponse struct {
 	Body         []byte
@@ -2306,13 +2613,13 @@ func (r LogoutResponse) StatusCode() int {
 	return 0
 }
 
-// TODO: <castai customization> to have common interface
+// TODO: <castai customization> to have common interface. https://github.com/deepmap/oapi-codegen/issues/240
 // Body returns body of byte array
 func (r LogoutResponse) GetBody() []byte {
 	return r.Body
 }
 
-// TODO: </castai customization> to have common interface
+// TODO: </castai customization> to have common interface. https://github.com/deepmap/oapi-codegen/issues/240
 
 type GetSessionResponse struct {
 	Body         []byte
@@ -2336,13 +2643,13 @@ func (r GetSessionResponse) StatusCode() int {
 	return 0
 }
 
-// TODO: <castai customization> to have common interface
+// TODO: <castai customization> to have common interface. https://github.com/deepmap/oapi-codegen/issues/240
 // Body returns body of byte array
 func (r GetSessionResponse) GetBody() []byte {
 	return r.Body
 }
 
-// TODO: </castai customization> to have common interface
+// TODO: </castai customization> to have common interface. https://github.com/deepmap/oapi-codegen/issues/240
 
 type ListAuthTokensResponse struct {
 	Body         []byte
@@ -2366,13 +2673,13 @@ func (r ListAuthTokensResponse) StatusCode() int {
 	return 0
 }
 
-// TODO: <castai customization> to have common interface
+// TODO: <castai customization> to have common interface. https://github.com/deepmap/oapi-codegen/issues/240
 // Body returns body of byte array
 func (r ListAuthTokensResponse) GetBody() []byte {
 	return r.Body
 }
 
-// TODO: </castai customization> to have common interface
+// TODO: </castai customization> to have common interface. https://github.com/deepmap/oapi-codegen/issues/240
 
 type CreateAuthTokenResponse struct {
 	Body         []byte
@@ -2396,13 +2703,13 @@ func (r CreateAuthTokenResponse) StatusCode() int {
 	return 0
 }
 
-// TODO: <castai customization> to have common interface
+// TODO: <castai customization> to have common interface. https://github.com/deepmap/oapi-codegen/issues/240
 // Body returns body of byte array
 func (r CreateAuthTokenResponse) GetBody() []byte {
 	return r.Body
 }
 
-// TODO: </castai customization> to have common interface
+// TODO: </castai customization> to have common interface. https://github.com/deepmap/oapi-codegen/issues/240
 
 type DeleteAuthTokenResponse struct {
 	Body         []byte
@@ -2425,13 +2732,13 @@ func (r DeleteAuthTokenResponse) StatusCode() int {
 	return 0
 }
 
-// TODO: <castai customization> to have common interface
+// TODO: <castai customization> to have common interface. https://github.com/deepmap/oapi-codegen/issues/240
 // Body returns body of byte array
 func (r DeleteAuthTokenResponse) GetBody() []byte {
 	return r.Body
 }
 
-// TODO: </castai customization> to have common interface
+// TODO: </castai customization> to have common interface. https://github.com/deepmap/oapi-codegen/issues/240
 
 type GetAuthTokenResponse struct {
 	Body         []byte
@@ -2455,13 +2762,13 @@ func (r GetAuthTokenResponse) StatusCode() int {
 	return 0
 }
 
-// TODO: <castai customization> to have common interface
+// TODO: <castai customization> to have common interface. https://github.com/deepmap/oapi-codegen/issues/240
 // Body returns body of byte array
 func (r GetAuthTokenResponse) GetBody() []byte {
 	return r.Body
 }
 
-// TODO: </castai customization> to have common interface
+// TODO: </castai customization> to have common interface. https://github.com/deepmap/oapi-codegen/issues/240
 
 type ListCloudCredentialsResponse struct {
 	Body         []byte
@@ -2485,13 +2792,13 @@ func (r ListCloudCredentialsResponse) StatusCode() int {
 	return 0
 }
 
-// TODO: <castai customization> to have common interface
+// TODO: <castai customization> to have common interface. https://github.com/deepmap/oapi-codegen/issues/240
 // Body returns body of byte array
 func (r ListCloudCredentialsResponse) GetBody() []byte {
 	return r.Body
 }
 
-// TODO: </castai customization> to have common interface
+// TODO: </castai customization> to have common interface. https://github.com/deepmap/oapi-codegen/issues/240
 
 type CreateCloudCredentialsResponse struct {
 	Body         []byte
@@ -2515,13 +2822,13 @@ func (r CreateCloudCredentialsResponse) StatusCode() int {
 	return 0
 }
 
-// TODO: <castai customization> to have common interface
+// TODO: <castai customization> to have common interface. https://github.com/deepmap/oapi-codegen/issues/240
 // Body returns body of byte array
 func (r CreateCloudCredentialsResponse) GetBody() []byte {
 	return r.Body
 }
 
-// TODO: </castai customization> to have common interface
+// TODO: </castai customization> to have common interface. https://github.com/deepmap/oapi-codegen/issues/240
 
 type DeleteCloudCredentialsResponse struct {
 	Body         []byte
@@ -2544,13 +2851,13 @@ func (r DeleteCloudCredentialsResponse) StatusCode() int {
 	return 0
 }
 
-// TODO: <castai customization> to have common interface
+// TODO: <castai customization> to have common interface. https://github.com/deepmap/oapi-codegen/issues/240
 // Body returns body of byte array
 func (r DeleteCloudCredentialsResponse) GetBody() []byte {
 	return r.Body
 }
 
-// TODO: </castai customization> to have common interface
+// TODO: </castai customization> to have common interface. https://github.com/deepmap/oapi-codegen/issues/240
 
 type GetCloudCredentialsResponse struct {
 	Body         []byte
@@ -2574,13 +2881,71 @@ func (r GetCloudCredentialsResponse) StatusCode() int {
 	return 0
 }
 
-// TODO: <castai customization> to have common interface
+// TODO: <castai customization> to have common interface. https://github.com/deepmap/oapi-codegen/issues/240
 // Body returns body of byte array
 func (r GetCloudCredentialsResponse) GetBody() []byte {
 	return r.Body
 }
 
-// TODO: </castai customization> to have common interface
+// TODO: </castai customization> to have common interface. https://github.com/deepmap/oapi-codegen/issues/240
+
+type DeleteFirewallResponse struct {
+	Body         []byte
+	HTTPResponse *http.Response
+}
+
+// Status returns HTTPResponse.Status
+func (r DeleteFirewallResponse) Status() string {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.Status
+	}
+	return http.StatusText(0)
+}
+
+// StatusCode returns HTTPResponse.StatusCode
+func (r DeleteFirewallResponse) StatusCode() int {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.StatusCode
+	}
+	return 0
+}
+
+// TODO: <castai customization> to have common interface. https://github.com/deepmap/oapi-codegen/issues/240
+// Body returns body of byte array
+func (r DeleteFirewallResponse) GetBody() []byte {
+	return r.Body
+}
+
+// TODO: </castai customization> to have common interface. https://github.com/deepmap/oapi-codegen/issues/240
+
+type CreateOrUpdateFirewallResponse struct {
+	Body         []byte
+	HTTPResponse *http.Response
+}
+
+// Status returns HTTPResponse.Status
+func (r CreateOrUpdateFirewallResponse) Status() string {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.Status
+	}
+	return http.StatusText(0)
+}
+
+// StatusCode returns HTTPResponse.StatusCode
+func (r CreateOrUpdateFirewallResponse) StatusCode() int {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.StatusCode
+	}
+	return 0
+}
+
+// TODO: <castai customization> to have common interface. https://github.com/deepmap/oapi-codegen/issues/240
+// Body returns body of byte array
+func (r CreateOrUpdateFirewallResponse) GetBody() []byte {
+	return r.Body
+}
+
+// TODO: </castai customization> to have common interface. https://github.com/deepmap/oapi-codegen/issues/240
 
 type DeleteGslbResponse struct {
 	Body         []byte
@@ -2603,13 +2968,13 @@ func (r DeleteGslbResponse) StatusCode() int {
 	return 0
 }
 
-// TODO: <castai customization> to have common interface
+// TODO: <castai customization> to have common interface. https://github.com/deepmap/oapi-codegen/issues/240
 // Body returns body of byte array
 func (r DeleteGslbResponse) GetBody() []byte {
 	return r.Body
 }
 
-// TODO: </castai customization> to have common interface
+// TODO: </castai customization> to have common interface. https://github.com/deepmap/oapi-codegen/issues/240
 
 type CreateOrUpdateGslbResponse struct {
 	Body         []byte
@@ -2633,13 +2998,13 @@ func (r CreateOrUpdateGslbResponse) StatusCode() int {
 	return 0
 }
 
-// TODO: <castai customization> to have common interface
+// TODO: <castai customization> to have common interface. https://github.com/deepmap/oapi-codegen/issues/240
 // Body returns body of byte array
 func (r CreateOrUpdateGslbResponse) GetBody() []byte {
 	return r.Body
 }
 
-// TODO: </castai customization> to have common interface
+// TODO: </castai customization> to have common interface. https://github.com/deepmap/oapi-codegen/issues/240
 
 type ListKubernetesClustersResponse struct {
 	Body         []byte
@@ -2663,13 +3028,13 @@ func (r ListKubernetesClustersResponse) StatusCode() int {
 	return 0
 }
 
-// TODO: <castai customization> to have common interface
+// TODO: <castai customization> to have common interface. https://github.com/deepmap/oapi-codegen/issues/240
 // Body returns body of byte array
 func (r ListKubernetesClustersResponse) GetBody() []byte {
 	return r.Body
 }
 
-// TODO: </castai customization> to have common interface
+// TODO: </castai customization> to have common interface. https://github.com/deepmap/oapi-codegen/issues/240
 
 type CreateNewClusterResponse struct {
 	Body         []byte
@@ -2693,13 +3058,13 @@ func (r CreateNewClusterResponse) StatusCode() int {
 	return 0
 }
 
-// TODO: <castai customization> to have common interface
+// TODO: <castai customization> to have common interface. https://github.com/deepmap/oapi-codegen/issues/240
 // Body returns body of byte array
 func (r CreateNewClusterResponse) GetBody() []byte {
 	return r.Body
 }
 
-// TODO: </castai customization> to have common interface
+// TODO: </castai customization> to have common interface. https://github.com/deepmap/oapi-codegen/issues/240
 
 type DeleteClusterResponse struct {
 	Body         []byte
@@ -2722,13 +3087,13 @@ func (r DeleteClusterResponse) StatusCode() int {
 	return 0
 }
 
-// TODO: <castai customization> to have common interface
+// TODO: <castai customization> to have common interface. https://github.com/deepmap/oapi-codegen/issues/240
 // Body returns body of byte array
 func (r DeleteClusterResponse) GetBody() []byte {
 	return r.Body
 }
 
-// TODO: </castai customization> to have common interface
+// TODO: </castai customization> to have common interface. https://github.com/deepmap/oapi-codegen/issues/240
 
 type GetClusterResponse struct {
 	Body         []byte
@@ -2752,13 +3117,13 @@ func (r GetClusterResponse) StatusCode() int {
 	return 0
 }
 
-// TODO: <castai customization> to have common interface
+// TODO: <castai customization> to have common interface. https://github.com/deepmap/oapi-codegen/issues/240
 // Body returns body of byte array
 func (r GetClusterResponse) GetBody() []byte {
 	return r.Body
 }
 
-// TODO: </castai customization> to have common interface
+// TODO: </castai customization> to have common interface. https://github.com/deepmap/oapi-codegen/issues/240
 
 type GetClusterAddonsResponse struct {
 	Body         []byte
@@ -2783,13 +3148,13 @@ func (r GetClusterAddonsResponse) StatusCode() int {
 	return 0
 }
 
-// TODO: <castai customization> to have common interface
+// TODO: <castai customization> to have common interface. https://github.com/deepmap/oapi-codegen/issues/240
 // Body returns body of byte array
 func (r GetClusterAddonsResponse) GetBody() []byte {
 	return r.Body
 }
 
-// TODO: </castai customization> to have common interface
+// TODO: </castai customization> to have common interface. https://github.com/deepmap/oapi-codegen/issues/240
 
 type ConfigureClusterAddonsResponse struct {
 	Body         []byte
@@ -2815,13 +3180,13 @@ func (r ConfigureClusterAddonsResponse) StatusCode() int {
 	return 0
 }
 
-// TODO: <castai customization> to have common interface
+// TODO: <castai customization> to have common interface. https://github.com/deepmap/oapi-codegen/issues/240
 // Body returns body of byte array
 func (r ConfigureClusterAddonsResponse) GetBody() []byte {
 	return r.Body
 }
 
-// TODO: </castai customization> to have common interface
+// TODO: </castai customization> to have common interface. https://github.com/deepmap/oapi-codegen/issues/240
 
 type ArchiveClusterResponse struct {
 	Body         []byte
@@ -2844,13 +3209,13 @@ func (r ArchiveClusterResponse) StatusCode() int {
 	return 0
 }
 
-// TODO: <castai customization> to have common interface
+// TODO: <castai customization> to have common interface. https://github.com/deepmap/oapi-codegen/issues/240
 // Body returns body of byte array
 func (r ArchiveClusterResponse) GetBody() []byte {
 	return r.Body
 }
 
-// TODO: </castai customization> to have common interface
+// TODO: </castai customization> to have common interface. https://github.com/deepmap/oapi-codegen/issues/240
 
 type GetClusterAuditLogResponse struct {
 	Body         []byte
@@ -2874,13 +3239,13 @@ func (r GetClusterAuditLogResponse) StatusCode() int {
 	return 0
 }
 
-// TODO: <castai customization> to have common interface
+// TODO: <castai customization> to have common interface. https://github.com/deepmap/oapi-codegen/issues/240
 // Body returns body of byte array
 func (r GetClusterAuditLogResponse) GetBody() []byte {
 	return r.Body
 }
 
-// TODO: </castai customization> to have common interface
+// TODO: </castai customization> to have common interface. https://github.com/deepmap/oapi-codegen/issues/240
 
 type GetClusterFeedbackEventsResponse struct {
 	Body         []byte
@@ -2904,13 +3269,13 @@ func (r GetClusterFeedbackEventsResponse) StatusCode() int {
 	return 0
 }
 
-// TODO: <castai customization> to have common interface
+// TODO: <castai customization> to have common interface. https://github.com/deepmap/oapi-codegen/issues/240
 // Body returns body of byte array
 func (r GetClusterFeedbackEventsResponse) GetBody() []byte {
 	return r.Body
 }
 
-// TODO: </castai customization> to have common interface
+// TODO: </castai customization> to have common interface. https://github.com/deepmap/oapi-codegen/issues/240
 
 type GetClusterHealthResponse struct {
 	Body         []byte
@@ -2934,13 +3299,44 @@ func (r GetClusterHealthResponse) StatusCode() int {
 	return 0
 }
 
-// TODO: <castai customization> to have common interface
+// TODO: <castai customization> to have common interface. https://github.com/deepmap/oapi-codegen/issues/240
 // Body returns body of byte array
 func (r GetClusterHealthResponse) GetBody() []byte {
 	return r.Body
 }
 
-// TODO: </castai customization> to have common interface
+// TODO: </castai customization> to have common interface. https://github.com/deepmap/oapi-codegen/issues/240
+
+type GetClusterIngressControllerResponse struct {
+	Body         []byte
+	HTTPResponse *http.Response
+	JSON200      *KubernetesIngressController
+	JSON404      *ErrorResponse
+}
+
+// Status returns HTTPResponse.Status
+func (r GetClusterIngressControllerResponse) Status() string {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.Status
+	}
+	return http.StatusText(0)
+}
+
+// StatusCode returns HTTPResponse.StatusCode
+func (r GetClusterIngressControllerResponse) StatusCode() int {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.StatusCode
+	}
+	return 0
+}
+
+// TODO: <castai customization> to have common interface. https://github.com/deepmap/oapi-codegen/issues/240
+// Body returns body of byte array
+func (r GetClusterIngressControllerResponse) GetBody() []byte {
+	return r.Body
+}
+
+// TODO: </castai customization> to have common interface. https://github.com/deepmap/oapi-codegen/issues/240
 
 type GetClusterKubeconfigResponse struct {
 	Body         []byte
@@ -2963,13 +3359,13 @@ func (r GetClusterKubeconfigResponse) StatusCode() int {
 	return 0
 }
 
-// TODO: <castai customization> to have common interface
+// TODO: <castai customization> to have common interface. https://github.com/deepmap/oapi-codegen/issues/240
 // Body returns body of byte array
 func (r GetClusterKubeconfigResponse) GetBody() []byte {
 	return r.Body
 }
 
-// TODO: </castai customization> to have common interface
+// TODO: </castai customization> to have common interface. https://github.com/deepmap/oapi-codegen/issues/240
 
 type GetClusterMetricsResponse struct {
 	Body         []byte
@@ -2993,13 +3389,13 @@ func (r GetClusterMetricsResponse) StatusCode() int {
 	return 0
 }
 
-// TODO: <castai customization> to have common interface
+// TODO: <castai customization> to have common interface. https://github.com/deepmap/oapi-codegen/issues/240
 // Body returns body of byte array
 func (r GetClusterMetricsResponse) GetBody() []byte {
 	return r.Body
 }
 
-// TODO: </castai customization> to have common interface
+// TODO: </castai customization> to have common interface. https://github.com/deepmap/oapi-codegen/issues/240
 
 type GetClusterNodesResponse struct {
 	Body         []byte
@@ -3023,13 +3419,13 @@ func (r GetClusterNodesResponse) StatusCode() int {
 	return 0
 }
 
-// TODO: <castai customization> to have common interface
+// TODO: <castai customization> to have common interface. https://github.com/deepmap/oapi-codegen/issues/240
 // Body returns body of byte array
 func (r GetClusterNodesResponse) GetBody() []byte {
 	return r.Body
 }
 
-// TODO: </castai customization> to have common interface
+// TODO: </castai customization> to have common interface. https://github.com/deepmap/oapi-codegen/issues/240
 
 type UpdateNodeListResponse struct {
 	Body         []byte
@@ -3053,13 +3449,13 @@ func (r UpdateNodeListResponse) StatusCode() int {
 	return 0
 }
 
-// TODO: <castai customization> to have common interface
+// TODO: <castai customization> to have common interface. https://github.com/deepmap/oapi-codegen/issues/240
 // Body returns body of byte array
 func (r UpdateNodeListResponse) GetBody() []byte {
 	return r.Body
 }
 
-// TODO: </castai customization> to have common interface
+// TODO: </castai customization> to have common interface. https://github.com/deepmap/oapi-codegen/issues/240
 
 type PauseClusterResponse struct {
 	Body         []byte
@@ -3083,13 +3479,13 @@ func (r PauseClusterResponse) StatusCode() int {
 	return 0
 }
 
-// TODO: <castai customization> to have common interface
+// TODO: <castai customization> to have common interface. https://github.com/deepmap/oapi-codegen/issues/240
 // Body returns body of byte array
 func (r PauseClusterResponse) GetBody() []byte {
 	return r.Body
 }
 
-// TODO: </castai customization> to have common interface
+// TODO: </castai customization> to have common interface. https://github.com/deepmap/oapi-codegen/issues/240
 
 type GetPoliciesResponse struct {
 	Body         []byte
@@ -3113,13 +3509,13 @@ func (r GetPoliciesResponse) StatusCode() int {
 	return 0
 }
 
-// TODO: <castai customization> to have common interface
+// TODO: <castai customization> to have common interface. https://github.com/deepmap/oapi-codegen/issues/240
 // Body returns body of byte array
 func (r GetPoliciesResponse) GetBody() []byte {
 	return r.Body
 }
 
-// TODO: </castai customization> to have common interface
+// TODO: </castai customization> to have common interface. https://github.com/deepmap/oapi-codegen/issues/240
 
 type UpsertPoliciesResponse struct {
 	Body         []byte
@@ -3143,13 +3539,13 @@ func (r UpsertPoliciesResponse) StatusCode() int {
 	return 0
 }
 
-// TODO: <castai customization> to have common interface
+// TODO: <castai customization> to have common interface. https://github.com/deepmap/oapi-codegen/issues/240
 // Body returns body of byte array
 func (r UpsertPoliciesResponse) GetBody() []byte {
 	return r.Body
 }
 
-// TODO: </castai customization> to have common interface
+// TODO: </castai customization> to have common interface. https://github.com/deepmap/oapi-codegen/issues/240
 
 type ResumeClusterResponse struct {
 	Body         []byte
@@ -3173,13 +3569,13 @@ func (r ResumeClusterResponse) StatusCode() int {
 	return 0
 }
 
-// TODO: <castai customization> to have common interface
+// TODO: <castai customization> to have common interface. https://github.com/deepmap/oapi-codegen/issues/240
 // Body returns body of byte array
 func (r ResumeClusterResponse) GetBody() []byte {
 	return r.Body
 }
 
-// TODO: </castai customization> to have common interface
+// TODO: </castai customization> to have common interface. https://github.com/deepmap/oapi-codegen/issues/240
 
 type ListRegionsResponse struct {
 	Body         []byte
@@ -3203,13 +3599,22 @@ func (r ListRegionsResponse) StatusCode() int {
 	return 0
 }
 
-// TODO: <castai customization> to have common interface
+// TODO: <castai customization> to have common interface. https://github.com/deepmap/oapi-codegen/issues/240
 // Body returns body of byte array
 func (r ListRegionsResponse) GetBody() []byte {
 	return r.Body
 }
 
-// TODO: </castai customization> to have common interface
+// TODO: </castai customization> to have common interface. https://github.com/deepmap/oapi-codegen/issues/240
+
+// ListAuditEventsWithResponse request returning *ListAuditEventsResponse
+func (c *ClientWithResponses) ListAuditEventsWithResponse(ctx context.Context) (*ListAuditEventsResponse, error) {
+	rsp, err := c.ListAuditEvents(ctx)
+	if err != nil {
+		return nil, err
+	}
+	return ParseListAuditEventsResponse(rsp)
+}
 
 // LoginCallbackWithResponse request returning *LoginCallbackResponse
 func (c *ClientWithResponses) LoginCallbackWithResponse(ctx context.Context) (*LoginCallbackResponse, error) {
@@ -3333,6 +3738,40 @@ func (c *ClientWithResponses) GetCloudCredentialsWithResponse(ctx context.Contex
 		return nil, err
 	}
 	return ParseGetCloudCredentialsResponse(rsp)
+}
+
+// DeleteFirewallWithBodyWithResponse request with arbitrary body returning *DeleteFirewallResponse
+func (c *ClientWithResponses) DeleteFirewallWithBodyWithResponse(ctx context.Context, contentType string, body io.Reader) (*DeleteFirewallResponse, error) {
+	rsp, err := c.DeleteFirewallWithBody(ctx, contentType, body)
+	if err != nil {
+		return nil, err
+	}
+	return ParseDeleteFirewallResponse(rsp)
+}
+
+func (c *ClientWithResponses) DeleteFirewallWithResponse(ctx context.Context, body DeleteFirewallJSONRequestBody) (*DeleteFirewallResponse, error) {
+	rsp, err := c.DeleteFirewall(ctx, body)
+	if err != nil {
+		return nil, err
+	}
+	return ParseDeleteFirewallResponse(rsp)
+}
+
+// CreateOrUpdateFirewallWithBodyWithResponse request with arbitrary body returning *CreateOrUpdateFirewallResponse
+func (c *ClientWithResponses) CreateOrUpdateFirewallWithBodyWithResponse(ctx context.Context, contentType string, body io.Reader) (*CreateOrUpdateFirewallResponse, error) {
+	rsp, err := c.CreateOrUpdateFirewallWithBody(ctx, contentType, body)
+	if err != nil {
+		return nil, err
+	}
+	return ParseCreateOrUpdateFirewallResponse(rsp)
+}
+
+func (c *ClientWithResponses) CreateOrUpdateFirewallWithResponse(ctx context.Context, body CreateOrUpdateFirewallJSONRequestBody) (*CreateOrUpdateFirewallResponse, error) {
+	rsp, err := c.CreateOrUpdateFirewall(ctx, body)
+	if err != nil {
+		return nil, err
+	}
+	return ParseCreateOrUpdateFirewallResponse(rsp)
 }
 
 // DeleteGslbWithBodyWithResponse request with arbitrary body returning *DeleteGslbResponse
@@ -3475,6 +3914,15 @@ func (c *ClientWithResponses) GetClusterHealthWithResponse(ctx context.Context, 
 	return ParseGetClusterHealthResponse(rsp)
 }
 
+// GetClusterIngressControllerWithResponse request returning *GetClusterIngressControllerResponse
+func (c *ClientWithResponses) GetClusterIngressControllerWithResponse(ctx context.Context, clusterId ClusterId) (*GetClusterIngressControllerResponse, error) {
+	rsp, err := c.GetClusterIngressController(ctx, clusterId)
+	if err != nil {
+		return nil, err
+	}
+	return ParseGetClusterIngressControllerResponse(rsp)
+}
+
 // GetClusterKubeconfigWithResponse request returning *GetClusterKubeconfigResponse
 func (c *ClientWithResponses) GetClusterKubeconfigWithResponse(ctx context.Context, clusterId ClusterId) (*GetClusterKubeconfigResponse, error) {
 	rsp, err := c.GetClusterKubeconfig(ctx, clusterId)
@@ -3578,6 +4026,32 @@ func (c *ClientWithResponses) ListRegionsWithResponse(ctx context.Context) (*Lis
 		return nil, err
 	}
 	return ParseListRegionsResponse(rsp)
+}
+
+// ParseListAuditEventsResponse parses an HTTP response from a ListAuditEventsWithResponse call
+func ParseListAuditEventsResponse(rsp *http.Response) (*ListAuditEventsResponse, error) {
+	bodyBytes, err := ioutil.ReadAll(rsp.Body)
+	defer rsp.Body.Close()
+	if err != nil {
+		return nil, err
+	}
+
+	response := &ListAuditEventsResponse{
+		Body:         bodyBytes,
+		HTTPResponse: rsp,
+	}
+
+	switch {
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 200:
+		var dest AuditEventList
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON200 = &dest
+
+	}
+
+	return response, nil
 }
 
 // ParseLoginCallbackResponse parses an HTTP response from a LoginCallbackWithResponse call
@@ -3852,6 +4326,44 @@ func ParseGetCloudCredentialsResponse(rsp *http.Response) (*GetCloudCredentialsR
 		}
 		response.JSON200 = &dest
 
+	}
+
+	return response, nil
+}
+
+// ParseDeleteFirewallResponse parses an HTTP response from a DeleteFirewallWithResponse call
+func ParseDeleteFirewallResponse(rsp *http.Response) (*DeleteFirewallResponse, error) {
+	bodyBytes, err := ioutil.ReadAll(rsp.Body)
+	defer rsp.Body.Close()
+	if err != nil {
+		return nil, err
+	}
+
+	response := &DeleteFirewallResponse{
+		Body:         bodyBytes,
+		HTTPResponse: rsp,
+	}
+
+	switch {
+	}
+
+	return response, nil
+}
+
+// ParseCreateOrUpdateFirewallResponse parses an HTTP response from a CreateOrUpdateFirewallWithResponse call
+func ParseCreateOrUpdateFirewallResponse(rsp *http.Response) (*CreateOrUpdateFirewallResponse, error) {
+	bodyBytes, err := ioutil.ReadAll(rsp.Body)
+	defer rsp.Body.Close()
+	if err != nil {
+		return nil, err
+	}
+
+	response := &CreateOrUpdateFirewallResponse{
+		Body:         bodyBytes,
+		HTTPResponse: rsp,
+	}
+
+	switch {
 	}
 
 	return response, nil
@@ -4163,6 +4675,39 @@ func ParseGetClusterHealthResponse(rsp *http.Response) (*GetClusterHealthRespons
 			return nil, err
 		}
 		response.JSON200 = &dest
+
+	}
+
+	return response, nil
+}
+
+// ParseGetClusterIngressControllerResponse parses an HTTP response from a GetClusterIngressControllerWithResponse call
+func ParseGetClusterIngressControllerResponse(rsp *http.Response) (*GetClusterIngressControllerResponse, error) {
+	bodyBytes, err := ioutil.ReadAll(rsp.Body)
+	defer rsp.Body.Close()
+	if err != nil {
+		return nil, err
+	}
+
+	response := &GetClusterIngressControllerResponse{
+		Body:         bodyBytes,
+		HTTPResponse: rsp,
+	}
+
+	switch {
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 200:
+		var dest KubernetesIngressController
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON200 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 404:
+		var dest ErrorResponse
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON404 = &dest
 
 	}
 

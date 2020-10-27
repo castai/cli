@@ -11,16 +11,15 @@ import (
 
 const (
 	castDirName         = ".cast"
-	accessTokenFileName = "access_token.json"
-	accessTokenEnvName  = "CASTAI_API_ACCESS_TOKEN"
+	accessTokenFileName = "credentials.json"
 )
 
-type AccessToken struct {
-	Token     string    `json:"token"`
-	CreatedAt time.Time `json:"created_at"`
+type Credentials struct {
+	AccessToken string    `json:"access_token"`
+	CreatedAt   time.Time `json:"created_at"`
 }
 
-func StoreAccessToken(token string) error {
+func StoreCredentials(token string) error {
 	basePath, err := getBaseDirPath()
 	if err != nil {
 		return err
@@ -28,19 +27,19 @@ func StoreAccessToken(token string) error {
 	if err := ensureDir(basePath); err != nil {
 		return err
 	}
-	if err := createAccessTokenConfig(basePath, token); err != nil {
+	if err := createCredentials(basePath, token); err != nil {
 		return err
 	}
 	return nil
 }
 
-func GetAccessToken() (AccessToken, error) {
-	fromEnv := os.Getenv(accessTokenEnvName)
+func GetCredentials() (Credentials, error) {
+	fromEnv := os.Getenv(envAccessToken)
 	if fromEnv != "" {
-		return AccessToken{Token: fromEnv}, nil
+		return Credentials{AccessToken: fromEnv}, nil
 	}
 
-	var tkn AccessToken
+	var tkn Credentials
 	basePath, err := getBaseDirPath()
 	if err != nil {
 		return tkn, err
@@ -57,7 +56,7 @@ func GetAccessToken() (AccessToken, error) {
 
 	tknBytes, err := ioutil.ReadFile(tknFilePath)
 	if err != nil {
-		return AccessToken{}, err
+		return Credentials{}, err
 	}
 
 	if err := json.Unmarshal(tknBytes, &tkn); err != nil {
@@ -66,10 +65,10 @@ func GetAccessToken() (AccessToken, error) {
 	return tkn, nil
 }
 
-func createAccessTokenConfig(basePath, token string) error {
-	tkn := AccessToken{
-		Token:     token,
-		CreatedAt: time.Now(),
+func createCredentials(basePath, token string) error {
+	tkn := Credentials{
+		AccessToken: token,
+		CreatedAt:   time.Now(),
 	}
 	tknBytes, err := json.Marshal(tkn)
 	if err != nil {

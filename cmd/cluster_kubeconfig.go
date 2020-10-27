@@ -34,7 +34,7 @@ import (
 )
 
 var (
-	kubeconfigPath string
+	flagKubeconfigPath string
 )
 
 var clusterGetKubeconfigCmd = &cobra.Command{
@@ -42,7 +42,7 @@ var clusterGetKubeconfigCmd = &cobra.Command{
 	Short: "Get cluster kubeconfig",
 	Run: func(cmd *cobra.Command, args []string) {
 		clusterID := requireClusterID(cmd, args)
-		if err := handleClusterGetKubeconfig(clusterID.String(), kubeconfigPath); err != nil {
+		if err := handleClusterGetKubeconfig(clusterID.String(), flagKubeconfigPath); err != nil {
 			log.Fatal(err)
 		}
 	},
@@ -50,7 +50,7 @@ var clusterGetKubeconfigCmd = &cobra.Command{
 
 func init() {
 	defaultKubeConfigDir := getDefaultKubeconfigPath()
-	clusterGetKubeconfigCmd.PersistentFlags().StringVar(&kubeconfigPath, "path", defaultKubeConfigDir, "(optional) absolute path to the kubeconfig file")
+	clusterGetKubeconfigCmd.PersistentFlags().StringVar(&flagKubeconfigPath, "path", defaultKubeConfigDir, "(optional) absolute path to the kubeconfig file")
 	if defaultKubeConfigDir == "" {
 		clusterGetKubeconfigCmd.MarkPersistentFlagRequired("path")
 	}

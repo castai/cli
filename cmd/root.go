@@ -27,11 +27,18 @@ var rootCmd = &cobra.Command{
 	Short: "CAST AI Command Line Interface",
 	Long:  ``,
 	PersistentPreRun: func(cmd *cobra.Command, args []string) {
-		log.SetFormatter(&log.TextFormatter{DisableTimestamp: true})
-		if config.GlobalFlags.Debug {
-			log.SetLevel(log.DebugLevel)
-		}
+		initLogger()
 	},
+}
+
+func initLogger() {
+	log.SetFormatter(&log.TextFormatter{
+		DisableTimestamp:       true,
+		DisableLevelTruncation: true,
+	})
+	if config.Debug() {
+		log.SetLevel(log.DebugLevel)
+	}
 }
 
 func Execute() {
