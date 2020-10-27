@@ -13,17 +13,26 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
+
 package cmd
 
 import (
+	"fmt"
+
 	"github.com/spf13/cobra"
+
+	"github.com/castai/cast-cli/pkg/version"
 )
 
-var clusterCmd = &cobra.Command{
-	Use:   "cluster",
-	Short: "Manage clusters",
+var versionCmd = &cobra.Command{
+	Use:     "version",
+	Aliases: []string{"-v"},
+	Short:   "Print version",
+	Run: func(cmd *cobra.Command, args []string) {
+		fmt.Printf("version: %s, commit: %s\n", version.Version, version.Commit)
+	},
 }
 
 func init() {
-	rootCmd.AddCommand(clusterCmd)
+	rootCmd.AddCommand(versionCmd)
 }
