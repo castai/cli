@@ -2,7 +2,6 @@ package config
 
 import (
 	"encoding/json"
-	"errors"
 	"fmt"
 	"io/ioutil"
 	"os"
@@ -10,13 +9,10 @@ import (
 	"time"
 )
 
-var (
-	ErrTokenNotFound = errors.New("token not found")
-)
-
 const (
 	castDirName         = ".cast"
 	accessTokenFileName = "access_token.json"
+	accessTokenEnvName  = "CASTAI_API_ACCESS_TOKEN"
 )
 
 type AccessToken struct {
@@ -39,6 +35,11 @@ func StoreAccessToken(token string) error {
 }
 
 func GetAccessToken() (AccessToken, error) {
+	fromEnv := os.Getenv(accessTokenEnvName)
+	if fromEnv != "" {
+		return AccessToken{Token: fromEnv}, nil
+	}
+
 	var tkn AccessToken
 	basePath, err := getBaseDirPath()
 	if err != nil {
@@ -49,7 +50,7 @@ func GetAccessToken() (AccessToken, error) {
 	_, err = os.Stat(tknFilePath)
 	if err != nil {
 		if os.IsNotExist(err) {
-			return tkn, ErrTokenNotFound
+			return tkn, fmt.Errorf("access token not found in %q, please login using 'cast login --token <YOUR_CAST_AI_TOKEN>' ", tknFilePath)
 		}
 		return tkn, err
 	}
@@ -74,14 +75,14 @@ func createAccessTokenConfig(basePath, token string) error {
 	if err != nil {
 		return err
 	}
-	err = ioutil.WriteFile(path.Join(basePath, accessTokenFileName), tknBytes, 0700)
+	err = ioutil.WriteFile(path.Join(basePath, accessTokenFileName), tknBytes, 0600)
 	return err
 }
 
 func ensureDir(basePath string) error {
 	_, err := os.Stat(basePath)
 	if os.IsNotExist(err) {
-		if err := os.Mkdir(basePath, 0700); err != nil {
+		if err := os.Mkdir(basePath, 0755); err != nil {
 			return err
 		}
 		return nil

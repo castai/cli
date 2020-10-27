@@ -18,10 +18,10 @@ package cmd
 import (
 	"context"
 	"fmt"
+	"log"
 	"net/http"
 	"time"
 
-	log "github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
 
 	"github.com/castai/cast-cli/internal/client"
@@ -36,14 +36,19 @@ var loginCmd = &cobra.Command{
 	Run: func(cmd *cobra.Command, args []string) {
 		token := cmd.Flag("token").Value.String()
 		if err := handleLogin(token); err != nil {
-			log.Fatalf("🤭 login failed: %v", err)
+			log.Fatalf("🤭 login failed: %v\n", err)
 			return
 		}
-		log.Info("👌 login successful")
+		fmt.Println("👌 login successful")
 	},
 }
 
 func handleLogin(token string) error {
+	// Store valid access token to file.
+	if err := config.StoreAccessToken(token); err != nil {
+		return err
+	}
+
 	// Check that access token is valid.
 	apiClient, err := client.New()
 	if err != nil {
@@ -58,11 +63,6 @@ func handleLogin(token string) error {
 	}
 	if resp.StatusCode() != http.StatusOK {
 		return fmt.Errorf("could not verify access token, got status code %d", resp.StatusCode())
-	}
-
-	// Store valid access token to file.
-	if err := config.StoreAccessToken(token); err != nil {
-		return err
 	}
 
 	return nil

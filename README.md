@@ -16,7 +16,7 @@ Flags:
   -h, --help             help for cast
 ```
 
-### Example
+### Basic usage
 
 Login
 
@@ -39,4 +39,15 @@ cast cluster list
 ├──────────────────────────────────────┼─────────────────┼─────────┼───────────┼────────────────────────────┤
 │ 7d411935-1fb8-4eb8-9e98-bbf4a28693f4 │ help            │ deleted │ gcp       │ Europe Central (Frankfurt) │
 └──────────────────────────────────────┴─────────────────┴─────────┴───────────┴────────────────────────────┘
+```
+
+Get kubeconfig. By default this command merges received kubeconfig with local config if found at $HOME/.cube/config
+and updates the default context. Config could be written to different location by specifying `--path` flag.
+
+```
+// Get kubeconfig.
+cast cluster get-kubeconfig 19fb46b8-6cb3-4d9b-88af-b70050bde6f2
+
+// Check contexts. New context should be visible.
+kubectl config get-contexts
 ```
