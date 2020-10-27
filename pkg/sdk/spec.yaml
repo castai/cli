@@ -1,6 +1,6 @@
 openapi: 3.0.1
 servers:
-  - url: 'https://api.cast.ai/v1'
+  - url: 'https://api.cast.api/v1'
 info:
   description: |
     cast.ai console API
@@ -10,8 +10,8 @@ tags:
   - name: kubernetes
     description: Kubernetes CRUD
 security:
-  - BearerAuth: [ ]
-  - ApiKeyAuth: [ ]
+  - BearerAuth: []
+  - ApiKeyAuth: []
 paths:
   /auth:
     post:
@@ -21,14 +21,21 @@ paths:
       summary: >-
         Login
       description: >-
-        Redirect browser to AUTH0 login flow, where user authenticates, browser receives authentication cookie,
-        and then user's browser gets redirected to provided `returnTo` URL. From that point on, all API calls don't require additional headers as HTTP-only cookie
-        will be attached to each request.
+        Redirect browser to AUTH0 login flow, where user authenticates, browser receives authentication cookie, and then user's browser gets redirected to provided `returnTo` URL. From that point on, all API calls don't require additional headers as HTTP-only cookie will be attached to each request.
       parameters:
         - $ref: '#/components/parameters/returnTo'
-        - $ref: '#/components/parameters/auth0returnTo'
+        - name: auth0returnTo
+          in: query
+          schema:
+            type: string
+          description: optional override for URL to redirect browser from auth0 back to backend, for situations where backend is being reached via proxy
+        - name: screenHint
+          in: query
+          schema:
+            type: string
+          description: optional hint for which screen to use when redirecting to authentication pages.
       responses:
-        '302':
+        "302":
           description: redirects to login page
     get:
       operationId: login-callback
@@ -39,8 +46,45 @@ paths:
       description: >-
         Callback endpoint where login flow returns after authentication succeeds on auth0. Not to be called directly.
       responses:
-        '302':
+        "302":
           description: redirects to `returnTo` that was provided with initial auth request.
+  /firewall:
+    post:
+      operationId: create-or-update-firewall
+      tags:
+        - firewall
+      summary: >-
+        Create or update firewall record.
+      description: >-
+        Create firewall rules to access cluster master nodes API Server.
+      requestBody:
+        required: true
+        description: Specification of new GSLB record.
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/FirewallRequest'
+      responses:
+        204:
+          description: The resource was create or updated.
+    delete:
+      operationId: delete-firewall
+      tags:
+        - gslb
+      summary: >-
+        Delete firewall record.
+      description: >-
+        Deletes firewall rules.
+      requestBody:
+        required: true
+        description: Specification of firewall record to delete.
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/FirewallDeleteRequest'
+      responses:
+        204:
+          description: firewall was deleted
   /auth/session:
     get:
       operationId: get-session
@@ -51,15 +95,14 @@ paths:
       description: >-
         As JS has no access to JWT token, this provides a subset of information about user session.
       responses:
-        '200':
+        "200":
           description: User is currently logged in
           content:
             application/json:
               schema:
                 $ref: '#/components/schemas/UserSession'
-        '401':
+        "401":
           description: not logged in.
-
   /auth/logout:
     post:
       operationId: logout
@@ -72,7 +115,7 @@ paths:
       parameters:
         - $ref: '#/components/parameters/returnTo'
       responses:
-        '302':
+        "302":
           description: redirects to `returnTo` url.
   /auth/tokens:
     get:
@@ -82,7 +125,7 @@ paths:
         List auth tokens created by current user
       operationId: list-auth-tokens
       responses:
-        '200':
+        "200":
           description: OK
           content:
             application/json:
@@ -101,7 +144,7 @@ paths:
             schema:
               $ref: '#/components/schemas/AuthToken'
       responses:
-        '201':
+        "201":
           description: Created
           content:
             application/json:
@@ -117,13 +160,13 @@ paths:
         Get auth token information.
       operationId: get-auth-token
       responses:
-        '200':
+        "200":
           description: OK
           content:
             application/json:
               schema:
                 $ref: '#/components/schemas/AuthToken'
-        '404':
+        "404":
           description: Not Found
     delete:
       tags:
@@ -132,8 +175,130 @@ paths:
         Delete auth token.
       operationId: delete-auth-token
       responses:
-        204:
+        "204":
           description: The auth token has been deleted.
+  /audit:
+    get:
+      operationId: list-audit-events
+      tags:
+        - audit
+      summary: >-
+        List audit events
+      description: >-
+        Lists all audit events for current account.
+      responses:
+        "200":
+          description: Event list.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AuditEventList'
+  /credentials:
+    get:
+      operationId: list-cloud-credentials
+      tags:
+        - cloud-credentials
+      summary: >-
+        List cloud credentials.
+      description: >-
+        List available cloud credentials of user's organization.
+      responses:
+        "200":
+          description: List of cloud credentials.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CloudCredentialsList'
+    post:
+      operationId: create-cloud-credentials
+      tags:
+        - cloud-credentials
+      summary: >-
+        Create cloud credentials.
+      description: >-
+        Create new cloud credentials entry for user's organization.
+      requestBody:
+        required: true
+        description: Specification of new cloud credentials.
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CloudCredentials'
+      responses:
+        "201":
+          description: Created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CloudCredentials'
+  /credentials/{credentialsId}:
+    parameters:
+      - $ref: '#/components/parameters/credentialsId'
+    get:
+      operationId: get-cloud-credentials
+      tags:
+        - cloud-credentials
+      summary: >-
+        Get cloud credentials.
+      description: >-
+        Get an item of cloud credentials.
+      responses:
+        "200":
+          description: Item of cloud credentials.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CloudCredentials'
+    delete:
+      tags:
+        - cloud-credentials
+      summary: Delete cloud credentials.
+      description: Delete an item of cloud credentials.
+      operationId: delete-cloud-credentials
+      responses:
+        "204":
+          description: The resource has been deleted.
+  /gslb:
+    post:
+      operationId: create-or-update-gslb
+      tags:
+        - gslb
+      summary: >-
+        Create or update GSLB record.
+      description: >-
+        Creates a GSLB record for cluster service load balancers. If a record already exists for this service, it updates the record.
+      requestBody:
+        required: true
+        description: Specification of new GSLB record.
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/GSLBRequest'
+      responses:
+        "200":
+          description: The resource was create or updated.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/GSLBResponse'
+    delete:
+      operationId: delete-gslb
+      tags:
+        - gslb
+      summary: >-
+        Delete GSLB record.
+      description: >-
+        Deletes a GSLB record for cluster service load balancer.
+      requestBody:
+        required: true
+        description: Specification of GSLB record to delete.
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/GSLBDeleteRequest'
+      responses:
+        "204":
+          description: GSLB was deleted
   /kubernetes/clusters:
     get:
       parameters:
@@ -156,7 +321,7 @@ paths:
         List clusters
       operationId: list-kubernetes-clusters
       responses:
-        '200':
+        "200":
           description: OK
           content:
             application/json:
@@ -168,7 +333,6 @@ paths:
       summary: >-
         Create new cluster
       description: Initiates the creation of a new Kubernetes cluster.
-
       operationId: create-new-cluster
       requestBody:
         required: true
@@ -178,7 +342,7 @@ paths:
             schema:
               $ref: '#/components/schemas/CreateCluster'
       responses:
-        '201':
+        "201":
           description: Created
           content:
             application/json:
@@ -195,13 +359,13 @@ paths:
       description: Get cluster information.
       operationId: get-cluster
       responses:
-        '200':
+        "200":
           description: OK
           content:
             application/json:
               schema:
                 $ref: '#/components/schemas/KubernetesCluster'
-        '404':
+        "404":
           description: Not Found
     delete:
       tags:
@@ -211,9 +375,8 @@ paths:
       description: Delete cast cluster.
       operationId: delete-cluster
       responses:
-        204:
+        "204":
           description: The resource has been deleted.
-
   /kubernetes/clusters/{clusterId}/metrics:
     parameters:
       - $ref: '#/components/parameters/clusterId'
@@ -235,7 +398,6 @@ paths:
           description: Cluster not found
       parameters:
         - $ref: "#/components/parameters/MetricsType"
-
   /kubernetes/clusters/{clusterId}/feedbackevents:
     parameters:
       - $ref: '#/components/parameters/clusterId'
@@ -247,13 +409,13 @@ paths:
       description: Get cluster creation feedback events which are generated during cluster creation.
       operationId: get-cluster-feedback-events
       responses:
-        '200':
+        "200":
           description: OK
           content:
             application/json:
               schema:
                 $ref: '#/components/schemas/KubernetesClusterFeedbackEventsList'
-        '404':
+        "404":
           description: Not Found
   /kubernetes/clusters/{clusterId}/auditlog:
     parameters:
@@ -266,13 +428,13 @@ paths:
       description: "Get cluster audit log events: when the VM was added or deleted, cluster paused and so on"
       operationId: get-cluster-audit-log
       responses:
-        '200':
+        "200":
           description: OK
           content:
             application/json:
               schema:
                 $ref: '#/components/schemas/KubernetesClusterAuditLogEventsList'
-        '404':
+        "404":
           description: Not Found
   /kubernetes/clusters/{clusterId}/health:
     parameters:
@@ -285,13 +447,13 @@ paths:
       description: "Get cluster health including kubernetes, cilium, nodes health."
       operationId: get-cluster-health
       responses:
-        '200':
+        "200":
           description: OK
           content:
             application/json:
               schema:
                 $ref: '#/components/schemas/ClusterHealth'
-        '404':
+        "404":
           description: Not Found
   /kubernetes/clusters/{clusterId}/kubeconfig:
     parameters:
@@ -305,13 +467,13 @@ paths:
       description: >-
         Retrieves kubeconfig to access the specified kubernetes cluster.
       responses:
-        200:
+        "200":
           description: kubeconfig file
           content:
             text/plain:
               schema:
                 type: string
-        404:
+        "404":
           description: kubeconfig file does not exist (possible reason - control plane is not initialized yet).
   /kubernetes/clusters/{clusterId}/nodes:
     parameters:
@@ -325,7 +487,7 @@ paths:
       description: >-
         Lists nodes in the cluster (workers+masters).
       responses:
-        200:
+        "200":
           description: Node list
           content:
             application/json:
@@ -352,13 +514,13 @@ paths:
             schema:
               $ref: '#/components/schemas/NodeUpdateOperation'
       responses:
-        '200':
+        "200":
           description: Updated node list, including generated IDs of new nodes.
           content:
             application/json:
               schema:
                 $ref: '#/components/schemas/NodeList'
-        '400':
+        "400":
           description: Node(s) with specified ID(s) are not found
   /kubernetes/clusters/{clusterId}/archive:
     parameters:
@@ -372,11 +534,11 @@ paths:
         Archives cluster. Archived cluster won't visible while listing clusters.
       operationId: archive-cluster
       responses:
-        '200':
+        "200":
           description: Operation completed succesfully
-        '400':
+        "400":
           description: Cluster is active and cannot be archived
-        '404':
+        "404":
           description: Cluster was not found
   /kubernetes/clusters/{clusterId}/pause:
     parameters:
@@ -398,15 +560,15 @@ paths:
             schema:
               $ref: '#/components/schemas/PauseCluster'
       responses:
-        '200':
+        "200":
           description: Operation completed succesfully
           content:
             application/json:
               schema:
                 $ref: '#/components/schemas/KubernetesCluster'
-        '400':
+        "400":
           description: Cluster is already paused
-        '404':
+        "404":
           description: Cluster was not found
   /kubernetes/clusters/{clusterId}/resume:
     parameters:
@@ -422,58 +584,16 @@ paths:
         non-working hours.
       operationId: resume-cluster
       responses:
-        '200':
+        "200":
           description: Operation completed succesfully
           content:
             application/json:
               schema:
                 $ref: '#/components/schemas/KubernetesCluster'
-        '400':
+        "400":
           description: Cluster is already running
-        '404':
+        "404":
           description: Cluster was not found
-  /kubernetes/clusters/{clusterId}/policies:
-    parameters:
-      - $ref: '#/components/parameters/clusterId'
-    get:
-      operationId: get-policies
-      tags:
-        - kubernetes
-      summary: >-
-        Get cluster policies configuration
-      description: >-
-        Gets policies configuration for the target cluster
-      responses:
-        '200':
-          description: List of policies.
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/PoliciesConfig'
-    put:
-      operationId: upsert-policies
-      tags:
-        - kubernetes
-      summary: >-
-        Upsert policies
-      description: >-
-        Upserts policies modifying cluster's behavior to run workloads.
-      requestBody:
-        required: true
-        description: List of policies to be modified/created
-        content:
-          application/json:
-            schema:
-              $ref: '#/components/schemas/PoliciesConfig'
-      responses:
-        '200':
-          description: Policies were successfully updated.
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/PoliciesConfig'
-        '400':
-          description: Bad request
   /kubernetes/clusters/{clusterId}/addons:
     parameters:
       - $ref: '#/components/parameters/clusterId'
@@ -486,13 +606,13 @@ paths:
       description: >-
         Gets enabled addons and their configuration for the target cluster
       responses:
-        '200':
+        "200":
           description: List of enabled/configured addons.
           content:
             application/json:
               schema:
                 $ref: '#/components/schemas/AddonsConfig'
-        '404':
+        "404":
           description: Cluster was not found
           content:
             application/json:
@@ -515,89 +635,92 @@ paths:
             schema:
               $ref: '#/components/schemas/AddonsConfig'
       responses:
-        '200':
+        "200":
           description: Addons configuration initiated, desired configuration is returned
           content:
             application/json:
               schema:
                 $ref: '#/components/schemas/AddonsConfig'
-        '404':
+        "404":
           description: Addon type not found
           content:
             application/json:
               schema:
                 $ref: '#/components/schemas/ErrorResponse'
-        '409':
+        "409":
           description: Addon already exists
           content:
             application/json:
               schema:
                 $ref: '#/components/schemas/ErrorResponse'
-  /credentials:
+  /kubernetes/clusters/{clusterId}/ingress-controller:
+    parameters:
+      - $ref: '#/components/parameters/clusterId'
     get:
-      operationId: list-cloud-credentials
+      operationId: get-cluster-ingress-controller
       tags:
-        - cloud-credentials
+        - kubernetes
+        - ingress
+        - controller
       summary: >-
-        List cloud credentials.
+        Get cluster ingress controller.
       description: >-
-        List available cloud credentials of user's organization.
+        Retrieves information about kubernetes cluster ingress controller.
       responses:
-        '200':
-          description: List of cloud credentials.
+        "200":
+          description: Description of ingress controller.
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/CloudCredentialsList'
-    post:
-      operationId: create-cloud-credentials
+                $ref: '#/components/schemas/KubernetesIngressController'
+        "404":
+          description: Ingress controller not found.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+  /kubernetes/clusters/{clusterId}/policies:
+    parameters:
+      - $ref: '#/components/parameters/clusterId'
+    get:
+      operationId: get-policies
       tags:
-        - cloud-credentials
+        - kubernetes
       summary: >-
-        Create cloud credentials.
+        Get cluster policies configuration
       description: >-
-        Create new cloud credentials entry for user's organization.
+        Gets policies configuration for the target cluster
+      responses:
+        "200":
+          description: List of policies.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PoliciesConfig'
+    put:
+      operationId: upsert-policies
+      tags:
+        - kubernetes
+      summary: >-
+        Upsert policies
+      description: >-
+        Upserts policies modifying cluster's behavior to run workloads.
       requestBody:
         required: true
-        description: Specification of new cloud credentials.
+        description: List of policies to be modified/created
         content:
           application/json:
             schema:
-              $ref: '#/components/schemas/CloudCredentials'
+              $ref: '#/components/schemas/PoliciesConfig'
       responses:
-        '201':
-          description: Created
+        "200":
+          description: Policies were successfully updated.
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/CloudCredentials'
-  /credentials/{credentialsId}:
-    parameters:
-      - $ref: '#/components/parameters/credentialsId'
-    get:
-      operationId: get-cloud-credentials
-      tags:
-        - cloud-credentials
-      summary: >-
-        Get cloud credentials.
-      description: >-
-        Get an item of cloud credentials.
-      responses:
-        200:
-          description: Item of cloud credentials.
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/CloudCredentials'
-    delete:
-      tags:
-        - cloud-credentials
-      summary: Delete cloud credentials.
-      description: Delete an item of cloud credentials.
-      operationId: delete-cloud-credentials
-      responses:
-        204:
-          description: The resource has been deleted.
+                $ref: '#/components/schemas/PoliciesConfig'
+        "400":
+          description: Bad request
   /regions:
     get:
       operationId: list-regions
@@ -608,54 +731,12 @@ paths:
       description: >-
         List of available CAST AI regions.
       responses:
-        '200':
+        "200":
           description: List of available CAST AI regions.
           content:
             application/json:
               schema:
                 $ref: '#/components/schemas/CastRegionList'
-  /gslb:
-    post:
-      operationId: create-or-update-gslb
-      tags:
-        - gslb
-      summary: >-
-        Create or update GSLB record.
-      description: >-
-        Creates a GSLB record for cluster service load balancers. If a record already exists for this service, it updates the record.
-      requestBody:
-        required: true
-        description: Specification of new GSLB record.
-        content:
-          application/json:
-            schema:
-              $ref: '#/components/schemas/GSLBRequest'
-      responses:
-        200:
-          description: The resource was create or updated.
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/GSLBResponse'
-    delete:
-      operationId: delete-gslb
-      tags:
-        - gslb
-      summary: >-
-        Delete GSLB record.
-      description: >-
-        Deletes a GSLB record for cluster service load balancer.
-      requestBody:
-        required: true
-        description: Specification of GSLB record to delete.
-        content:
-          application/json:
-            schema:
-              $ref: '#/components/schemas/GSLBDeleteRequest'
-      responses:
-        204:
-          description: GSLB was deleted
-
 components:
   securitySchemes:
     BearerAuth:
@@ -701,12 +782,6 @@ components:
       schema:
         type: string
       description: URL to redirect browser to after operation completes
-    auth0returnTo:
-      name: auth0returnTo
-      in: query
-      schema:
-        type: string
-      description: optional override for URL to redirect browser from auth0 back to backend, for situations where backend is being reached via proxy
     MetricsType:
       name: metricsType
       in: query
@@ -719,6 +794,246 @@ components:
           - cloud_memory_usage
       description: The type of metric to query
   schemas:
+    ErrorResponse:
+      type: object
+      properties:
+        error:
+          type: string
+      required:
+        - error
+    CloudType:
+      type: string
+      enum:
+        - gcp
+        - aws
+        - azure
+      example: "aws"
+    AuthToken:
+      type: object
+      properties:
+        id:
+          type: string
+          description: Auth token ID, generated at the time of creation
+          readOnly: true
+        name:
+          type: string
+          description: Name of the token. Must be unique among other active tokens for the current user.
+        createdAt:
+          type: string
+          format: date-time
+          description: Auth token creation UTC time in RFC3339 format.
+          example: 2022-10-02T15:00:00Z
+          readOnly: true
+      required:
+        - id
+        - name
+        - createdAt
+    AuthTokenList:
+      type: object
+      properties:
+        items:
+          type: array
+          items:
+            $ref: '#/components/schemas/AuthToken'
+      required:
+        - items
+    AuthTokenCreateResponse:
+      type: object
+      properties:
+        id:
+          type: string
+          description: Auth token ID, generated at the time of creation
+          readOnly: true
+        name:
+          type: string
+          description: Name of the token. Must be unique among other active tokens for the current user.
+        createdAt:
+          type: string
+          format: date-time
+          description: Auth token creation UTC time in RFC3339 format.
+          example: 2022-10-02T15:00:00Z
+          readOnly: true
+        token:
+          type: string
+          description: Generated secret for this auth token (only shown once on creation)
+          readOnly: true
+      required:
+        - id
+        - name
+        - createdAt
+        - token
+    UserSession:
+      type: object
+      properties:
+        name:
+          type: string
+          description: full name of logged-in user, e.g. "John Doe". Managed by Auth0 and directly taken from login JWT claim "name".
+          example: John Doe
+    AuditInitiator:
+      type: object
+      properties:
+        id:
+          type: string
+          description: user or system ID.
+        name:
+          type: string
+          description: user or system name.
+      required:
+        - id
+    AuditEvent:
+      type: object
+      description: single event.
+      properties:
+        eventType:
+          type: string
+          enum:
+            - clusterCreated
+            - clusterDeleted
+          description: type of the performed operation
+        time:
+          type: string
+          format: date-time
+          description: Event creation UTC time in RFC3339 format.
+          example: 2022-10-02T15:00:00Z
+        initiatedBy:
+          $ref: '#/components/schemas/AuditInitiator'
+        event:
+          type: object
+          oneOf:
+            - $ref: '#/components/schemas/AuditEventClusterCreated'
+            - $ref: '#/components/schemas/AuditEventClusterDeleted'
+      required:
+        - eventType
+        - initiatedBy
+        - time
+    AuditEventList:
+      type: object
+      properties:
+        items:
+          type: array
+          items:
+            $ref: '#/components/schemas/AuditEvent'
+      required:
+        - items
+    AuditEventClusterCreated:
+      type: object
+      properties:
+        cluster:
+          type: object
+          description: snapshot of created cluster
+    AuditEventClusterDeleted:
+      type: object
+      properties:
+        cluster:
+          type: object
+          description: snapshot of deleted cluster
+    CloudCredentialsReservation:
+      type: object
+      description: Defines object that uses this credentials.
+      properties:
+        id:
+          type: string
+          description: Id of the object which uses credentials.
+        name:
+          type: string
+          description: Name of the object which uses credentials.
+      required:
+        - id
+        - name
+    CloudCredentials:
+      type: object
+      description: Cloud credentials item.
+      properties:
+        id:
+          type: string
+          readOnly: true
+          description: Id of cloud credentials item.
+        credentials:
+          type: string
+          writeOnly: true
+          description: Actual credentials data of given cloud.
+        name:
+          type: string
+          description: Name of cloud credentials object.
+        cloud:
+          type: string
+          description: Cloud type that these credentials represent.
+        usedBy:
+          type: array
+          readOnly: true
+          items:
+            $ref: '#/components/schemas/CloudCredentialsReservation'
+      required:
+        - id
+        - name
+        - cloud
+        - credentials
+    CloudCredentialsList:
+      type: object
+      properties:
+        items:
+          type: array
+          items:
+            $ref: '#/components/schemas/CloudCredentials'
+      required:
+        - items
+    GSLBRequest:
+      type: object
+      properties:
+        clusterId:
+          type: string
+          description: ID of the cluster.
+          example: 06a6fe03-fc9c-4d99-a0a4-373e87efe4b8
+        serviceName:
+          type: string
+          description: Name of the exposed LoadBalancer type service.
+          example: nginx
+        serviceNamespace:
+          type: string
+          description: Namespace where the exposed LoadBalancer type service resides.
+          example: default
+        hosts:
+          type: array
+          items:
+            type: string
+            description: Hostname or IP address of a single load balancer.
+          description: Array of all cloud load balancer hostnames and IP addresses which should be globally load balanced.
+          example:
+            - 80.1.1.23
+            - cloud.loadbalancer.com
+      required:
+        - clusterId
+        - serviceName
+        - serviceNamespace
+        - hosts
+    GSLBResponse:
+      type: object
+      properties:
+        dns:
+          type: string
+          description: Hostname of the GSLB.
+          example: nginx.default.06a6fe03-fc9c-4d99-a0a4-373e87efe4b8.onmulti.cloud
+      required:
+        - dns
+    GSLBDeleteRequest:
+      type: object
+      properties:
+        clusterId:
+          type: string
+          description: ID of the cluster.
+          example: 06a6fe03-fc9c-4d99-a0a4-373e87efe4b8
+        serviceName:
+          type: string
+          description: Name of the exposed LoadBalancer type service.
+          example: nginx
+        serviceNamespace:
+          type: string
+          description: Namespace where the exposed LoadBalancer type service resides.
+          example: default
+      required:
+        - clusterId
+        - serviceName
+        - serviceNamespace
     ClusterMetrics:
       type: object
       properties:
@@ -758,22 +1073,7 @@ components:
               description: Sample data array based. Format is based on the result type. Check the Prometheus API docs.
               externalDocs:
                 url: https://prometheus.io/docs/prometheus/latest/querying/api/#expression-query-result-formats
-
-    HealthcheckResponse:
-      type: object
-      properties:
-        status:
-          type: string
-      required:
-        - status
-    ErrorResponse:
-      type: object
-      properties:
-        error:
-          type: string
-      required:
-        - error
-    AddonEnabled: &addonEnabled
+    AddonEnabled:
       type: boolean
       description: Whether this addon is enabled
       default: true
@@ -781,21 +1081,30 @@ components:
       type: object
       description: Cert-Manager
       properties:
-        enabled: *addonEnabled
+        enabled:
+          type: boolean
+          description: Whether this addon is enabled
+          default: true
       required:
         - enabled
     DashboardConfig:
       type: object
       description: Kubernetes dashboard
       properties:
-        enabled: *addonEnabled
+        enabled:
+          type: boolean
+          description: Whether this addon is enabled
+          default: true
       required:
         - enabled
     ElasticLoggingConfig:
       type: object
       description: Elastic Cloud on Kubernetes + Logging setup
       properties:
-        enabled: *addonEnabled
+        enabled:
+          type: boolean
+          description: Whether this addon is enabled
+          default: true
         config:
           type: object
           properties:
@@ -809,14 +1118,30 @@ components:
       type: object
       description: Grafana -- UI for Prometheus
       properties:
-        enabled: *addonEnabled
+        enabled:
+          type: boolean
+          description: Whether this addon is enabled
+          default: true
+      required:
+        - enabled
+    KedaConfig:
+      type: object
+      description: KEDA (keda.sh) an event-based k8s resources autoscaler
+      properties:
+        enabled:
+          default: false
+          type: boolean
+          description: Whether this addon is enabled
       required:
         - enabled
     NginxIngressConfig:
       type: object
       description: Nginx-based ingress controller
       properties:
-        enabled: *addonEnabled
+        enabled:
+          type: boolean
+          description: Whether this addon is enabled
+          default: true
       required:
         - enabled
     AddonsConfig:
@@ -830,6 +1155,8 @@ components:
           $ref: '#/components/schemas/ElasticLoggingConfig'
         grafana:
           $ref: '#/components/schemas/GrafanaConfig'
+        keda:
+          $ref: '#/components/schemas/KedaConfig'
         nginxIngress:
           $ref: '#/components/schemas/NginxIngressConfig'
     CreateCluster:
@@ -942,47 +1269,6 @@ components:
         - message
         - severity
         - createdAt
-    CloudCredentialsReservation:
-      type: object
-      description: Defines object that uses this credentials.
-      properties:
-        id:
-          type: string
-          description: Id of the object which uses credentials.
-        name:
-          type: string
-          description: Name of the object which uses credentials.
-      required:
-        - id
-        - name
-    CloudCredentials:
-      type: object
-      description: Cloud credentials item.
-      properties:
-        id:
-          type: string
-          readOnly: true
-          description: Id of cloud credentials item.
-        credentials:
-          type: string
-          writeOnly: true
-          description: Actual credentials data of given cloud.
-        name:
-          type: string
-          description: Name of cloud credentials object.
-        cloud:
-          type: string
-          description: Cloud type that these credentials represent.
-        usedBy:
-          type: array
-          readOnly: true
-          items:
-            $ref: '#/components/schemas/CloudCredentialsReservation'
-      required:
-        - id
-        - name
-        - cloud
-        - credentials
     ClusterRegion:
       type: object
       description: CAST AI region used by cluster.
@@ -996,41 +1282,6 @@ components:
       required:
         - name
         - displayName
-    CastRegion:
-      type: object
-      description: CAST AI region.
-      properties:
-        name:
-          type: string
-          description: CAST AI region name, e.g. `us-west`.
-        displayName:
-          type: string
-          description: display name of the region, e.g. `US West ( California )`.
-        clouds:
-          type: array
-          description: List of available cloud providers in given CAST AI region.
-          items:
-            $ref: '#/components/schemas/Cloud'
-      required:
-        - name
-        - displayName
-        - clouds
-    Cloud:
-      type: object
-      description: Cloud Provider.
-      properties:
-        name:
-          type: string
-          description: Cloud provider name.
-      required:
-        - name
-    CloudType:
-      type: string
-      enum:
-        - gcp
-        - aws
-        - azure
-      example: "aws"
     NodeType:
       type: string
       enum:
@@ -1124,40 +1375,6 @@ components:
             $ref: '#/components/schemas/KubernetesClusterFeedbackEvent'
       required:
         - items
-    AuditLogEvent:
-      type: object
-      properties:
-        id:
-          type: string
-          description: Audit Log Event ID, generated at the time of creation.
-          readOnly: true
-          example: "9e75b56e-c1af-40d4-966f-7f48bfcc4211"
-        operation:
-          type: string
-          description: Operation.
-          example: "vm_deleted"
-        metadata:
-          type: object
-          description: Metadata about the event
-        createdAt:
-          type: string
-          format: date-time
-          description: Event creation UTC time in RFC3339 format.
-          example: 2022-10-02T15:00:00Z
-      required:
-        - id
-        - metadata
-        - operation
-        - createdAt
-    KubernetesClusterAuditLogEventsList:
-      type: object
-      properties:
-        items:
-          type: array
-          items:
-            $ref: '#/components/schemas/AuditLogEvent'
-      required:
-        - items
     ClusterHealth:
       type: object
       properties:
@@ -1216,24 +1433,6 @@ components:
         - name
         - hostIp
         - state
-    CloudCredentialsList:
-      type: object
-      properties:
-        items:
-          type: array
-          items:
-            $ref: '#/components/schemas/CloudCredentials'
-      required:
-        - items
-    CastRegionList:
-      type: object
-      properties:
-        items:
-          type: array
-          items:
-            $ref: '#/components/schemas/CastRegion'
-      required:
-        - items
     NodeList:
       type: object
       properties:
@@ -1261,124 +1460,71 @@ components:
           type: string
           maxLength: 2000
           description: Optional notes when pausing a cluster (2000 characters at most)
-    UserSession:
-      type: object
-      properties:
-        name:
-          type: string
-          description: full name of logged-in user, e.g. "John Doe". Managed by Auth0 and directly taken from login JWT claim "name".
-          example: John Doe
-    AuthTokenCreateResponse:
-      type: object
-      properties:
-        id:
-          type: string
-          description: Auth token ID, generated at the time of creation
-          readOnly: true
-        name:
-          type: string
-          description: Name of the token. Must be unique among other active tokens for the current user.
-        createdAt:
-          type: string
-          format: date-time
-          description: Auth token creation UTC time in RFC3339 format.
-          example: 2022-10-02T15:00:00Z
-          readOnly: true
-        token:
-          type: string
-          description: Generated secret for this auth token (only shown once on creation)
-          readOnly: true
-      required:
-        - id
-        - name
-        - createdAt
-        - token
-    AuthToken:
-      type: object
-      properties:
-        id:
-          type: string
-          description: Auth token ID, generated at the time of creation
-          readOnly: true
-        name:
-          type: string
-          description: Name of the token. Must be unique among other active tokens for the current user.
-        createdAt:
-          type: string
-          format: date-time
-          description: Auth token creation UTC time in RFC3339 format.
-          example: 2022-10-02T15:00:00Z
-          readOnly: true
-      required:
-        - id
-        - name
-        - createdAt
-    AuthTokenList:
+    KubernetesClusterAuditLogEventsList:
       type: object
       properties:
         items:
           type: array
           items:
-            $ref: '#/components/schemas/AuthToken'
+            $ref: '#/components/schemas/AuditLogEvent'
       required:
         - items
-    GSLBRequest:
+    AuditLogEvent:
       type: object
       properties:
-        clusterId:
+        id:
           type: string
-          description: ID of the cluster.
-          example: 06a6fe03-fc9c-4d99-a0a4-373e87efe4b8
-        serviceName:
+          description: Audit Log Event ID, generated at the time of creation.
+          readOnly: true
+          example: "9e75b56e-c1af-40d4-966f-7f48bfcc4211"
+        operation:
           type: string
-          description: Name of the exposed LoadBalancer type service.
-          example: nginx
-        serviceNamespace:
+          description: Operation.
+          example: "vm_deleted"
+        metadata:
+          type: object
+          description: Metadata about the event
+        createdAt:
           type: string
-          description: Namespace where the exposed LoadBalancer type service resides.
-          example: default
-        hosts:
+          format: date-time
+          description: Event creation UTC time in RFC3339 format.
+          example: 2022-10-02T15:00:00Z
+      required:
+        - id
+        - metadata
+        - operation
+        - createdAt
+    KubernetesIngressController:
+      type: object
+      properties:
+        loadBalancers:
+          type: array
+          description: Set of load balancers forwarding requests to the ingress.
+          items:
+            $ref: '#/components/schemas/IngressLoadBalancer'
+        ports:
+          description: Available ingress controller ports.
           type: array
           items:
-            type: string
-            description: Hostname or IP address of a single load balancer.
-          description: Array of all cloud load balancer hostnames and IP addresses which should be globally load balanced.
-          example:
-            - 80.1.1.23
-            - cloud.loadbalancer.com
+            type: integer
       required:
-        - clusterId
-        - serviceName
-        - serviceNamespace
-        - hosts
-    GSLBResponse:
+        - loadBalancers
+        - ports
+    IngressLoadBalancer:
       type: object
+      description: Ingress load balancer.
       properties:
-        dns:
+        type:
+          description: Type/origin of load balancer.
+          example: "gslb"
           type: string
-          description: Hostname of the GSLB.
-          example: nginx.default.06a6fe03-fc9c-4d99-a0a4-373e87efe4b8.onmulti.cloud
+        address:
+          description: Load balancer address.
+          example: "1849464756.demo-cluster-7a1264f9.local.onmulti.cloud"
+          type: string
       required:
-        - dns
-    GSLBDeleteRequest:
-      type: object
-      properties:
-        clusterId:
-          type: string
-          description: ID of the cluster.
-          example: 06a6fe03-fc9c-4d99-a0a4-373e87efe4b8
-        serviceName:
-          type: string
-          description: Name of the exposed LoadBalancer type service.
-          example: nginx
-        serviceNamespace:
-          type: string
-          description: Namespace where the exposed LoadBalancer type service resides.
-          example: default
-      required:
-        - clusterId
-        - serviceName
-        - serviceNamespace
+        - type
+        - address
     PoliciesConfig:
       type: object
       properties:
@@ -1387,17 +1533,57 @@ components:
           description: Enable / disable all policies.
         unschedulablePods:
           $ref: '#/components/schemas/UnschedulablePodsPolicy'
-        cpuWatermarks:
-          $ref: '#/components/schemas/CpuWatermarkPoliciesList'
+        cpuUtilization:
+          $ref: '#/components/schemas/CpuUtilizationPolicies'
+        clusterLimits:
+          $ref: '#/components/schemas/ClusterLimitsPolicy'
       required:
         - enabled
-        - cpuWatermarks
+        - cpuUtilization
         - unschedulablePods
-    CpuHighWatermarkPolicy:
+        - clusterLimits
+    ClusterLimitsPolicy:
+      type: object
+      description: Defines minimum and maximum amount of vCPUs for cluster's worker nodes.
+      properties:
+        enabled:
+          description: Enable/disable cluster size limits policy.
+          type: boolean
+          default: false
+        cpu:
+          $ref: '#/components/schemas/ClusterLimitsCpu'
+      required:
+        - enabled
+        - cpu
+    ClusterLimitsCpu:
+      type: object
+      description: Defines the minimum and maximum amount of vCPUs for cluster's worker nodes.
+      properties:
+        minCores:
+          description: Defines the minimum allowed amount of vCPUs in the whole cluster.
+          type: integer
+          default: 1
+          format: int64
+          minimum: 1
+          maximum: 20
+          example: 1
+        maxCores:
+          description: Defines the maximum allowed amount of vCPUs in the whole cluster.
+          type: integer
+          default: 20
+          format: int64
+          minimum: 2
+          maximum: 20
+          example: 20
+      required:
+        - enabled
+        - minCores
+        - maxCores
+    ScaleUpThreshold:
       type: object
       description: CPU high watermark policy defines the higher bound of average cluster CPU load in percentages over the duration in seconds.
       properties:
-        avgCpuLoadMoreThan:
+        avgCpuLoadPercentageMoreThan:
           description: Average cluster's worker CPU load in percentages.
           type: integer
           format: int64
@@ -1405,19 +1591,19 @@ components:
           maximum: 100
           exclusiveMaximum: true
           example: 20
-        durationSeconds:
+        evaluationPeriodSeconds:
           description: Duration in seconds.
           type: integer
           format: int64
           example: 120
       required:
-        - avgCpuLoadMoreThan
-        - durationSeconds
-    CpuLowWatermarkPolicy:
+        - avgCpuLoadPercentageMoreThan
+        - evaluationPeriodSeconds
+    ScaleDownThreshold:
       type: object
       description: CPU low watermark policy defines the lower bound of average cluster worker nodes CPU load in percentages over the duration in seconds.
       properties:
-        avgCpuLoadLessThan:
+        avgCpuLoadPercentageLessThan:
           description: Average cluster's worker CPU load in percentages.
           type: integer
           format: int64
@@ -1426,30 +1612,30 @@ components:
           exclusiveMaximum: true
           default: false
           example: 20
-        durationSeconds:
+        evaluationPeriodSeconds:
           description: Duration in seconds.
           type: integer
           format: int64
           minimum: 0
           example: 120
       required:
-        - avgCpuLoadLessThan
-        - durationSeconds
-    CpuWatermarkPoliciesList:
+        - avgCpuLoadPercentageLessThan
+        - evaluationPeriodSeconds
+    CpuUtilizationPolicies:
       type: object
       description: Policy defining CPU high and low watermarks used by autoscaler to optimize cluster resources utilization.
       properties:
         enabled:
-          description: Enable/disable CPU watermark policies.
+          description: Enable/disable CPU utilization policies.
           type: boolean
           default: false
-        highCPUWatermark:
-          $ref: '#/components/schemas/CpuHighWatermarkPolicy'
-        lowCPUWatermark:
-          $ref: '#/components/schemas/CpuLowWatermarkPolicy'
+        scaleUpThreshold:
+          $ref: '#/components/schemas/ScaleUpThreshold'
+        scaleDownThreshold:
+          $ref: '#/components/schemas/ScaleDownThreshold'
       required:
-        - highCPUWatermark
-        - lowCPUWatermark
+        - highCpuUtilization
+        - lowCpuUtilization
         - enabled
     UnschedulablePodsPolicy:
       type: object
@@ -1459,7 +1645,7 @@ components:
           description: Enable/disable unschedulable pods detection policy.
           type: boolean
           default: false
-        durationSeconds:
+        evaluationPeriodSeconds:
           description: Duration in seconds for how long any of the pods should remain in 'Unschedulable' state to trigger upscaling action.
           type: integer
           format: int64
@@ -1468,4 +1654,65 @@ components:
           example: 120
       required:
         - enabled
-        - durationSeconds
+        - evaluationPeriodSeconds
+    CastRegion:
+      type: object
+      description: CAST AI region.
+      properties:
+        name:
+          type: string
+          description: CAST AI region name, e.g. `us-west`.
+        displayName:
+          type: string
+          description: display name of the region, e.g. `US West ( California )`.
+        clouds:
+          type: array
+          description: List of available cloud providers in given CAST AI region.
+          items:
+            $ref: '#/components/schemas/Cloud'
+      required:
+        - name
+        - displayName
+        - clouds
+    CastRegionList:
+      type: object
+      properties:
+        items:
+          type: array
+          items:
+            $ref: '#/components/schemas/CastRegion'
+      required:
+        - items
+    Cloud:
+      type: object
+      description: Cloud Provider.
+      properties:
+        name:
+          type: string
+          description: Cloud provider name.
+      required:
+        - name
+    FirewallRequest:
+      type: object
+      properties:
+        clusterId:
+          type: string
+        cidr:
+          type: string
+          description: Firewall IP Cidr.
+          example: 71.61.81.11/32
+      required:
+        - clusterId
+        - cidr
+    FirewallDeleteRequest:
+      type: object
+      properties:
+        clusterId:
+          type: string
+        cidr:
+          type: string
+          description: Firewall IP Cidr.
+          example: 71.61.81.11/32
+      required:
+        - clusterId
+        - cidr

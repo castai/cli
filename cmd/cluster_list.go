@@ -17,12 +17,12 @@ limitations under the License.
 package cmd
 
 import (
-	"log"
 	"net/http"
 	"os"
 	"strings"
 
 	"github.com/jedib0t/go-pretty/v6/table"
+	log "github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
 
 	"github.com/castai/cast-cli/internal/client"

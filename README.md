@@ -42,7 +42,7 @@ cast cluster list
 ```
 
 Get kubeconfig. By default this command merges received kubeconfig with local config if found at $HOME/.cube/config
-and updates the default context. Config could be written to different location by specifying `--path` flag.
+and updates the default context.
 
 ```
 // Get kubeconfig.
@@ -51,3 +51,11 @@ cast cluster get-kubeconfig 19fb46b8-6cb3-4d9b-88af-b70050bde6f2
 // Check contexts. New context should be visible.
 kubectl config get-contexts
 ```
+
+### Environment variables
+
+It's possible to override some global flags by setting environment variables.
+
+* CASTAI_API_ACCESS_TOKEN
+* CASTAI_DEBUG
+* CASTAI_API_URL

@@ -22,8 +22,52 @@ type AddonsConfig struct {
 	// Grafana -- UI for Prometheus
 	Grafana *GrafanaConfig `json:"grafana,omitempty"`
 
+	// KEDA (keda.sh) an event-based k8s resources autoscaler
+	Keda *KedaConfig `json:"keda,omitempty"`
+
 	// Nginx-based ingress controller
 	NginxIngress *NginxIngressConfig `json:"nginxIngress,omitempty"`
+}
+
+// AuditEvent defines model for AuditEvent.
+type AuditEvent struct {
+	Event *interface{} `json:"event,omitempty"`
+
+	// type of the performed operation
+	EventType   string         `json:"eventType"`
+	InitiatedBy AuditInitiator `json:"initiatedBy"`
+
+	// Event creation UTC time in RFC3339 format.
+	Time time.Time `json:"time"`
+}
+
+// AuditEventClusterCreated defines model for AuditEventClusterCreated.
+type AuditEventClusterCreated struct {
+
+	// snapshot of created cluster
+	Cluster *map[string]interface{} `json:"cluster,omitempty"`
+}
+
+// AuditEventClusterDeleted defines model for AuditEventClusterDeleted.
+type AuditEventClusterDeleted struct {
+
+	// snapshot of deleted cluster
+	Cluster *map[string]interface{} `json:"cluster,omitempty"`
+}
+
+// AuditEventList defines model for AuditEventList.
+type AuditEventList struct {
+	Items []AuditEvent `json:"items"`
+}
+
+// AuditInitiator defines model for AuditInitiator.
+type AuditInitiator struct {
+
+	// user or system ID.
+	Id string `json:"id"`
+
+	// user or system name.
+	Name *string `json:"name,omitempty"`
 }
 
 // AuditLogEvent defines model for AuditLogEvent.
@@ -182,6 +226,26 @@ type ClusterHealthNodes struct {
 	Msg   string              `json:"msg"`
 }
 
+// ClusterLimitsCpu defines model for ClusterLimitsCpu.
+type ClusterLimitsCpu struct {
+
+	// Defines the maximum allowed amount of vCPUs in the whole cluster.
+	MaxCores int64 `json:"maxCores"`
+
+	// Defines the minimum allowed amount of vCPUs in the whole cluster.
+	MinCores int64 `json:"minCores"`
+}
+
+// ClusterLimitsPolicy defines model for ClusterLimitsPolicy.
+type ClusterLimitsPolicy struct {
+
+	// Defines the minimum and maximum amount of vCPUs for cluster's worker nodes.
+	Cpu ClusterLimitsCpu `json:"cpu"`
+
+	// Enable/disable cluster size limits policy.
+	Enabled bool `json:"enabled"`
+}
+
 // ClusterMetrics defines model for ClusterMetrics.
 type ClusterMetrics struct {
 
@@ -218,37 +282,17 @@ type ClusterRegion struct {
 	Name string `json:"name"`
 }
 
-// CpuHighWatermarkPolicy defines model for CpuHighWatermarkPolicy.
-type CpuHighWatermarkPolicy struct {
+// CpuUtilizationPolicies defines model for CpuUtilizationPolicies.
+type CpuUtilizationPolicies struct {
 
-	// Average cluster's worker CPU load in percentages.
-	AvgCpuLoadMoreThan int64 `json:"avgCpuLoadMoreThan"`
-
-	// Duration in seconds.
-	DurationSeconds int64 `json:"durationSeconds"`
-}
-
-// CpuLowWatermarkPolicy defines model for CpuLowWatermarkPolicy.
-type CpuLowWatermarkPolicy struct {
-
-	// Average cluster's worker CPU load in percentages.
-	AvgCpuLoadLessThan int64 `json:"avgCpuLoadLessThan"`
-
-	// Duration in seconds.
-	DurationSeconds int64 `json:"durationSeconds"`
-}
-
-// CpuWatermarkPoliciesList defines model for CpuWatermarkPoliciesList.
-type CpuWatermarkPoliciesList struct {
-
-	// Enable/disable CPU watermark policies.
+	// Enable/disable CPU utilization policies.
 	Enabled bool `json:"enabled"`
 
-	// CPU high watermark policy defines the higher bound of average cluster CPU load in percentages over the duration in seconds.
-	HighCPUWatermark CpuHighWatermarkPolicy `json:"highCPUWatermark"`
-
 	// CPU low watermark policy defines the lower bound of average cluster worker nodes CPU load in percentages over the duration in seconds.
-	LowCPUWatermark CpuLowWatermarkPolicy `json:"lowCPUWatermark"`
+	ScaleDownThreshold *ScaleDownThreshold `json:"scaleDownThreshold,omitempty"`
+
+	// CPU high watermark policy defines the higher bound of average cluster CPU load in percentages over the duration in seconds.
+	ScaleUpThreshold *ScaleUpThreshold `json:"scaleUpThreshold,omitempty"`
 }
 
 // CreateCluster defines model for CreateCluster.
@@ -303,6 +347,22 @@ type ErrorResponse struct {
 	Error string `json:"error"`
 }
 
+// FirewallDeleteRequest defines model for FirewallDeleteRequest.
+type FirewallDeleteRequest struct {
+
+	// Firewall IP Cidr.
+	Cidr      string `json:"cidr"`
+	ClusterId string `json:"clusterId"`
+}
+
+// FirewallRequest defines model for FirewallRequest.
+type FirewallRequest struct {
+
+	// Firewall IP Cidr.
+	Cidr      string `json:"cidr"`
+	ClusterId string `json:"clusterId"`
+}
+
 // GSLBDeleteRequest defines model for GSLBDeleteRequest.
 type GSLBDeleteRequest struct {
 
@@ -341,6 +401,23 @@ type GSLBResponse struct {
 
 // GrafanaConfig defines model for GrafanaConfig.
 type GrafanaConfig struct {
+
+	// Whether this addon is enabled
+	Enabled bool `json:"enabled"`
+}
+
+// IngressLoadBalancer defines model for IngressLoadBalancer.
+type IngressLoadBalancer struct {
+
+	// Load balancer address.
+	Address string `json:"address"`
+
+	// Type/origin of load balancer.
+	Type string `json:"type"`
+}
+
+// KedaConfig defines model for KedaConfig.
+type KedaConfig struct {
 
 	// Whether this addon is enabled
 	Enabled bool `json:"enabled"`
@@ -402,6 +479,16 @@ type KubernetesClusterFeedbackEventsList struct {
 // KubernetesClusterList defines model for KubernetesClusterList.
 type KubernetesClusterList struct {
 	Items []KubernetesCluster `json:"items"`
+}
+
+// KubernetesIngressController defines model for KubernetesIngressController.
+type KubernetesIngressController struct {
+
+	// Set of load balancers forwarding requests to the ingress.
+	LoadBalancers []IngressLoadBalancer `json:"loadBalancers"`
+
+	// Available ingress controller ports.
+	Ports []int `json:"ports"`
 }
 
 // NginxIngressConfig defines model for NginxIngressConfig.
@@ -481,8 +568,11 @@ type PauseCluster struct {
 // PoliciesConfig defines model for PoliciesConfig.
 type PoliciesConfig struct {
 
+	// Defines minimum and maximum amount of vCPUs for cluster's worker nodes.
+	ClusterLimits ClusterLimitsPolicy `json:"clusterLimits"`
+
 	// Policy defining CPU high and low watermarks used by autoscaler to optimize cluster resources utilization.
-	CpuWatermarks CpuWatermarkPoliciesList `json:"cpuWatermarks"`
+	CpuUtilization CpuUtilizationPolicies `json:"cpuUtilization"`
 
 	// Enable / disable all policies.
 	Enabled bool `json:"enabled"`
@@ -491,14 +581,34 @@ type PoliciesConfig struct {
 	UnschedulablePods UnschedulablePodsPolicy `json:"unschedulablePods"`
 }
 
+// ScaleDownThreshold defines model for ScaleDownThreshold.
+type ScaleDownThreshold struct {
+
+	// Average cluster's worker CPU load in percentages.
+	AvgCpuLoadPercentageLessThan int64 `json:"avgCpuLoadPercentageLessThan"`
+
+	// Duration in seconds.
+	EvaluationPeriodSeconds int64 `json:"evaluationPeriodSeconds"`
+}
+
+// ScaleUpThreshold defines model for ScaleUpThreshold.
+type ScaleUpThreshold struct {
+
+	// Average cluster's worker CPU load in percentages.
+	AvgCpuLoadPercentageMoreThan int64 `json:"avgCpuLoadPercentageMoreThan"`
+
+	// Duration in seconds.
+	EvaluationPeriodSeconds int64 `json:"evaluationPeriodSeconds"`
+}
+
 // UnschedulablePodsPolicy defines model for UnschedulablePodsPolicy.
 type UnschedulablePodsPolicy struct {
 
-	// Duration in seconds for how long any of the pods should remain in 'Unschedulable' state to trigger upscaling action.
-	DurationSeconds int64 `json:"durationSeconds"`
-
 	// Enable/disable unschedulable pods detection policy.
 	Enabled bool `json:"enabled"`
+
+	// Duration in seconds for how long any of the pods should remain in 'Unschedulable' state to trigger upscaling action.
+	EvaluationPeriodSeconds int64 `json:"evaluationPeriodSeconds"`
 }
 
 // UserSession defines model for UserSession.
@@ -519,9 +629,6 @@ const (
 	MetricsType_node_memory_usage  MetricsType = "node_memory_usage"
 )
 
-// Auth0returnTo defines model for auth0returnTo.
-type Auth0returnTo string
-
 // AuthTokenId defines model for authTokenId.
 type AuthTokenId string
 
@@ -541,7 +648,10 @@ type LoginParams struct {
 	ReturnTo *ReturnTo `json:"returnTo,omitempty"`
 
 	// optional override for URL to redirect browser from auth0 back to backend, for situations where backend is being reached via proxy
-	Auth0returnTo *Auth0returnTo `json:"auth0returnTo,omitempty"`
+	Auth0returnTo *string `json:"auth0returnTo,omitempty"`
+
+	// optional hint for which screen to use when redirecting to authentication pages.
+	ScreenHint *string `json:"screenHint,omitempty"`
 }
 
 // LogoutParams defines parameters for Logout.
@@ -556,6 +666,12 @@ type CreateAuthTokenJSONBody AuthToken
 
 // CreateCloudCredentialsJSONBody defines parameters for CreateCloudCredentials.
 type CreateCloudCredentialsJSONBody CloudCredentials
+
+// DeleteFirewallJSONBody defines parameters for DeleteFirewall.
+type DeleteFirewallJSONBody FirewallDeleteRequest
+
+// CreateOrUpdateFirewallJSONBody defines parameters for CreateOrUpdateFirewall.
+type CreateOrUpdateFirewallJSONBody FirewallRequest
 
 // DeleteGslbJSONBody defines parameters for DeleteGslb.
 type DeleteGslbJSONBody GSLBDeleteRequest
@@ -599,6 +715,12 @@ type CreateAuthTokenJSONRequestBody CreateAuthTokenJSONBody
 
 // CreateCloudCredentialsRequestBody defines body for CreateCloudCredentials for application/json ContentType.
 type CreateCloudCredentialsJSONRequestBody CreateCloudCredentialsJSONBody
+
+// DeleteFirewallRequestBody defines body for DeleteFirewall for application/json ContentType.
+type DeleteFirewallJSONRequestBody DeleteFirewallJSONBody
+
+// CreateOrUpdateFirewallRequestBody defines body for CreateOrUpdateFirewall for application/json ContentType.
+type CreateOrUpdateFirewallJSONRequestBody CreateOrUpdateFirewallJSONBody
 
 // DeleteGslbRequestBody defines body for DeleteGslb for application/json ContentType.
 type DeleteGslbJSONRequestBody DeleteGslbJSONBody
