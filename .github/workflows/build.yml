@@ -32,4 +32,4 @@ jobs:
       - name: Test
         run: ./test.sh
         env:
-          CI_CAST_API_ACCESS_TOKEN: ${{ .Env.CI_CAST_API_ACCESS_TOKEN }}
+          CI_CAST_API_ACCESS_TOKEN: {{ .secrets.CI_CAST_API_ACCESS_TOKEN }}
