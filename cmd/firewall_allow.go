@@ -32,18 +32,18 @@ var (
 )
 
 var firewallAddCmd = &cobra.Command{
-	Use:   "add <cluster_id>",
-	Short: "Add firewall rule to access API Server",
-	Long:  `Example: cast firewall add <cluster_id> --cidr 0.0.0.0/32`,
+	Use:   "allow <cluster_id>",
+	Short: "Allow firewall rule to access API Server",
+	Long:  `Example: cast firewall allow <cluster_id> --cidr 0.0.0.0/32`,
 	Run: func(cmd *cobra.Command, args []string) {
 		clusterID := requireClusterID(cmd, args)
-		if err := handleFirewallAdd(clusterID.String(), flagCidr); err != nil {
+		if err := handleFirewallAllow(clusterID.String(), flagCidr); err != nil {
 			log.Fatal(err)
 		}
 	},
 }
 
-func handleFirewallAdd(clusterID, cidr string) error {
+func handleFirewallAllow(clusterID, cidr string) error {
 	apiClient, err := client.New()
 	if err != nil {
 		return err
@@ -64,7 +64,7 @@ func handleFirewallAdd(clusterID, cidr string) error {
 		ClusterId: clusterID,
 	}
 	resp, err := apiClient.CreateOrUpdateFirewallWithResponse(ctx, body)
-	if err := client.CheckResponse(resp, err, http.StatusNoContent); err != nil {
+	if err := client.CheckResponse(resp, err, http.StatusOK); err != nil {
 		return err
 	}
 	return nil

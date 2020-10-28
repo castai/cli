@@ -60,7 +60,7 @@ func handleFirewallDelete(clusterID, cidr string) error {
 		ClusterId: clusterID,
 	}
 	resp, err := apiClient.DeleteFirewallWithResponse(ctx, body)
-	if err := client.CheckResponse(resp, err, http.StatusNoContent); err != nil {
+	if err := client.CheckResponse(resp, err, http.StatusOK); err != nil {
 		return err
 	}
 	return nil
