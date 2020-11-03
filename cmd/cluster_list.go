@@ -30,6 +30,10 @@ import (
 	"github.com/castai/cast-cli/pkg/sdk"
 )
 
+var (
+	flagIncludeDeleted bool
+)
+
 var clusterListCmd = &cobra.Command{
 	Use:   "list",
 	Short: "List all clusters",
@@ -42,6 +46,7 @@ var clusterListCmd = &cobra.Command{
 
 func init() {
 	clusterCmd.AddCommand(clusterListCmd)
+	clusterListCmd.PersistentFlags().BoolVar(&flagIncludeDeleted, "include-deleted", false, "Show deleted clusters too.")
 	command.AddJSONOutput(clusterListCmd)
 }
 
@@ -59,12 +64,23 @@ func handleListClusters() error {
 		return err
 	}
 
+	res := resp.JSON200.Items
+	if !flagIncludeDeleted {
+		// TODO: Ideally API should all to pass query params to include deleted clusters in response.
+		res = []sdk.KubernetesCluster{}
+		for _, item := range resp.JSON200.Items {
+			if item.Status != "deleted" {
+				res = append(res, item)
+			}
+		}
+	}
+
 	if command.OutputJSON() {
-		command.PrintOutput(resp.JSON200.Items)
+		command.PrintOutput(res)
 		return nil
 	}
 
-	printClustersListTable(resp.JSON200.Items)
+	printClustersListTable(res)
 	return nil
 }
 
