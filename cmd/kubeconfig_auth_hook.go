@@ -27,7 +27,7 @@ import (
 	"github.com/spf13/cobra"
 	"k8s.io/client-go/tools/clientcmd/api"
 
-	"github.com/castai/cast-cli/internal/client"
+	"github.com/castai/cast-cli/pkg/client"
 	"github.com/castai/cast-cli/pkg/sdk"
 )
 

@@ -29,7 +29,7 @@ import (
 
 	"k8s.io/client-go/tools/clientcmd"
 
-	"github.com/castai/cast-cli/internal/client"
+	"github.com/castai/cast-cli/pkg/client"
 	"github.com/castai/cast-cli/pkg/sdk"
 )
 

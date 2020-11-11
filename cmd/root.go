@@ -19,7 +19,7 @@ import (
 	log "github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
 
-	"github.com/castai/cast-cli/internal/config"
+	"github.com/castai/cast-cli/pkg/config"
 )
 
 var rootCmd = &cobra.Command{

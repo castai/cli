@@ -12,7 +12,7 @@ import (
 
 	log "github.com/sirupsen/logrus"
 
-	"github.com/castai/cast-cli/internal/config"
+	"github.com/castai/cast-cli/pkg/config"
 	"github.com/castai/cast-cli/pkg/sdk"
 )
 

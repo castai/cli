@@ -24,8 +24,8 @@ import (
 	log "github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
 
-	"github.com/castai/cast-cli/internal/client"
-	"github.com/castai/cast-cli/internal/config"
+	"github.com/castai/cast-cli/pkg/client"
+	"github.com/castai/cast-cli/pkg/config"
 )
 
 // loginCmd represents the login command
