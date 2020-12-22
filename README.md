@@ -1,4 +1,6 @@
-# cast-cli
+# cast-cli (Experimental)
+
+NOTE: CAST AI CLI is in it's early stage. Feel free to contribute, ask questions, give feedback.
 
 CAST AI Command Line Interface
 ```
