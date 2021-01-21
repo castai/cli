@@ -35,16 +35,17 @@ var loginCmd = &cobra.Command{
 	Long:  ``,
 	Run: func(cmd *cobra.Command, args []string) {
 		token := cmd.Flag("token").Value.String()
-		if err := handleLogin(token); err != nil {
+		apiUrl := cmd.Flag("api-url").Value.String()
+		if err := handleLogin(token, apiUrl); err != nil {
 			log.Fatalf("🤭 login failed: %v\n", err)
 			return
 		}
 	},
 }
 
-func handleLogin(token string) error {
+func handleLogin(token string, apiUrl string) error {
 	// Store valid access token to file.
-	if err := config.StoreCredentials(token); err != nil {
+	if err := config.StoreCredentials(token, apiUrl); err != nil {
 		return err
 	}
 

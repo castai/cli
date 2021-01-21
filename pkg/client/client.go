@@ -43,7 +43,15 @@ func New() (*sdk.ClientWithResponses, error) {
 		return nil
 	})
 
-	apiClient, err := sdk.NewClientWithResponses(config.ApiURL(), httpClientOption, apiTokenOption)
+	defaultApiUrl := config.ApiURL()
+	var apiUrl string
+	if apiToken.ApiUrl != "" {
+		apiUrl = apiToken.ApiUrl
+	} else {
+		apiUrl = defaultApiUrl
+	}
+
+	apiClient, err := sdk.NewClientWithResponses(apiUrl, httpClientOption, apiTokenOption)
 	if err != nil {
 		return nil, err
 	}
