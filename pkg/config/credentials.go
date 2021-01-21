@@ -15,11 +15,12 @@ const (
 )
 
 type Credentials struct {
+	ApiUrl      string    `json:"api_url"`
 	AccessToken string    `json:"access_token"`
 	CreatedAt   time.Time `json:"created_at"`
 }
 
-func StoreCredentials(token string) error {
+func StoreCredentials(token string, apiUrl string) error {
 	basePath, err := getBaseDirPath()
 	if err != nil {
 		return err
@@ -27,7 +28,7 @@ func StoreCredentials(token string) error {
 	if err := ensureDir(basePath); err != nil {
 		return err
 	}
-	if err := createCredentials(basePath, token); err != nil {
+	if err := createCredentials(basePath, token, apiUrl); err != nil {
 		return err
 	}
 	return nil
@@ -65,10 +66,11 @@ func GetCredentials() (Credentials, error) {
 	return tkn, nil
 }
 
-func createCredentials(basePath, token string) error {
+func createCredentials(basePath, token string, apiUrl string) error {
 	tkn := Credentials{
 		AccessToken: token,
 		CreatedAt:   time.Now(),
+		ApiUrl: apiUrl,
 	}
 	tknBytes, err := json.Marshal(tkn)
 	if err != nil {
