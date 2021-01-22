@@ -1,172 +1,178 @@
 package client
 
 import (
-	"bytes"
 	"context"
 	"fmt"
-	"io"
-	"io/ioutil"
 	"net/http"
 	"strings"
 	"time"
 
-	log "github.com/sirupsen/logrus"
+	"github.com/sirupsen/logrus"
 
 	"github.com/castai/cast-cli/pkg/config"
 	"github.com/castai/cast-cli/pkg/sdk"
 )
 
 const (
-	globalTimeout = 1 * time.Minute
+	defaultTimeout = 1 * time.Minute
 )
 
-func New() (*sdk.ClientWithResponses, error) {
-	apiToken, err := config.GetCredentials()
-	if err != nil {
-		return nil, err
-	}
+type Interface interface {
+	CreateNewCluster(ctx context.Context, req sdk.CreateNewClusterJSONRequestBody) (*sdk.KubernetesCluster, error)
+	GetCluster(ctx context.Context, req sdk.ClusterId) (*sdk.KubernetesCluster, error)
+	DeleteCluster(ctx context.Context, req sdk.ClusterId) error
+	ListRegions(ctx context.Context) ([]sdk.CastRegion, error)
+	ListCloudCredentials(ctx context.Context) ([]sdk.CloudCredentials, error)
+	GetClusterKubeconfig(ctx context.Context, req sdk.ClusterId) ([]byte, error)
+	ListKubernetesClusters(ctx context.Context, req *sdk.ListKubernetesClustersParams) ([]sdk.KubernetesCluster, error)
+	ListAuthTokens(ctx context.Context) ([]sdk.AuthToken, error)
+	FeedbackEvents(ctx context.Context, req sdk.ClusterId) ([]sdk.KubernetesClusterFeedbackEvent, error)
+}
+
+func New(cfg *config.Config, log logrus.FieldLogger) (Interface, error) {
+	accessToken := cfg.AccessToken
+	apiURL := fmt.Sprintf("https://%s/v1", cfg.Hostname)
 
 	tr := http.DefaultTransport
-	if config.Debug() {
-		tr = &loggingTransport{}
+	if cfg.Debug {
+		tr = &loggingTransport{log: log}
 	}
 	httpClientOption := func(client *sdk.Client) error {
 		client.Client = &http.Client{
 			Transport: tr,
-			Timeout:   globalTimeout,
+			Timeout:   defaultTimeout,
 		}
 		return nil
 	}
-
 	apiTokenOption := sdk.WithRequestEditorFn(func(ctx context.Context, req *http.Request) error {
-		req.Header.Set("X-API-Key", apiToken.AccessToken)
+		req.Header.Set("X-API-Key", accessToken)
 		return nil
 	})
-
-	defaultApiUrl := config.ApiURL()
-	var apiUrl string
-	if apiToken.ApiUrl != "" {
-		apiUrl = apiToken.ApiUrl
-	} else {
-		apiUrl = defaultApiUrl
-	}
-
-	apiClient, err := sdk.NewClientWithResponses(apiUrl, httpClientOption, apiTokenOption)
+	apiClient, err := sdk.NewClientWithResponses(apiURL, httpClientOption, apiTokenOption)
 	if err != nil {
 		return nil, err
 	}
 
-	return apiClient, nil
+	return &client{
+		apiURL: apiURL,
+		api:    apiClient,
+	}, nil
 }
 
-func DefaultContext() (context.Context, func()) {
-	ctx, cancel := context.WithTimeout(context.Background(), globalTimeout)
-	return ctx, cancel
+type client struct {
+	apiURL string
+	api    sdk.ClientWithResponsesInterface
 }
 
-func CheckResponse(response sdk.Response, err error, expectedStatus int) error {
-	return checkResponse(response, err, expectedStatus)
+func (c *client) GetCluster(ctx context.Context, req sdk.ClusterId) (*sdk.KubernetesCluster, error) {
+	resp, err := c.api.GetClusterWithResponse(ctx, req)
+	if err != nil {
+		return nil, err
+	}
+	if err := c.checkResponse(resp, err, http.StatusOK); err != nil {
+		return nil, err
+	}
+	return resp.JSON200, nil
 }
-func checkResponse(response sdk.Response, err error, expectedStatus int) error {
+
+func (c *client) DeleteCluster(ctx context.Context, req sdk.ClusterId) error {
+	resp, err := c.api.DeleteClusterWithResponse(ctx, req)
 	if err != nil {
 		return err
 	}
-
-	if response.StatusCode() != expectedStatus {
-		return fmt.Errorf("expected status code %d, received: status=%d body=%s", expectedStatus, response.StatusCode(), string(response.GetBody()))
+	if err := c.checkResponse(resp, err, http.StatusNoContent); err != nil {
+		return err
 	}
-
 	return nil
 }
 
-type loggingTransport struct {
-}
-
-// Executes HTTP request with request/response logging.
-func (t *loggingTransport) RoundTrip(req *http.Request) (*http.Response, error) {
-	// before
-	startTime := time.Now()
-	requestBody := readBody(req.Body)
-	req.Body = ioutil.NopCloser(bytes.NewBuffer(requestBody))
-
-	fields := log.Fields{
-		"method": req.Method,
-		"url":    req.URL,
-		"body":   redactSensitiveRequestBody(req, string(requestBody)),
-	}
-	log.WithFields(fields).Debugf("request")
-
-	// real request happens here
-	resp, err := http.DefaultTransport.RoundTrip(req)
+func (c *client) FeedbackEvents(ctx context.Context, req sdk.ClusterId) ([]sdk.KubernetesClusterFeedbackEvent, error) {
+	resp, err := c.api.GetClusterFeedbackEventsWithResponse(ctx, req)
 	if err != nil {
-		return resp, err
+		return nil, err
 	}
-
-	// after
-	duration := time.Since(startTime)
-	responseBody := readBody(resp.Body)
-	resp.Body = ioutil.NopCloser(bytes.NewBuffer(responseBody))
-
-	fields = log.Fields{
-		"method": resp.Request.Method,
-		"url":    resp.Request.URL,
-		"code":   resp.StatusCode,
-		// We want to see that request-ID
-		"headers": resp.Header,
-		"time":    duration.Seconds(),
-		"body":    redactSensitiveResponseBody(resp, string(responseBody)),
+	if err := c.checkResponse(resp, err, http.StatusOK); err != nil {
+		return nil, err
 	}
-
-	log.WithFields(fields).Debugf("response")
-
-	return resp, err
+	return resp.JSON200.Items, nil
 }
 
-func redactSensitiveRequestBody(req *http.Request, requestBody string) string {
-	requestsToRedact := []func(*http.Request) bool{
-		func(req *http.Request) bool {
-			return req.Method == http.MethodPost && strings.Contains(req.URL.Path, "/credentials")
-		},
+func (c *client) CreateNewCluster(ctx context.Context, body sdk.CreateNewClusterJSONRequestBody) (*sdk.KubernetesCluster, error) {
+	resp, err := c.api.CreateNewClusterWithResponse(ctx, body)
+	if err != nil {
+		return nil, err
 	}
+	if err := c.checkResponse(resp, err, http.StatusCreated); err != nil {
+		return nil, err
+	}
+	return resp.JSON201, nil
+}
 
-	for _, shouldRedact := range requestsToRedact {
-		if shouldRedact(req) {
-			return redact(requestBody)
+func (c *client) ListRegions(ctx context.Context) ([]sdk.CastRegion, error) {
+	resp, err := c.api.ListRegionsWithResponse(ctx)
+	if err != nil {
+		return nil, err
+	}
+	if err := c.checkResponse(resp, err, http.StatusOK); err != nil {
+		return nil, err
+	}
+	return resp.JSON200.Items, nil
+}
+
+func (c *client) ListCloudCredentials(ctx context.Context) ([]sdk.CloudCredentials, error) {
+	resp, err := c.api.ListCloudCredentialsWithResponse(ctx)
+	if err != nil {
+		return nil, err
+	}
+	if err := c.checkResponse(resp, err, http.StatusOK); err != nil {
+		return nil, err
+	}
+	return resp.JSON200.Items, nil
+}
+
+func (c *client) GetClusterKubeconfig(ctx context.Context, req sdk.ClusterId) ([]byte, error) {
+	resp, err := c.api.GetClusterKubeconfigWithResponse(ctx, req)
+	if err != nil {
+		return nil, err
+	}
+	if err := c.checkResponse(resp, err, http.StatusOK); err != nil {
+		return nil, err
+	}
+	return resp.Body, nil
+}
+
+func (c *client) ListKubernetesClusters(ctx context.Context, req *sdk.ListKubernetesClustersParams) ([]sdk.KubernetesCluster, error) {
+	resp, err := c.api.ListKubernetesClustersWithResponse(ctx, req)
+	if err != nil {
+		return nil, err
+	}
+	if err := c.checkResponse(resp, err, http.StatusOK); err != nil {
+		return nil, err
+	}
+	return resp.JSON200.Items, nil
+}
+
+func (c *client) ListAuthTokens(ctx context.Context) ([]sdk.AuthToken, error) {
+	resp, err := c.api.ListAuthTokensWithResponse(ctx)
+	if err != nil {
+		return nil, err
+	}
+	if err := c.checkResponse(resp, err, http.StatusOK); err != nil {
+		return nil, err
+	}
+	return resp.JSON200.Items, nil
+}
+
+func (c *client) checkResponse(resp sdk.Response, err error, expectedStatus int) error {
+	if err != nil {
+		return err
+	}
+	if resp.StatusCode() != expectedStatus {
+		errBody := strings.ToLower(strings.TrimSpace(string(resp.GetBody())))
+		if resp.StatusCode() == http.StatusUnauthorized {
+			return fmt.Errorf("unauthorized to access %s: %s, run 'cast configure' to setup access token", c.apiURL, errBody)
 		}
+		return fmt.Errorf("expected status code %d, received: status=%d body=%s", expectedStatus, resp.StatusCode(), errBody)
 	}
-
-	return requestBody
-}
-
-func redactSensitiveResponseBody(resp *http.Response, responseBody string) string {
-	responsesToRedact := []func(*http.Response) bool{
-		func(req *http.Response) bool {
-			return resp.Request.Method == http.MethodGet && strings.Contains(resp.Request.URL.Path, "/kubeconfig")
-		},
-	}
-
-	for _, shouldRedact := range responsesToRedact {
-		if shouldRedact(resp) {
-			return redact(responseBody)
-		}
-	}
-
-	return responseBody
-}
-
-func redact(text string) string {
-	redacted := "<redacted>"
-	if len(text) < 10 {
-		return redacted
-	}
-	return fmt.Sprintf("%v...%s", text[:10], redacted)
-}
-
-func readBody(body io.ReadCloser) []byte {
-	var bodyBytes []byte
-	if body != nil {
-		bodyBytes, _ = ioutil.ReadAll(body)
-	}
-
-	return bodyBytes
+	return nil
 }

@@ -15,8 +15,36 @@ limitations under the License.
 */
 package main
 
-import "github.com/castai/cast-cli/cmd"
+import (
+	"github.com/sirupsen/logrus"
+
+	"github.com/castai/cast-cli/cmd"
+	"github.com/castai/cast-cli/pkg/client"
+	"github.com/castai/cast-cli/pkg/config"
+)
 
 func main() {
-	cmd.Execute()
+	log := logrus.New()
+	log.SetFormatter(&logrus.TextFormatter{
+		DisableTimestamp:       false,
+		DisableLevelTruncation: true,
+	})
+
+	cfg, err := config.LoadFromEnv()
+	if err != nil {
+		log.Fatal(err)
+	}
+	if cfg.Debug {
+		log.SetLevel(logrus.DebugLevel)
+	}
+
+	api, err := client.New(cfg, log)
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	root := cmd.NewRootCmd(log, api)
+	if err := root.Execute(); err != nil {
+		log.Fatal(err)
+	}
 }

@@ -13,39 +13,44 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
+
 package cmd
 
 import (
-	log "github.com/sirupsen/logrus"
+	"github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
 
-	"github.com/castai/cast-cli/pkg/config"
+	"github.com/castai/cast-cli/pkg/client"
 )
 
-var rootCmd = &cobra.Command{
-	Use:   "cast",
-	Short: "CAST AI Command Line Interface",
-	Long:  ``,
-	PersistentPreRun: func(cmd *cobra.Command, args []string) {
-		initLogger()
-	},
-}
-
-func initLogger() {
-	log.SetFormatter(&log.TextFormatter{
-		DisableTimestamp:       true,
-		DisableLevelTruncation: true,
-	})
-	if config.Debug() {
-		log.SetLevel(log.DebugLevel)
+func NewRootCmd(log logrus.FieldLogger, api client.Interface) *cobra.Command {
+	rootCmd := &cobra.Command{
+		Use:   "cast",
+		Short: "CAST AI Command Line Interface",
+		Long:  ``,
 	}
-}
+	// Configure.
+	rootCmd.AddCommand(newConfigureCmd(log))
+	// Credentials.
+	credentialsCmd := newCredentialsCmd()
+	credentialsCmd.AddCommand(newCredentialsListCmd(log, api))
+	rootCmd.AddCommand(credentialsCmd)
+	// Cluster.
+	clusterCmd := newClusterCmd()
+	clusterCmd.AddCommand(newClusterListCmd(log, api))
+	clusterCmd.AddCommand(newClusterGetCmd(log, api))
+	clusterCmd.AddCommand(newClusterCreateCmd(log, api))
+	clusterCmd.AddCommand(newClusterGetKubeconfigCmd(log, api))
+	clusterCmd.AddCommand(newClusterDeleteCmd(log, api))
+	rootCmd.AddCommand(clusterCmd)
+	// Completion.
+	rootCmd.AddCommand(newCompletionCmd())
+	// Region.
+	regionCmd := newRegionCmd()
+	regionCmd.AddCommand(newRegionListCmd(log, api))
+	rootCmd.AddCommand(regionCmd)
+	// Version.
+	rootCmd.AddCommand(newVersionCmd())
 
-func Execute() {
-	rootCmd.PersistentFlags().BoolVar(&config.GlobalFlags.Debug, "debug", false, "Enable debug mode to log api calls")
-	rootCmd.PersistentFlags().StringVar(&config.GlobalFlags.ApiURL, "api-url", "https://api.cast.ai/v1", "CAST AI Api URL")
-
-	if err := rootCmd.Execute(); err != nil {
-		log.Fatal(err)
-	}
+	return rootCmd
 }

@@ -2,63 +2,38 @@
 
 NOTE: CAST AI CLI is in it's early stage. Feel free to contribute, ask questions, give feedback.
 
-CAST AI Command Line Interface
-```
-CAST AI Command Line Interface
+### Installation
 
-Usage:
-  cast [command]
+#### macOS
+TODO:
 
-Available Commands:
-  cluster     Manage clusters
-  firewall    Manage firewall
-  help        Help about any command
-  login       Login to CAST AI
-  version     Print version
+#### Linux
+TODO:
 
-Flags:
-      --api-url string   CAST AI Api URL (default "https://api.cast.ai/v1")
-      --debug            Enable debug mode to log api calls
-  -h, --help             help for cast
+#### Windows
+TODOl:
 
-Use "cast [command] --help" for more information about a command.
-```
+### Getting started
 
-### Basic usage
+After installing CLI you need to configure API access token to access CAST AI public API.
 
-Login
+#### Quick configuration
 
 ```
-cast login --token <YOUR_CAST_AI_TOKEN>
+cast configure
 ```
 
-List clusters
-```
-cast cluster list
+After done configuration file is saved to file system.
+	
+#### Configure via environment variables
+It is possible to override all configuration with environment variables.
 
-┌──────────────────────────────────────┬─────────────────┬─────────┬───────────┬────────────────────────────┐
-│ #                                    │ NAME            │ STATUS  │ CLOUDS    │ REGION                     │
-├──────────────────────────────────────┼─────────────────┼─────────┼───────────┼────────────────────────────┤
-│ 19fb46b8-6cb3-4d9b-88af-b70050bde6f2 │ azure-1         │ deleted │ aws azure │ Europe Central (Frankfurt) │
-├──────────────────────────────────────┼─────────────────┼─────────┼───────────┼────────────────────────────┤
-│ 39cd2fbb-bdf6-4233-bd26-b372c759fb69 │ aws-gcp         │ deleted │ aws gcp   │ Europe Central (Frankfurt) │
-├──────────────────────────────────────┼─────────────────┼─────────┼───────────┼────────────────────────────┤
-│ 82835a71-7598-4d3c-a8a0-9c629c697d6a │ gcp             │ deleted │ gcp       │ Europe Central (Frankfurt) │
-├──────────────────────────────────────┼─────────────────┼─────────┼───────────┼────────────────────────────┤
-│ 7d411935-1fb8-4eb8-9e98-bbf4a28693f4 │ help            │ deleted │ gcp       │ Europe Central (Frankfurt) │
-└──────────────────────────────────────┴─────────────────┴─────────┴───────────┴────────────────────────────┘
-```
-
-Get kubeconfig. By default this command merges received kubeconfig with local config if found at $HOME/.cube/config
-and updates the default context.
-
-```
-// Get kubeconfig.
-cast cluster get-kubeconfig 19fb46b8-6cb3-4d9b-88af-b70050bde6f2
-
-// Check contexts. New context should be visible.
-kubectl config get-contexts
-```
+| Variable          | Description          | Default |
+| ----------------- | ----------------- | ----------------- |
+| CASTAI_API_TOKEN | API access token | - |
+| CASTAI_API_HOSTNAME | API access token | api.cast.ai |
+| CASTAI_DEBUG | Enable debug mode | false |
+| CASTAI_CONFIG | Path to CLI configuration file | ~/.cast.config |
 
 ### Environment variables
 
@@ -67,3 +42,28 @@ It's possible to override some global flags by setting environment variables.
 * CASTAI_API_TOKEN
 * CASTAI_DEBUG
 * CASTAI_API_URL
+
+### Usage
+
+Run `cast` without any arguments to get help. Use --help on sub commands to get more help, eg. `cast cluster --help` 
+
+```
+CAST AI Command Line Interface
+
+Usage:
+  cast [command]
+
+Available Commands:
+  cluster     Manage clusters
+  completion  Generate completion script
+  configure   Setup initial configuration
+  credentials Manage credentials
+  help        Help about any command
+  region      Manage regions
+  version     Print version
+
+Flags:
+  -h, --help   help for cast
+
+Use "cast [command] --help" for more information about a command.
+```

@@ -18,11 +18,10 @@ package cmd
 
 import (
 	"io/ioutil"
-	"net/http"
 	"os"
 	"path/filepath"
 
-	log "github.com/sirupsen/logrus"
+	"github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
 	"k8s.io/client-go/tools/clientcmd/api"
 	"k8s.io/client-go/util/homedir"
@@ -37,24 +36,22 @@ var (
 	flagKubeconfigPath string
 )
 
-var clusterGetKubeconfigCmd = &cobra.Command{
-	Use:   "get-kubeconfig <cluster_id>",
-	Short: "Get cluster kubeconfig",
-	Run: func(cmd *cobra.Command, args []string) {
-		clusterID := requireClusterID(cmd, args)
-		if err := handleClusterGetKubeconfig(clusterID.String(), flagKubeconfigPath); err != nil {
-			log.Fatal(err)
-		}
-	},
-}
-
-func init() {
-	defaultKubeConfigDir := getDefaultKubeconfigPath()
-	clusterGetKubeconfigCmd.PersistentFlags().StringVar(&flagKubeconfigPath, "path", defaultKubeConfigDir, "(optional) absolute path to the kubeconfig file")
-	if defaultKubeConfigDir == "" {
-		clusterGetKubeconfigCmd.MarkPersistentFlagRequired("path")
+func newClusterGetKubeconfigCmd(log logrus.FieldLogger, api client.Interface) *cobra.Command {
+	cmd := &cobra.Command{
+		Use:   "get-kubeconfig <cluster_name_or_id>",
+		Short: "Get cluster kubeconfig",
+		Run: func(cmd *cobra.Command, args []string) {
+			if err := handleClusterGetKubeconfig(cmd, log, api); err != nil {
+				log.Fatal(err)
+			}
+		},
 	}
-	clusterCmd.AddCommand(clusterGetKubeconfigCmd)
+	defaultKubeConfigDir := getDefaultKubeconfigPath()
+	cmd.PersistentFlags().StringVar(&flagKubeconfigPath, "path", defaultKubeConfigDir, "(optional) absolute path to the kubeconfig file")
+	if defaultKubeConfigDir == "" {
+		cmd.MarkPersistentFlagRequired("path")
+	}
+	return cmd
 }
 
 func getDefaultKubeconfigPath() string {
@@ -65,34 +62,37 @@ func getDefaultKubeconfigPath() string {
 	return ""
 }
 
-func handleClusterGetKubeconfig(clusterID, kubeconfigPath string) error {
-	apiClient, err := client.New()
+func handleClusterGetKubeconfig(cmd *cobra.Command, log logrus.FieldLogger, api client.Interface) (err error) {
+	clusterID, err := getClusterID(cmd, api)
 	if err != nil {
 		return err
 	}
 
-	ctx, cancel := client.DefaultContext()
-	defer cancel()
-	resp, err := apiClient.GetClusterKubeconfigWithResponse(ctx, sdk.ClusterId(clusterID))
-	if err := client.CheckResponse(resp, err, http.StatusOK); err != nil {
-		return err
-	}
-
-	newConfig, err := getRawConfig(resp.Body)
+	resp, err := api.GetClusterKubeconfig(cmd.Context(), sdk.ClusterId(clusterID))
 	if err != nil {
 		return err
 	}
+	newConfig, err := getRawConfig(resp)
+	if err != nil {
+		return err
+	}
+
+	defer func() {
+		if err == nil {
+			log.Infof("Kubeconfig saved to %s", flagKubeconfigPath)
+		}
+	}()
 
 	// If there is no already created kubconfig in given path create it and exit.
-	if _, err := os.Stat(kubeconfigPath); os.IsNotExist(err) {
-		if err := clientcmd.WriteToFile(newConfig, kubeconfigPath); err != nil {
+	if _, err := os.Stat(flagKubeconfigPath); os.IsNotExist(err) {
+		if err := clientcmd.WriteToFile(newConfig, flagKubeconfigPath); err != nil {
 			return err
 		}
 		return nil
 	}
 
 	// Merge with existing kubeconfig and set default context to new config's context.
-	currentConfigBytes, err := ioutil.ReadFile(kubeconfigPath)
+	currentConfigBytes, err := ioutil.ReadFile(flagKubeconfigPath)
 	if err != nil {
 		return err
 	}
@@ -102,7 +102,7 @@ func handleClusterGetKubeconfig(clusterID, kubeconfigPath string) error {
 	}
 
 	currentConfig = mergeConfigs(currentConfig, newConfig)
-	if err := clientcmd.WriteToFile(currentConfig, kubeconfigPath); err != nil {
+	if err := clientcmd.WriteToFile(currentConfig, flagKubeconfigPath); err != nil {
 		return err
 	}
 

@@ -1,5 +1,5 @@
 /*
-Copyright © 2020 CAST AI
+Copyright © 2021 CAST AI
 
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
@@ -16,21 +16,11 @@ limitations under the License.
 
 package cmd
 
-import (
-	"fmt"
+import "github.com/spf13/cobra"
 
-	"github.com/spf13/cobra"
-
-	"github.com/castai/cast-cli/pkg/version"
-)
-
-func newVersionCmd() *cobra.Command {
+func newCredentialsCmd() *cobra.Command {
 	return &cobra.Command{
-		Use:     "version",
-		Aliases: []string{"-v"},
-		Short:   "Print version",
-		Run: func(cmd *cobra.Command, args []string) {
-			fmt.Printf("version: %s, commit: %s\n", version.Version, version.Commit)
-		},
+		Use:   "credentials",
+		Short: "Manage credentials",
 	}
 }

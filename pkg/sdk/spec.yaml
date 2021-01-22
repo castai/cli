@@ -1,18 +1,62 @@
 openapi: 3.0.1
 servers:
-  - url: 'https://api.cast.api/v1'
+  - url: 'https://api.cast.ai/'
 info:
-  description: |
-    cast.ai console API
+  title: CAST.AI API documentation
   version: 1.0.0
-  title: cast.ai API
+  description: |
+    ### Feature maturity indicators (may appear on resources, operations and request/response fields)
+     - **(BETA)** - new or experimental features, subject to change
+     - **(Deprecated)** - outdated or replaced features (a reason and removal date will be provided in the description)
 tags:
-  - name: kubernetes
-    description: Kubernetes CRUD
+  - name: audit
+    description: (BETA) Audit of the current account.
+  - name: auth
+    description: User authentication
+  - name: auth-tokens
+    description: (BETA) User authentication tokens
+  - name: chargebee
+    description: utility endpoints for chargebee integration
+  - name: initial-cluster-costs
+    description: (BETA) Initial Cluster Costs Plan
+  - name: cloud-credentials
+    description: Cloud credentials
+  - name: gslb
+    description: (BETA) GSLB
+  - name: cluster-policies
+    description: (BETA) Cluster policies
+  - name: kubernetes-cluster
+    description: Kubernetes cluster
+  - name: regions
+    description: (BETA) Regions
+  - name: report
+    description: (BETA) Reports of current user's organization.
 security:
   - BearerAuth: []
   - ApiKeyAuth: []
 paths:
+  /audit:
+    get:
+      operationId: list-audit-events
+      tags:
+        - audit
+      summary: >-
+        (BETA) List audit events
+      description: >-
+        Lists all audit events for current account.
+      parameters:
+        - $ref: '#/components/parameters/limit'
+        - $ref: '#/components/parameters/cursor'
+        - $ref: '#/components/parameters/filterFromDate'
+        - $ref: '#/components/parameters/filterToDate'
+        - $ref: '#/components/parameters/filterClusterId'
+      responses:
+        "200":
+          description: Event list.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AuditEventList'
   /auth:
     post:
       operationId: login
@@ -48,43 +92,6 @@ paths:
       responses:
         "302":
           description: redirects to `returnTo` that was provided with initial auth request.
-  /firewall:
-    post:
-      operationId: create-or-update-firewall
-      tags:
-        - firewall
-      summary: >-
-        Create or update firewall record.
-      description: >-
-        Create firewall rules to access cluster master nodes API Server.
-      requestBody:
-        required: true
-        description: Specification of new GSLB record.
-        content:
-          application/json:
-            schema:
-              $ref: '#/components/schemas/FirewallRequest'
-      responses:
-        204:
-          description: The resource was create or updated.
-    delete:
-      operationId: delete-firewall
-      tags:
-        - gslb
-      summary: >-
-        Delete firewall record.
-      description: >-
-        Deletes firewall rules.
-      requestBody:
-        required: true
-        description: Specification of firewall record to delete.
-        content:
-          application/json:
-            schema:
-              $ref: '#/components/schemas/FirewallDeleteRequest'
-      responses:
-        204:
-          description: firewall was deleted
   /auth/session:
     get:
       operationId: get-session
@@ -122,7 +129,7 @@ paths:
       tags:
         - auth-tokens
       summary: >-
-        List auth tokens created by current user
+        (BETA) List auth tokens created by current user
       operationId: list-auth-tokens
       responses:
         "200":
@@ -135,7 +142,7 @@ paths:
       tags:
         - auth-tokens
       summary: >-
-        Create a new auth token for the current user
+        (BETA) Create a new auth token for the current user
       operationId: create-auth-token
       requestBody:
         required: true
@@ -157,7 +164,7 @@ paths:
       tags:
         - auth-tokens
       summary: >-
-        Get auth token information.
+        (BETA) Get auth token information.
       operationId: get-auth-token
       responses:
         "200":
@@ -168,31 +175,89 @@ paths:
                 $ref: '#/components/schemas/AuthToken'
         "404":
           description: Not Found
+    post:
+      tags:
+        - auth-tokens
+      summary: >-
+        (BETA) Update an auth token.
+      operationId: update-auth-token
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/AuthTokenUpdateRequest'
+      responses:
+        "200":
+          description: Updated auth token.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AuthToken'
     delete:
       tags:
         - auth-tokens
       summary: >-
-        Delete auth token.
+        (BETA) Delete auth token.
       operationId: delete-auth-token
       responses:
         "204":
           description: The auth token has been deleted.
-  /audit:
+  /chargebee/sso:
     get:
-      operationId: list-audit-events
+      operationId: chargebee-sso
       tags:
-        - audit
+        - chargebee
+      parameters:
+        - name: forwardUrl
+          in: query
+          schema:
+            type: string
+          required: false
+          description: |
+            Optional parameter: desired destination URL within Chargebee. See https://apidocs.chargebee.com/docs/api/portal_sessions#create_a_portal_session_forward_url for more details.
       summary: >-
-        List audit events
+        Single-signon for chargebee
       description: >-
-        Lists all audit events for current account.
+        Builds URL to use in end-customer's browser session to open Chargebee iframe contents
+      responses:
+        "302":
+          description: responds with Chargebee login URL with single-use token in the url.
+  /cluster-price-plan:
+    post:
+      operationId: plan-cluster-price
+      tags:
+        - estimated-cluster-costs
+      summary: >-
+        (BETA) Estimate cluster costs.
+      description: >-
+        Estimate initial cluster costs: VMs, VPNs, IPs and other resources
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                addons:
+                  $ref: "#/components/schemas/AddonsConfig"
+                clouds:
+                  type: array
+                  items:
+                    $ref: "#/components/schemas/CloudType"
+                region:
+                  $ref: "#/components/schemas/ClusterRegion"
+                nodes:
+                  type: array
+                  items:
+                    $ref: "#/components/schemas/Node"
+                  description: Initial nodes of this cluster. Both masters and workers
       responses:
         "200":
-          description: Event list.
+          description: List of prices per cloud, per component.
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/AuditEventList'
+                $ref: '#/components/schemas/ClusterCostEstimate'
   /credentials:
     get:
       operationId: list-cloud-credentials
@@ -264,7 +329,7 @@ paths:
       tags:
         - gslb
       summary: >-
-        Create or update GSLB record.
+        (BETA) Create or update GSLB record.
       description: >-
         Creates a GSLB record for cluster service load balancers. If a record already exists for this service, it updates the record.
       requestBody:
@@ -286,7 +351,7 @@ paths:
       tags:
         - gslb
       summary: >-
-        Delete GSLB record.
+        (BETA) Delete GSLB record.
       description: >-
         Deletes a GSLB record for cluster service load balancer.
       requestBody:
@@ -299,6 +364,187 @@ paths:
       responses:
         "204":
           description: GSLB was deleted
+  /kubernetes/operations/{id}:
+    parameters:
+      - name: id
+        in: path
+        schema:
+          type: string
+        description: ID of the operation to get.
+    get:
+      operationId: get-operation
+      tags:
+        - operations
+      summary: (BETA) Get operation by ID.
+      description: Gets an operation by it's ID. Can be used to track the lifecycle of long-running operations.
+      responses:
+        "200":
+          description: Operation object.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/OperationResponse'
+        "404":
+          description: Operation not found.
+  /kubernetes/clusters/{clusterId}/nodes:
+    post:
+      parameters:
+        - $ref: '#/components/parameters/clusterId'
+      operationId: add-cluster-node
+      tags:
+        - kubernetes-cluster
+      summary: >-
+        (BETA) single operation: add cluster node
+      description: |
+        Adds single node to cluster. Starts a long-running operation.
+
+        The operation might result in an error. List of AWS operation errors:
+
+        | Reason | Details |
+        | --- | --- |
+        | `bid_price_too_low` | Spot request price is too low. Increase the price. |
+        | `max_spot_instance_count_exceeded` | Max spot instance count for the requested instance type exceeded. Choose another instance type. |
+        | `insufficient_capacity` | Insufficient instance capacity. There is no Spot capacity available that matches your request. Choose another instance type. |
+        | `quota_exceeded_{resource}` | Quota exceeded. Cannot continue without user interaction. Refer to the official AWS [documentation](https://docs.aws.amazon.com/AWSEC2/latest/APIReference/errors-overview.html#api-error-codes-table-client) to see the possible resources. |
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/Node'
+      responses:
+        "201":
+          description: Operation result
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AddNodeResult'
+    get:
+      operationId: get-cluster-nodes
+      tags:
+        - kubernetes-cluster
+      summary: >-
+        (BETA) List cluster nodes
+      description: >-
+        Lists nodes in the cluster (workers+masters).
+      parameters:
+        - $ref: '#/components/parameters/clusterId'
+      responses:
+        "200":
+          description: Node list
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/NodeList'
+  /kubernetes/clusters/{clusterId}/nodes/{nodeId}:
+    delete:
+      parameters:
+        - $ref: '#/components/parameters/clusterId'
+        - name: nodeId
+          in: path
+          schema:
+            type: string
+          required: true
+          description: The id of node to be deleted.
+      operationId: delete-cluster-node
+      tags:
+        - kubernetes-cluster
+      summary: >-
+        (BETA) single operation: delete cluster node
+      description: >-
+        Deletes single node to cluster. Starts a long-running operation
+      responses:
+        "201":
+          description: Operation result
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DeleteNodeResult'
+    get:
+      operationId: get-cluster-node
+      tags:
+        - kubernetes-cluster
+      summary: (BETA) Get cluster node by ID.
+      description: Get the details of a cluster node by ID.
+      parameters:
+        - $ref: '#/components/parameters/clusterId'
+        - name: nodeId
+          in: path
+          required: true
+          schema:
+            type: string
+          description: The id of node.
+      responses:
+        "200":
+          description: Node object
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Node'
+        "404":
+          description: Node not found
+  /kubernetes/clusters/{clusterId}/nodes/{nodeId}/interrupt:
+    post:
+      parameters:
+        - $ref: '#/components/parameters/clusterId'
+        - name: nodeId
+          in: path
+          schema:
+            type: string
+          required: true
+          description: The id of node to be interrupted
+      operationId: interrupt-cluster-node
+      tags:
+        - kubernetes-cluster
+      summary: >-
+        (BETA) Simulates a spot instance interruption on a given node
+      description: >-
+        Calling this API is identical to receiving an interrupt signal from the cloud: workloads will be drained from the node, and node cloud resources will be deleted after that. This is different from simply deleting a node, as drain has a cloud specific timeout (e.g. 2 minutes on AWS or 30seconds on GCP), after which virtual machine will be forcefully deleted regardless if draining succeeded or not.
+      responses:
+        "204":
+          description: Operation received
+  /kubernetes/clusters/{clusterId}/policies:
+    parameters:
+      - $ref: '#/components/parameters/clusterId'
+    get:
+      operationId: get-policies
+      tags:
+        - cluster-policies
+      summary: >-
+        (BETA) Get cluster policies configuration
+      description: >-
+        Gets policies configuration for the target cluster
+      responses:
+        "200":
+          description: List of policies.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PoliciesConfig'
+    put:
+      operationId: upsert-policies
+      tags:
+        - cluster-policies
+      summary: >-
+        (BETA) Upsert policies
+      description: >-
+        Upserts policies modifying cluster's behavior to run workloads.
+      requestBody:
+        required: true
+        description: List of policies to be modified/created
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PoliciesConfig'
+      responses:
+        "200":
+          description: Policies were successfully updated.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PoliciesConfig'
+        "400":
+          description: Bad request
   /kubernetes/clusters:
     get:
       parameters:
@@ -314,7 +560,7 @@ paths:
             Provide as repeated parameter in case of multiple arguments, e.g. `?credentialsId=123&credentialsId=456`.
             Cluster will be included in the list if it's using any of the provided credentials.
       tags:
-        - kubernetes
+        - kubernetes-cluster
       summary: >-
         List clusters
       description: >-
@@ -329,7 +575,7 @@ paths:
                 $ref: '#/components/schemas/KubernetesClusterList'
     post:
       tags:
-        - kubernetes
+        - kubernetes-cluster
       summary: >-
         Create new cluster
       description: Initiates the creation of a new Kubernetes cluster.
@@ -353,7 +599,7 @@ paths:
       - $ref: '#/components/parameters/clusterId'
     get:
       tags:
-        - kubernetes
+        - kubernetes-cluster
       summary: >-
         Get cluster information
       description: Get cluster information.
@@ -369,7 +615,7 @@ paths:
           description: Not Found
     delete:
       tags:
-        - kubernetes
+        - kubernetes-cluster
       summary: >-
         Delete cluster
       description: Delete cast cluster.
@@ -382,9 +628,9 @@ paths:
       - $ref: '#/components/parameters/clusterId'
     get:
       tags:
-        - kubernetes
+        - kubernetes-cluster
       summary: >-
-        Get cluster metrics
+        (BETA) Get cluster metrics
       description: Get cluster metrics of specific type.
       operationId: get-cluster-metrics
       responses:
@@ -403,9 +649,9 @@ paths:
       - $ref: '#/components/parameters/clusterId'
     get:
       tags:
-        - kubernetes
+        - kubernetes-cluster
       summary: >-
-        Get cluster creation feedback events
+        (BETA) Get cluster creation feedback events
       description: Get cluster creation feedback events which are generated during cluster creation.
       operationId: get-cluster-feedback-events
       responses:
@@ -422,9 +668,9 @@ paths:
       - $ref: '#/components/parameters/clusterId'
     get:
       tags:
-        - kubernetes
+        - kubernetes-cluster
       summary: >-
-        Get cluster audit log events
+        (BETA) Get cluster audit log events
       description: "Get cluster audit log events: when the VM was added or deleted, cluster paused and so on"
       operationId: get-cluster-audit-log
       responses:
@@ -441,9 +687,9 @@ paths:
       - $ref: '#/components/parameters/clusterId'
     get:
       tags:
-        - kubernetes
+        - kubernetes-cluster
       summary: >-
-        Get cluster health
+        (BETA) Get cluster health
       description: "Get cluster health including kubernetes, cilium, nodes health."
       operationId: get-cluster-health
       responses:
@@ -461,7 +707,7 @@ paths:
     get:
       operationId: get-cluster-kubeconfig
       tags:
-        - kubernetes
+        - kubernetes-cluster
       summary: >-
         Get kubeconfig.
       description: >-
@@ -475,38 +721,20 @@ paths:
                 type: string
         "404":
           description: kubeconfig file does not exist (possible reason - control plane is not initialized yet).
-  /kubernetes/clusters/{clusterId}/nodes:
-    parameters:
-      - $ref: '#/components/parameters/clusterId'
-    get:
-      operationId: get-cluster-nodes
-      tags:
-        - kubernetes-nodes
-      summary: >-
-        List cluster nodes
-      description: >-
-        Lists nodes in the cluster (workers+masters).
-      responses:
-        "200":
-          description: Node list
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/NodeList'
   /kubernetes/clusters/{clusterId}/nodes:update:
-    parameters:
-      - $ref: '#/components/parameters/clusterId'
     post:
       tags:
-        - kubernetes-nodes
+        - kubernetes-cluster
       summary: >-
-        Update node list
+        (BETA) Update node list
       description: |
         Updates node list, adding/removing nodes as specified.
         'Add' list should contain definition of what nodes to add.
         'Delete' list should contain nodes ids.
         Any of these list can be empty.
       operationId: update-node-list
+      parameters:
+        - $ref: '#/components/parameters/clusterId'
       requestBody:
         required: true
         content:
@@ -527,9 +755,9 @@ paths:
       - $ref: '#/components/parameters/clusterId'
     post:
       tags:
-        - kubernetes
+        - kubernetes-cluster
       summary: >-
-        Archive cluster
+        (BETA) Archive cluster
       description: |
         Archives cluster. Archived cluster won't visible while listing clusters.
       operationId: archive-cluster
@@ -545,9 +773,9 @@ paths:
       - $ref: '#/components/parameters/clusterId'
     post:
       tags:
-        - kubernetes
+        - kubernetes-cluster
       summary: >-
-        Pause cluster
+        (BETA) Pause cluster
       description: |
         Pauses cluster. Can be used to reduce cloud operations
         cost by pausing the cluster, i.e. to avoid CI builders VM cost during
@@ -575,9 +803,9 @@ paths:
       - $ref: '#/components/parameters/clusterId'
     post:
       tags:
-        - kubernetes
+        - kubernetes-cluster
       summary: >-
-        Resume cluster
+        (BETA) Resume cluster
       description: |
         Resumes (previously paused) cluster. Can be used to reduce cloud operations
         cost by pausing the cluster, i.e. to avoid CI builders VM cost during
@@ -600,9 +828,9 @@ paths:
     get:
       operationId: get-cluster-addons
       tags:
-        - kubernetes
+        - kubernetes-cluster
       summary: >-
-        Get enabled cluster addons and their configuration (if any)
+        (BETA) Get enabled cluster addons and their configuration (if any)
       description: >-
         Gets enabled addons and their configuration for the target cluster
       responses:
@@ -621,10 +849,10 @@ paths:
     patch:
       operationId: configure-cluster-addons
       tags:
-        - kubernetes
+        - kubernetes-cluster
         - not-implemented
       summary: >-
-        Configure cluster addons
+        (BETA) Configure cluster addons
       description: >-
         Configures cluster addons: enable, disable or configure selected addons.
       requestBody:
@@ -663,7 +891,7 @@ paths:
         - ingress
         - controller
       summary: >-
-        Get cluster ingress controller.
+        (BETA) Get cluster ingress controller.
       description: >-
         Retrieves information about kubernetes cluster ingress controller.
       responses:
@@ -679,55 +907,13 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/ErrorResponse'
-  /kubernetes/clusters/{clusterId}/policies:
-    parameters:
-      - $ref: '#/components/parameters/clusterId'
-    get:
-      operationId: get-policies
-      tags:
-        - kubernetes
-      summary: >-
-        Get cluster policies configuration
-      description: >-
-        Gets policies configuration for the target cluster
-      responses:
-        "200":
-          description: List of policies.
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/PoliciesConfig'
-    put:
-      operationId: upsert-policies
-      tags:
-        - kubernetes
-      summary: >-
-        Upsert policies
-      description: >-
-        Upserts policies modifying cluster's behavior to run workloads.
-      requestBody:
-        required: true
-        description: List of policies to be modified/created
-        content:
-          application/json:
-            schema:
-              $ref: '#/components/schemas/PoliciesConfig'
-      responses:
-        "200":
-          description: Policies were successfully updated.
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/PoliciesConfig'
-        "400":
-          description: Bad request
   /regions:
     get:
       operationId: list-regions
       tags:
         - regions
       summary: >-
-        List CAST AI regions.
+        (BETA) List CAST AI regions.
       description: >-
         List of available CAST AI regions.
       responses:
@@ -737,6 +923,30 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/CastRegionList'
+  /report/usage/daily:
+    get:
+      operationId: get-usage-report
+      tags:
+        - report
+        - usage
+      summary: >-
+        (BETA) Receive a report of resources usage.
+      description: >-
+        Get cloud resources usage report of user's organization for current month. Report consists of daily accumulations of resources used by the hour. For example if a cluster runs on 8 vCPUs - its daily usage will be 8 * 24 = 192 vCPU hours. Can be filtered by Cluster Id and/or points in time.
+      parameters:
+        - $ref: '#/components/parameters/filterClusterId'
+        - $ref: '#/components/parameters/filterFromDate'
+        - $ref: '#/components/parameters/filterToDate'
+      responses:
+        "200":
+          description: Resource usage report.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ResourceUsageReport'
+            text/csv:
+              schema:
+                type: string
 components:
   securitySchemes:
     BearerAuth:
@@ -782,6 +992,51 @@ components:
       schema:
         type: string
       description: URL to redirect browser to after operation completes
+    limit:
+      name: limit
+      in: query
+      description: A limit on the number of objects to be returned, between 1 and 500. Default is 10.
+      schema:
+        type: integer
+        minimum: 1
+        maximum: 500
+        default: 10
+    cursor:
+      name: cursor
+      in: query
+      description: >
+        A cursor for use in pagination. This is a token that defines your place in the list. For instance, if you make a list request - you will receive nextCursor field in response metadata. Given that nextCursor field is not empty, it can be used as a cursor query parameter to get subsequent items. If nextCursor is empty - there are no more items to retrieve.
+
+      example: MTYwNDQwMzg4NzMxMTMzNzAwMA=====
+      schema:
+        type: string
+    filterFromDate:
+      name: fromDate
+      in: query
+      description: >
+        Request filter parameter declaring point of time after which the results should be returned. Moment in time must be declared in RFC3339 format. https://tools.ietf.org/html/rfc3339
+
+      example: 1985-04-12T23:20:50.52Z
+      schema:
+        type: string
+    filterToDate:
+      name: toDate
+      in: query
+      description: >
+        Request filter parameter declaring point of time until which the results should be returned. Moment in time must be declared in RFC3339 format. https://tools.ietf.org/html/rfc3339
+
+      example: 1985-04-12T23:20:50.52Z
+      schema:
+        type: string
+    filterClusterId:
+      name: clusterId
+      in: query
+      description: >
+        Request filter parameter representing unique cluster ID. For instance, if you make a list request with clusterId filter parameter - returned results will represent the respective cluster. Cluster ID must be a valid UUID.
+
+      example: e90523cc-1788-4363-8e07-7773c3174d4b
+      schema:
+        type: string
     MetricsType:
       name: metricsType
       in: query
@@ -792,83 +1047,45 @@ components:
           - node_memory_usage
           - cloud_cpu_usage
           - cloud_memory_usage
+          - node_cpu_requests
+          - node_memory_requests
+          - cloud_cpu_requests
+          - cloud_memory_requests
+          - cloud_pods
       description: The type of metric to query
   schemas:
+    FieldViolation:
+      type: object
+      properties:
+        field:
+          type: string
+        description:
+          type: string
+      required:
+        - field
+        - description
     ErrorResponse:
       type: object
       properties:
-        error:
+        message:
           type: string
+        fieldViolations:
+          type: array
+          description: in case the error is related to specific field, this list will contain
+          items:
+            $ref: '#/components/schemas/FieldViolation'
       required:
-        - error
+        - message
+        - fieldViolations
     CloudType:
       type: string
+      description: Cloud service provider type.
       enum:
         - gcp
         - aws
         - azure
+        - do
       example: "aws"
-    AuthToken:
-      type: object
-      properties:
-        id:
-          type: string
-          description: Auth token ID, generated at the time of creation
-          readOnly: true
-        name:
-          type: string
-          description: Name of the token. Must be unique among other active tokens for the current user.
-        createdAt:
-          type: string
-          format: date-time
-          description: Auth token creation UTC time in RFC3339 format.
-          example: 2022-10-02T15:00:00Z
-          readOnly: true
-      required:
-        - id
-        - name
-        - createdAt
-    AuthTokenList:
-      type: object
-      properties:
-        items:
-          type: array
-          items:
-            $ref: '#/components/schemas/AuthToken'
-      required:
-        - items
-    AuthTokenCreateResponse:
-      type: object
-      properties:
-        id:
-          type: string
-          description: Auth token ID, generated at the time of creation
-          readOnly: true
-        name:
-          type: string
-          description: Name of the token. Must be unique among other active tokens for the current user.
-        createdAt:
-          type: string
-          format: date-time
-          description: Auth token creation UTC time in RFC3339 format.
-          example: 2022-10-02T15:00:00Z
-          readOnly: true
-        token:
-          type: string
-          description: Generated secret for this auth token (only shown once on creation)
-          readOnly: true
-      required:
-        - id
-        - name
-        - createdAt
-        - token
-    UserSession:
-      type: object
-      properties:
-        name:
-          type: string
-          description: full name of logged-in user, e.g. "John Doe". Managed by Auth0 and directly taken from login JWT claim "name".
-          example: John Doe
     AuditInitiator:
       type: object
       properties:
@@ -878,12 +1095,19 @@ components:
         name:
           type: string
           description: user or system name.
+        email:
+          type: string
+          description: email of the user (absent for system calls)
       required:
         - id
+        - name
     AuditEvent:
       type: object
       description: single event.
       properties:
+        id:
+          type: string
+          description: audit event id
         eventType:
           type: string
           enum:
@@ -906,15 +1130,23 @@ components:
         - eventType
         - initiatedBy
         - time
+        - event
+        - id
     AuditEventList:
       type: object
       properties:
+        nextCursor:
+          type: string
+          description: >
+            Cursor token to be used in future request cursor parameter to retrieve subsequent items from the dataset. Empty value of nextCursor field indicates that there are no further items to retrieve.
+
         items:
           type: array
           items:
             $ref: '#/components/schemas/AuditEvent'
       required:
         - items
+        - nextCursor
     AuditEventClusterCreated:
       type: object
       properties:
@@ -927,6 +1159,287 @@ components:
         cluster:
           type: object
           description: snapshot of deleted cluster
+    AuthToken:
+      type: object
+      properties:
+        id:
+          type: string
+          description: Auth token ID, generated at the time of creation
+          readOnly: true
+        name:
+          type: string
+          description: Name of the token. Must be unique among other active tokens for the current user.
+        active:
+          type: boolean
+          description: Indicates whether this auth token is active.
+          readOnly: true
+        createdAt:
+          type: string
+          format: date-time
+          description: Auth token creation UTC time in RFC3339 format.
+          example: 2022-10-02T15:00:00Z
+          readOnly: true
+        deletedAt:
+          type: string
+          format: date-time
+          description: Auth token deletion UTC time in RFC3339 format.
+          example: 2022-11-02T15:00:00Z
+          readOnly: true
+        lastUsedAt:
+          type: string
+          format: date-time
+          description: Auth token last used UTC time in RFC3339 format.
+          example: 2022-10-02T15:00:00Z
+          readOnly: true
+      required:
+        - id
+        - name
+        - active
+        - createdAt
+    AuthTokenList:
+      type: object
+      properties:
+        items:
+          type: array
+          items:
+            $ref: '#/components/schemas/AuthToken'
+      required:
+        - items
+    AuthTokenUpdateRequest:
+      type: object
+      properties:
+        active:
+          type: boolean
+          description: Indicates whether this auth token is active.
+      required:
+        - active
+    AuthTokenCreateResponse:
+      type: object
+      properties:
+        id:
+          type: string
+          description: Auth token ID, generated at the time of creation
+          readOnly: true
+        name:
+          type: string
+          description: Name of the token. Must be unique among other active tokens for the current user.
+        active:
+          type: boolean
+          description: Indicates whether this auth token is active.
+          readOnly: true
+        createdAt:
+          type: string
+          format: date-time
+          description: Auth token creation UTC time in RFC3339 format.
+          example: 2022-10-02T15:00:00Z
+          readOnly: true
+        token:
+          type: string
+          description: Generated secret for this auth token (only shown once on creation)
+          readOnly: true
+      required:
+        - id
+        - name
+        - active
+        - createdAt
+        - token
+    UserSession:
+      type: object
+      properties:
+        userId:
+          type: string
+          description: user id of logged in user.
+          example: github|123456
+        userHash:
+          type: string
+          description: user identity verification - salted SHA256 hash of user ID. For use with Intercom identity verification (see https://www.intercom.com/help/en/articles/183-enable-identity-verification-for-web-and-mobile)
+          example: 85711c2dfd6c1b32b6c10bd49f452368197a2478b7a7b86c061356ebe0b65b38
+        name:
+          type: string
+          description: full name of logged-in user, e.g. "John Doe". Managed by Auth0 and directly taken from login JWT claim "name".
+          example: John Doe
+        email:
+          type: string
+          description: corresponds to Auth0 JWT claim
+          example: john@doe.eml
+        nickname:
+          type: string
+          description: corresponds to Auth0 JWT claim
+          example: heresjohnny
+        picture:
+          type: string
+          description: corresponds to Auth0 JWT claim
+          example: https://path-to-image/1.png
+      required:
+        - userId
+        - userHash
+        - name
+        - email
+        - nickname
+        - picture
+    EstimatedComponentTypePrice:
+      type: object
+      description: Price for all of the component type
+      properties:
+        unitCount:
+          type: integer
+          minimum: 1
+        price:
+          $ref: "#/components/schemas/EstimatedPriceAmount"
+    EstimatedComponentPrice:
+      type: object
+      description: Price for all of the components instances. Contains dependencies breakdown
+      properties:
+        id:
+          type: string
+          description: component's string id, e.g. "vpn", "master", "worker" and so on
+        name:
+          type: string
+          description: human-readable component's name
+        unitCount:
+          type: integer
+          minimum: 1
+        unitPrice:
+          $ref: "#/components/schemas/EstimatedPriceAmount"
+        fullPrice:
+          $ref: "#/components/schemas/EstimatedPriceAmount"
+        dependencies:
+          $ref: "#/components/schemas/EstimatedComponentPrice"
+      required:
+        - id
+        - name
+        - unitCount
+        - unitPrice
+        - fullPrice
+    EstimatedPriceAmount:
+      type: object
+      description: Estimated Price
+      properties:
+        currencyCode:
+          type: string
+          description: ISO-4217 currency code
+        hourly:
+          type: string
+          description: Price per hour (e.g. "0.1234")
+        monthly:
+          type: string
+          description: Price in dollars per month (30 days, e.g. "1.234")
+    CostsPerTypeEstimate:
+      type: object
+      additionalProperties:
+        $ref: "#/components/schemas/EstimatedComponentTypePrice"
+    CostsPerProviderEstimate:
+      type: object
+      properties:
+        totalHourly:
+          type: string
+        totalMonthly:
+          type: string
+        details:
+          type: array
+          description: Break down by provider
+          items:
+            $ref: "#/components/schemas/EstimatedComponentPrice"
+      required:
+        - totalHourly
+        - totalMonthl
+    ClusterCostEstimate:
+      type: object
+      properties:
+        perType:
+          $ref: "#/components/schemas/CostsPerTypeEstimate"
+        perCloud:
+          $ref: "#/components/schemas/CostsPerProviderEstimate"
+        total:
+          $ref: "#/components/schemas/EstimatedPriceAmount"
+      example:
+        total:
+          currencyCode: USD
+          hourly: "0.369"
+          monthly: "265.68"
+        perType:
+          masterVM:
+            unitCount: 3
+            price:
+              currencyCode: USD
+              hourly: "0.369"
+              monthly: "265.68"
+          vpn:
+            id: vpn
+            name: VPN Connections
+            unitCount: 4
+            price:
+              currencyCode: USD
+              hourly: "0.246"
+              monthly: "177.12"
+        perCloud:
+          aws:
+            totalMonthly: "6432.56"
+            totalHourly: "5.30"
+            details:
+              - id: masterVM
+                name: Medium master node (t3.medium)
+                unitCount: 3
+                unitPrice:
+                  currencyCode: USD
+                  hourly: "0.123"
+                  monthly: "88.56"
+                fullPrice:
+                  currencyCode: USD
+                  hourly: "0.369"
+                  monthly: "265.68"
+                dependencies:
+                  - id: vm
+                    name: Virtual Machine
+                    unitCount: 3
+                    unitPrice:
+                      currencyCode: USD
+                      hourly: "0.123"
+                      monthly: "88.56"
+                    fullPrice:
+                      currencyCode: USD
+                      hourly: "0.369"
+                      monthly: "265.68"
+                  - id: disk
+                    name: BlockStorage
+                    unitCount: 3
+                    unitPrice:
+                      currencyCode: USD
+                      hourly: "0.123"
+                      monthly: "88.56"
+                    fullPrice:
+                      currencyCode: USD
+                      hourly: "0.369"
+                      monthly: "265.68"
+              - id: vpn
+                name: VPN Connections
+                unitCount: 2
+                unitPrice:
+                  currencyCode: USD
+                  hourly: "0.123"
+                  monthly: "88.56"
+                fullPrice:
+                  currencyCode: USD
+                  hourly: "0.246"
+                  monthly: "177.12"
+          gcp:
+            totalHourly: "0.369"
+            totalMonthly: "265.68"
+            details:
+              - id: vpn
+                name: Gateway Type
+                unitCount: 2
+                unitPrice:
+                  currencyCode: USD
+                  hourly: "0.123"
+                  monthly: "88.56"
+                fullPrice:
+                  currencyCode: USD
+                  hourly: "0.246"
+                  monthly: "177.12"
+          castai:
+            totalHourly: "0"
+            totalMonthly: "0"
     CloudCredentialsReservation:
       type: object
       description: Defines object that uses this credentials.
@@ -958,6 +1471,16 @@ components:
         cloud:
           type: string
           description: Cloud type that these credentials represent.
+        freeTrial:
+          type: boolean
+          readOnly: true
+          description: Whether credentials are under free trial.
+        expiresAt:
+          type: string
+          format: date-time
+          readOnly: true
+          description: Credential expiration UTC time in RFC3339 format.
+          example: 2022-10-02T15:00:00Z
         usedBy:
           type: array
           readOnly: true
@@ -1034,6 +1557,221 @@ components:
         - clusterId
         - serviceName
         - serviceNamespace
+    OperationResponse:
+      type: object
+      properties:
+        id:
+          type: string
+          description: ID of the operation.
+          example: 06a6fe03-fc9c-4d99-a0a4-373e87efe4b8
+        done:
+          type: boolean
+          description: >-
+            Indicates whether the operation is done. If 'true', the operation has finished. If 'false', the operation is still in progress.
+          example: true
+        createdAt:
+          type: string
+          format: date-time
+          description: Operation creation time in RFC3339Nano format.
+          example: 2020-12-15T15:25:44.887899Z
+        finishedAt:
+          type: string
+          format: date-time
+          description: Operation finishe time in RFC3339Nano format.
+          example: 2020-12-15T15:26:44.887899Z
+        error:
+          type: object
+          description: >-
+            Error details for the operation. Only populated when the operation is done and has failed. If operation has completed successfully, the error will not be set.
+          properties:
+            reason:
+              type: string
+              description: >-
+                Reason is an operation specific failure code. Refer to documentation of the endpoint which generated the long-running operation about possible outcomes. Common error reasons:
+
+                * `internal_error`: An unknown error occurred. Retry the operation.
+              example: quota_reached
+            details:
+              type: string
+              description: Human readable caption text describing the error reason.
+              example: Resource quota was reached. Cannot continue without user interaction.
+          required:
+            - reason
+            - details
+      required:
+        - id
+        - done
+        - createdAt
+    AddNodeResult:
+      type: object
+      description: Add node operation result
+      properties:
+        operationId:
+          type: string
+          description: id for long running operation
+        nodeId:
+          type: string
+          description: id of the created note
+      required:
+        - operationId
+        - nodeId
+    DeleteNodeResult:
+      type: object
+      description: Delete node operation result
+      properties:
+        operationId:
+          type: string
+          description: id for long running operation
+      required:
+        - operationId
+    PoliciesConfig:
+      type: object
+      properties:
+        enabled:
+          description: Enable/disable all policies
+          type: boolean
+          default: false
+        unschedulablePods:
+          $ref: '#/components/schemas/UnschedulablePodsPolicy'
+        nodeDownscaler:
+          $ref: '#/components/schemas/NodeDownscaler'
+        cpuUtilization:
+          $ref: '#/components/schemas/CpuUtilizationPolicies'
+        clusterLimits:
+          $ref: '#/components/schemas/ClusterLimitsPolicy'
+        spotInstances:
+          $ref: '#/components/schemas/SpotInstances'
+      required:
+        - enabled
+        - cpuUtilization
+        - unschedulablePods
+        - spotInstances
+        - clusterLimits
+    ClusterLimitsPolicy:
+      type: object
+      description: Defines minimum and maximum amount of vCPUs for cluster's worker nodes.
+      properties:
+        enabled:
+          description: Enable/disable cluster size limits policy.
+          type: boolean
+          default: false
+        cpu:
+          $ref: '#/components/schemas/ClusterLimitsCpu'
+      required:
+        - enabled
+        - cpu
+    ClusterLimitsCpu:
+      type: object
+      description: Defines the minimum and maximum amount of vCPUs for cluster's worker nodes.
+      properties:
+        minCores:
+          description: Defines the minimum allowed amount of vCPUs in the whole cluster.
+          type: integer
+          default: 1
+          format: int64
+          minimum: 1
+          maximum: 20
+          example: 1
+        maxCores:
+          description: Defines the maximum allowed amount of vCPUs in the whole cluster.
+          type: integer
+          default: 20
+          format: int64
+          minimum: 2
+          maximum: 1000
+          example: 20
+      required:
+        - enabled
+        - minCores
+        - maxCores
+    ScaleUpThreshold:
+      type: object
+      description: CPU high watermark policy defines the higher bound of average cluster CPU load in percentages over the duration in seconds.
+      properties:
+        enabled:
+          description: Enable/disable Scale Up threshold
+          type: boolean
+          default: false
+        avgCpuLoadPercentageMoreThan:
+          description: Average cluster's worker CPU load in percentages.
+          type: integer
+          format: int64
+          minimum: 1
+          maximum: 100
+          exclusiveMaximum: true
+          example: 20
+        evaluationPeriodSeconds:
+          description: Duration in seconds.
+          type: integer
+          format: int64
+          example: 120
+      required:
+        - enabled
+        - avgCpuLoadPercentageMoreThan
+        - evaluationPeriodSeconds
+    NodeDownscalerEmptyNodes:
+      type: object
+      properties:
+        enabled:
+          description: Defines whether Node Downscaler should opt in for removing empty worker nodes when possible.
+          type: boolean
+          default: false
+    NodeDownscaler:
+      type: object
+      description: Node Downscaler defines polcies for removing nodes based on the configured conditions.
+      properties:
+        emptyNodes:
+          $ref: '#/components/schemas/NodeDownscalerEmptyNodes'
+      required:
+        - emtpyNodes
+    CpuUtilizationPolicies:
+      type: object
+      description: Policy defining CPU high watermarks used by autoscaler to optimize cluster resources utilization.
+      properties:
+        scaleUpThreshold:
+          $ref: '#/components/schemas/ScaleUpThreshold'
+      required:
+        - highCpuUtilization
+    UnschedulablePodsPolicy:
+      type: object
+      description: Policy defining autoscaler's behavior when unscedulable pods were detected.
+      properties:
+        enabled:
+          description: Enable/disable unschedulable pods detection policy.
+          type: boolean
+          default: false
+        evaluationPeriodSeconds:
+          description: Duration in seconds for how long any of the pods should remain in 'Unschedulable' state to trigger upscaling action.
+          type: integer
+          format: int64
+          default: 30
+          minimum: 0
+          example: 120
+      required:
+        - enabled
+        - evaluationPeriodSeconds
+    SpotInstances:
+      type: object
+      description: Policy defining whether autoscaler can use spot instances for provisioning additional workloads.
+      properties:
+        enabled:
+          description: Enable/disable spot instances policy.
+          type: boolean
+          default: false
+        clouds:
+          description: Enable/disable spot instances policy.
+          type: array
+          items:
+            type: string
+            default: []
+            enum:
+              - aws
+              - gcp
+              - azure
+            example: aws
+      required:
+        - enabled
+        - clouds
     ClusterMetrics:
       type: object
       properties:
@@ -1073,10 +1811,6 @@ components:
               description: Sample data array based. Format is based on the result type. Check the Prometheus API docs.
               externalDocs:
                 url: https://prometheus.io/docs/prometheus/latest/querying/api/#expression-query-result-formats
-    AddonEnabled:
-      type: boolean
-      description: Whether this addon is enabled
-      default: true
     CertManagerConfig:
       type: object
       description: Cert-Manager
@@ -1129,9 +1863,9 @@ components:
       description: KEDA (keda.sh) an event-based k8s resources autoscaler
       properties:
         enabled:
-          default: false
           type: boolean
           description: Whether this addon is enabled
+          default: false
       required:
         - enabled
     NginxIngressConfig:
@@ -1159,6 +1893,32 @@ components:
           $ref: '#/components/schemas/KedaConfig'
         nginxIngress:
           $ref: '#/components/schemas/NginxIngressConfig'
+    Network:
+      type: object
+      properties:
+        vpn:
+          $ref: '#/components/schemas/VpnConfig'
+      required:
+        - vpn
+    VpnConfig:
+      type: object
+      properties:
+        ipSec:
+          $ref: '#/components/schemas/IpSecConfig'
+        wireGuard:
+          $ref: '#/components/schemas/WireGuardConfig'
+    IpSecConfig:
+      type: object
+    WireGuardConfig:
+      type: object
+      properties:
+        topology:
+          type: string
+          enum:
+            - fullMesh
+            - crossLocationMesh
+      required:
+        - topology
     CreateCluster:
       type: object
       properties:
@@ -1180,6 +1940,9 @@ components:
           description: Initial nodes of this cluster. Must contain final masters count.
         addons:
           $ref: '#/components/schemas/AddonsConfig'
+        network:
+          $ref: '#/components/schemas/Network'
+          description: Cluster network configuration.
       required:
         - name
         - region
@@ -1232,6 +1995,13 @@ components:
           description: Optional notes added when pausing the cluster.
         addons:
           $ref: '#/components/schemas/AddonsConfig'
+        network:
+          $ref: '#/components/schemas/Network'
+          description: Cluster network configuration.
+        kubernetesVersion:
+          type: string
+          readOnly: true
+          description: Cluster kubernetes version.
       required:
         - id
         - name
@@ -1284,13 +2054,20 @@ components:
         - displayName
     NodeType:
       type: string
+      example: worker
       enum:
         - master
         - worker
-      description: Node type
+      description: |
+        Specifies the node type.
+
+        `master` hosts the Kubernetes control plane.
+
+        `worker` is used to run workloads and supports autoscaling.
     NodeShape:
       type: string
-      description: CAST AI shape defining VM template. Field is required unless "instanceType" is specified.
+      description: CAST AI shape defining VM template. Field is required unless `instanceType` is specified.
+      example: large
       enum:
         - x-small
         - small
@@ -1300,11 +2077,12 @@ components:
         - 2x-large
     NodeState:
       type: object
-      description: Kubernetes node state
+      description: Kubernetes node state.
       properties:
         phase:
           type: string
-          description: Current status of a node
+          description: Current status of a node.
+          example: ready
           readOnly: true
           enum:
             - unknown
@@ -1314,6 +2092,26 @@ components:
             - draining
             - deleting
             - deleted
+    NodeSpotConfig:
+      type: object
+      description: Spot instance configuration.
+      properties:
+        isSpot:
+          type: boolean
+          default: false
+          description: |
+            Indicates whether the node should be spot/preemtive, suitable for fault-tolerant workloads.
+
+            `true` if instance should be Spot (AWS), Preemtible (GCP), etc.
+
+            `false` if the node should be stable on-demand.
+          example: true
+        price:
+          type: string
+          description: Max bid price (only applicable to AWS).
+          example: "0.02"
+      required:
+        - isSpot
     Node:
       type: object
       description: Kubernetes node
@@ -1321,19 +2119,27 @@ components:
         id:
           type: string
           readOnly: true
-          description: node ID autogenerated at the time of node creation
+          description: Node ID autogenerated at the time of node creation.
+          example: 0aa598d4-f99e-48de-875f-819efcc702f6
+        name:
+          type: string
+          readOnly: true
+          description: Node name generated at the time of node creation.
+          example: cluster-33e75b9f-aws-8ca9
         role:
           $ref: '#/components/schemas/NodeType'
         shape:
           $ref: '#/components/schemas/NodeShape'
         instanceType:
           type: string
-          description: Precise VM instance type for specific cloud. If specified, "shape" field is ignored.
+          description: Precise VM instance type for specific cloud. If specified, `shape` field is ignored.
           example: "t3.xlarge"
         cloud:
           $ref: '#/components/schemas/CloudType'
         state:
           $ref: '#/components/schemas/NodeState'
+        spotConfig:
+          $ref: '#/components/schemas/NodeSpotConfig'
       required:
         - role
         - cloud
@@ -1525,136 +2331,6 @@ components:
       required:
         - type
         - address
-    PoliciesConfig:
-      type: object
-      properties:
-        enabled:
-          type: boolean
-          description: Enable / disable all policies.
-        unschedulablePods:
-          $ref: '#/components/schemas/UnschedulablePodsPolicy'
-        cpuUtilization:
-          $ref: '#/components/schemas/CpuUtilizationPolicies'
-        clusterLimits:
-          $ref: '#/components/schemas/ClusterLimitsPolicy'
-      required:
-        - enabled
-        - cpuUtilization
-        - unschedulablePods
-        - clusterLimits
-    ClusterLimitsPolicy:
-      type: object
-      description: Defines minimum and maximum amount of vCPUs for cluster's worker nodes.
-      properties:
-        enabled:
-          description: Enable/disable cluster size limits policy.
-          type: boolean
-          default: false
-        cpu:
-          $ref: '#/components/schemas/ClusterLimitsCpu'
-      required:
-        - enabled
-        - cpu
-    ClusterLimitsCpu:
-      type: object
-      description: Defines the minimum and maximum amount of vCPUs for cluster's worker nodes.
-      properties:
-        minCores:
-          description: Defines the minimum allowed amount of vCPUs in the whole cluster.
-          type: integer
-          default: 1
-          format: int64
-          minimum: 1
-          maximum: 20
-          example: 1
-        maxCores:
-          description: Defines the maximum allowed amount of vCPUs in the whole cluster.
-          type: integer
-          default: 20
-          format: int64
-          minimum: 2
-          maximum: 20
-          example: 20
-      required:
-        - enabled
-        - minCores
-        - maxCores
-    ScaleUpThreshold:
-      type: object
-      description: CPU high watermark policy defines the higher bound of average cluster CPU load in percentages over the duration in seconds.
-      properties:
-        avgCpuLoadPercentageMoreThan:
-          description: Average cluster's worker CPU load in percentages.
-          type: integer
-          format: int64
-          minimum: 1
-          maximum: 100
-          exclusiveMaximum: true
-          example: 20
-        evaluationPeriodSeconds:
-          description: Duration in seconds.
-          type: integer
-          format: int64
-          example: 120
-      required:
-        - avgCpuLoadPercentageMoreThan
-        - evaluationPeriodSeconds
-    ScaleDownThreshold:
-      type: object
-      description: CPU low watermark policy defines the lower bound of average cluster worker nodes CPU load in percentages over the duration in seconds.
-      properties:
-        avgCpuLoadPercentageLessThan:
-          description: Average cluster's worker CPU load in percentages.
-          type: integer
-          format: int64
-          minimum: 1
-          maximum: 100
-          exclusiveMaximum: true
-          default: false
-          example: 20
-        evaluationPeriodSeconds:
-          description: Duration in seconds.
-          type: integer
-          format: int64
-          minimum: 0
-          example: 120
-      required:
-        - avgCpuLoadPercentageLessThan
-        - evaluationPeriodSeconds
-    CpuUtilizationPolicies:
-      type: object
-      description: Policy defining CPU high and low watermarks used by autoscaler to optimize cluster resources utilization.
-      properties:
-        enabled:
-          description: Enable/disable CPU utilization policies.
-          type: boolean
-          default: false
-        scaleUpThreshold:
-          $ref: '#/components/schemas/ScaleUpThreshold'
-        scaleDownThreshold:
-          $ref: '#/components/schemas/ScaleDownThreshold'
-      required:
-        - highCpuUtilization
-        - lowCpuUtilization
-        - enabled
-    UnschedulablePodsPolicy:
-      type: object
-      description: Policy defining autoscaler's behavior when unscedulable pods were detected.
-      properties:
-        enabled:
-          description: Enable/disable unschedulable pods detection policy.
-          type: boolean
-          default: false
-        evaluationPeriodSeconds:
-          description: Duration in seconds for how long any of the pods should remain in 'Unschedulable' state to trigger upscaling action.
-          type: integer
-          format: int64
-          default: 30
-          minimum: 0
-          example: 120
-      required:
-        - enabled
-        - evaluationPeriodSeconds
     CastRegion:
       type: object
       description: CAST AI region.
@@ -1692,27 +2368,40 @@ components:
           description: Cloud provider name.
       required:
         - name
-    FirewallRequest:
+    ResourceUsage:
       type: object
       properties:
-        clusterId:
+        from:
           type: string
-        cidr:
+          description: start of usage time in RFC3339 format.
+        to:
           type: string
-          description: Firewall IP Cidr.
-          example: 71.61.81.11/32
+          description: end of usage time in RFC3339 format.
+        cpu:
+          type: integer
+          description: cpu hours used for given date.
+        memory:
+          type: integer
+          description: memory (MB) hours used for given date.
       required:
-        - clusterId
-        - cidr
-    FirewallDeleteRequest:
+        - from
+        - to
+        - cpu
+        - memory
+    ResourceUsageReport:
       type: object
       properties:
-        clusterId:
+        fromDate:
           type: string
-        cidr:
+          description: reported usage has occurred after this date. RFC3339 format.
+        toDate:
           type: string
-          description: Firewall IP Cidr.
-          example: 71.61.81.11/32
+          description: reported usage has occurred before this date. RFC3339 format.
+        dates:
+          type: array
+          items:
+            $ref: '#/components/schemas/ResourceUsage'
       required:
-        - clusterId
-        - cidr
+        - fromDate
+        - toDate
+        - dates
