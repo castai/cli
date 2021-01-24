@@ -28,7 +28,7 @@ archives:
   name_template: '{{ .ProjectName }}_{{ .Version }}_{{ .Os }}_{{ .Arch }}'
   files:
     - README.md
-    - LICENSE.md
+    - LICENSE
     - completions/*
 checksum:
   name_template: '{{ .ProjectName }}_{{ .Version }}_SHA256SUMS'
