@@ -22,10 +22,14 @@ builds:
   goarch:
     - amd64
     - arm64
-  binary: '{{ .ProjectName }}_v{{ .Version }}'
+  binary: 'cast'
 archives:
 - format: zip
   name_template: '{{ .ProjectName }}_{{ .Version }}_{{ .Os }}_{{ .Arch }}'
+  files:
+    - README.md
+    - LICENSE.md
+    - completions/*
 checksum:
   name_template: '{{ .ProjectName }}_{{ .Version }}_SHA256SUMS'
   algorithm: sha256
@@ -54,6 +58,7 @@ brews:
     test: |
       system "#{bin}/cast version"
     install: |-
-      bash_completion.install "completions/goreleaser.bash" => "cast"
-      zsh_completion.install "completions/goreleaser.zsh" => "_cast"
-      fish_completion.install "completions/goreleaser.fish"
+      bin.install "cast"
+      bash_completion.install "completions/cast.bash" => "cast"
+      zsh_completion.install "completions/cast.zsh" => "_cast"
+      fish_completion.install "completions/cast.fish"
