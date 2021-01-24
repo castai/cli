@@ -68,3 +68,6 @@ Flags:
 
 Use "cast [command] --help" for more information about a command.
 ```
+
+[Homebrew]: https://brew.sh
+[releases page]: https://github.com/castai/cast-cli/releases/latest
