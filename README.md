@@ -48,7 +48,7 @@ It is possible to override all configuration with environment variables.
 | CASTAI_API_TOKEN | API access token | - |
 | CASTAI_API_HOSTNAME | API access token | api.cast.ai |
 | CASTAI_DEBUG | Enable debug mode | false |
-| CASTAI_CONFIG | Path to CLI configuration file | ~/.cast.config |
+| CASTAI_CONFIG | Path to CLI configuration file | ~/.cast/config |
 
 ## Usage
 
