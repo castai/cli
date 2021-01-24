@@ -2,22 +2,31 @@
 
 NOTE: CAST AI CLI is in it's early stage. Feel free to contribute, ask questions, give feedback.
 
-### Installation
+## Installation
 
-#### macOS
-TODO:
+### macOS
 
-#### Linux
-TODO:
+`cast` is available via [Homebrew][], and as a downloadable binary from the [releases page][].
 
-#### Windows
-TODOl:
+#### Homebrew
 
-### Getting started
+| Install:          | Upgrade:          |
+| ----------------- | ----------------- |
+| `brew install castai/tap/cast-cli` | `brew upgrade castai/tap/cast-cli` |
+
+### Linux
+
+`cast` is available via [Homebrew](#homebrew), and as downloadable binaries from the [releases page][].
+
+### Windows
+
+`cast` is available as a downloadable binary from the [releases page][].
+
+## Getting started
 
 After installing CLI you need to configure API access token to access CAST AI public API.
 
-#### Quick configuration
+### Quick configuration
 
 ```
 cast configure
@@ -25,7 +34,7 @@ cast configure
 
 After done configuration file is saved to file system.
 	
-#### Configure via environment variables
+### Configure via environment variables
 It is possible to override all configuration with environment variables.
 
 | Variable          | Description          | Default |
@@ -35,15 +44,7 @@ It is possible to override all configuration with environment variables.
 | CASTAI_DEBUG | Enable debug mode | false |
 | CASTAI_CONFIG | Path to CLI configuration file | ~/.cast.config |
 
-### Environment variables
-
-It's possible to override some global flags by setting environment variables.
-
-* CASTAI_API_TOKEN
-* CASTAI_DEBUG
-* CASTAI_API_URL
-
-### Usage
+## Usage
 
 Run `cast` without any arguments to get help. Use --help on sub commands to get more help, eg. `cast cluster --help` 
 
