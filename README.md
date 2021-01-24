@@ -18,6 +18,12 @@ NOTE: CAST AI CLI is in it's early stage. Feel free to contribute, ask questions
 
 `cast` is available via [Homebrew](#homebrew), and as downloadable binaries from the [releases page][].
 
+#### Homebrew
+
+| Install:          | Upgrade:          |
+| ----------------- | ----------------- |
+| `brew install castai/tap/cast-cli` | `brew upgrade castai/tap/cast-cli` |
+
 ### Windows
 
 `cast` is available as a downloadable binary from the [releases page][].
