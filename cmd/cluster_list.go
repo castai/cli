@@ -17,12 +17,11 @@ limitations under the License.
 package cmd
 
 import (
-	"net/http"
-	"os"
+	"io"
 	"strings"
 
 	"github.com/jedib0t/go-pretty/v6/table"
-	log "github.com/sirupsen/logrus"
+	"github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
 
 	"github.com/castai/cast-cli/pkg/client"
@@ -31,44 +30,41 @@ import (
 )
 
 var (
-	flagIncludeDeleted bool
+	flagIncludeDeletedClusters bool
 )
 
-var clusterListCmd = &cobra.Command{
-	Use:   "list",
-	Short: "List all clusters",
-	Run: func(cmd *cobra.Command, args []string) {
-		if err := handleListClusters(); err != nil {
-			log.Fatal(err)
-		}
-	},
+func newClusterListCmd(log logrus.FieldLogger, api client.Interface) *cobra.Command {
+	cmd := &cobra.Command{
+		Use:   "list",
+		Short: "List all clusters",
+		Run: func(cmd *cobra.Command, args []string) {
+			if err := handleListClusters(cmd, api); err != nil {
+				log.Fatal(err)
+			}
+		},
+	}
+	cmd.PersistentFlags().BoolVar(&flagIncludeDeletedClusters, "include-deleted", false, "Show deleted clusters too.")
+	command.AddJSONOutput(cmd)
+	return cmd
 }
 
-func init() {
-	clusterCmd.AddCommand(clusterListCmd)
-	clusterListCmd.PersistentFlags().BoolVar(&flagIncludeDeleted, "include-deleted", false, "Show deleted clusters too.")
-	command.AddJSONOutput(clusterListCmd)
-}
+//func init() {
+//	clusterListCmd.PersistentFlags().BoolVar(&flagIncludeDeletedClusters, "include-deleted", false, "Show deleted clusters too.")
+//	command.AddJSONOutput(clusterListCmd)
+//	clusterCmd.AddCommand(clusterListCmd)
+//}
 
-func handleListClusters() error {
-	apiClient, err := client.New()
+func handleListClusters(cmd *cobra.Command, api client.Interface) error {
+	resp, err := api.ListKubernetesClusters(cmd.Context(), &sdk.ListKubernetesClustersParams{})
 	if err != nil {
 		return err
 	}
 
-	ctx, cancel := client.DefaultContext()
-	defer cancel()
-
-	resp, err := apiClient.ListKubernetesClustersWithResponse(ctx, &sdk.ListKubernetesClustersParams{})
-	if err := client.CheckResponse(resp, err, http.StatusOK); err != nil {
-		return err
-	}
-
-	res := resp.JSON200.Items
-	if !flagIncludeDeleted {
+	res := resp
+	if !flagIncludeDeletedClusters {
 		// TODO: Ideally API should all to pass query params to include deleted clusters in response.
 		res = []sdk.KubernetesCluster{}
-		for _, item := range resp.JSON200.Items {
+		for _, item := range resp {
 			if item.Status != "deleted" {
 				res = append(res, item)
 			}
@@ -80,32 +76,31 @@ func handleListClusters() error {
 		return nil
 	}
 
-	printClustersListTable(res)
+	printClustersListTable(cmd.OutOrStdout(), res)
 	return nil
 }
 
-func printClustersListTable(clusters []sdk.KubernetesCluster) {
+func printClustersListTable(out io.Writer, items []sdk.KubernetesCluster) {
 	t := table.NewWriter()
-	t.SetStyle(table.StyleLight)
-	t.SetOutputMirror(os.Stdout)
-	t.AppendHeader(table.Row{"#", "Name", "Status", "Clouds", "Region"})
-	for _, cluster := range clusters {
+	t.SetStyle(command.DefaultTableStyle)
+	t.SetOutputMirror(out)
+	t.AppendHeader(table.Row{"ID", "Name", "Status", "Clouds", "Region"})
+	for _, item := range items {
 		t.AppendRow(table.Row{
-			cluster.Id,
-			cluster.Name,
-			cluster.Status,
-			strings.Join(getClusterCloudsNames(cluster), " "),
-			cluster.Region.DisplayName,
+			item.Id,
+			item.Name,
+			item.Status,
+			strings.Join(getClusterCloudsNames(item), " "),
+			item.Region.DisplayName,
 		})
-		t.AppendSeparator()
 	}
 	t.Render()
 }
 
-func getClusterCloudsNames(cluster sdk.KubernetesCluster) []string {
+func getClusterCloudsNames(item sdk.KubernetesCluster) []string {
 	var res []string
 	clouds := map[string]struct{}{}
-	for _, node := range cluster.Nodes {
+	for _, node := range item.Nodes {
 		clouds[string(node.Cloud)] = struct{}{}
 	}
 	for c := range clouds {
