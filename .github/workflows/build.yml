@@ -31,5 +31,3 @@ jobs:
 
       - name: Test
         run: go test -race ./...
-        env:
-          CI_CAST_API_ACCESS_TOKEN: "${{ secrets.CI_CAST_API_ACCESS_TOKEN }}"

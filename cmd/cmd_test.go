@@ -113,11 +113,6 @@ func TestCommands(t *testing.T) {
 	})
 }
 
-func TestPa(t *testing.T) {
-	p := path.Join("/cast/config")
-	fmt.Println(path.Dir(p))
-}
-
 func executeCommand(root *cobra.Command, args ...string) (output string, err error) {
 	_, output, err = executeCommandC(root, args...)
 	return output, err

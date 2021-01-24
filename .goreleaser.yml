@@ -6,6 +6,7 @@
 before:
   hooks:
     - go mod tidy
+    - ./scripts/completions.sh
 builds:
 - env:
     - CGO_ENABLED=0
@@ -15,18 +16,12 @@ builds:
   ldflags:
     - '-s -w -X  github.com/castai/cast-cli/pkg/version.Version={{.Version}} -X  github.com/castai/cast-cli/pkg/version.Commit={{.Commit}}'
   goos:
-    - freebsd
     - windows
     - linux
     - darwin
   goarch:
     - amd64
-    - '386'
-    - arm
     - arm64
-  ignore:
-    - goos: darwin
-      goarch: '386'
   binary: '{{ .ProjectName }}_v{{ .Version }}'
 archives:
 - format: zip
@@ -45,6 +40,20 @@ signs:
       - "--detach-sign"
       - "${artifact}"
 release:
-  draft: true
+  draft: false
 changelog:
   skip: true
+brews:
+  - tap:
+      owner: castai
+      name: homebrew-tap
+    folder: Formula
+    homepage: "https://cast.ai"
+    description: Multiple clouds in one K8s cluster. Best combination of everything in cloud
+    license: Apache License
+    test: |
+      system "#{bin}/cast version"
+    install: |-
+      bash_completion.install "completions/goreleaser.bash" => "cast"
+      zsh_completion.install "completions/goreleaser.zsh" => "_cast"
+      fish_completion.install "completions/goreleaser.fish"
