@@ -176,9 +176,6 @@ func waitClusterCreatedWithProgress(ctx context.Context, duration time.Duration,
 		waitErr <- waitClusterCreated(ctx, clusterID, api)
 	}()
 
-	ctx, cancel := context.WithCancel(ctx)
-	defer cancel()
-
 	command.ShowProgress(ctx, command.ProgressConfig{
 		Title:        fmt.Sprintf("Estimated time: %s", duration),
 		TotalTimeETA: duration,
