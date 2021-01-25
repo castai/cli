@@ -14,23 +14,26 @@ const (
 	defaultConfigDir  = ".cast"
 	defaultConfigName = "config"
 
-	envApiToken    = "CASTAI_API_TOKEN"
-	envApiHostname = "CASTAI_API_HOSTNAME"
-	envDebug       = "CASTAI_DEBUG"
-	envConfigPath  = "CASTAI_CONFIG"
+	envApiToken      = "CASTAI_API_TOKEN"
+	envApiHostname   = "CASTAI_API_HOSTNAME"
+	envDebug         = "CASTAI_DEBUG"
+	envDefaultRegion = "CASTAI_DEFAULT_REGION"
+	envConfigPath    = "CASTAI_CONFIG"
 )
 
 type Config struct {
-	Hostname    string `yaml:"hostname"`
-	AccessToken string `yaml:"access_token"`
-	Debug       bool   `yaml:"debug"`
+	Hostname      string `yaml:"hostname"`
+	AccessToken   string `yaml:"access_token"`
+	DefaultRegion string `yaml:"default_region"`
+	Debug         bool   `yaml:"debug"`
 }
 
 func LoadFromEnv() (*Config, error) {
 	config := &Config{
-		Hostname:    "api.cast.ai",
-		AccessToken: "",
-		Debug:       false,
+		Hostname:      "api.cast.ai",
+		AccessToken:   "",
+		DefaultRegion: "eu-central",
+		Debug:         false,
 	}
 
 	// Try to read config from file.
@@ -61,6 +64,9 @@ func LoadFromEnv() (*Config, error) {
 	}
 	if debug := os.Getenv(envDebug); debug != "" {
 		config.Debug = debug == "true" || debug == "1"
+	}
+	if region := os.Getenv(envDefaultRegion); region != "" {
+		config.DefaultRegion = region
 	}
 
 	return config, nil

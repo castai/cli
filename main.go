@@ -43,7 +43,7 @@ func main() {
 		log.Fatal(err)
 	}
 
-	root := cmd.NewRootCmd(log, api)
+	root := cmd.NewRootCmd(log, cfg, api)
 	if err := root.Execute(); err != nil {
 		log.Fatal(err)
 	}

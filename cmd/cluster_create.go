@@ -29,8 +29,9 @@ import (
 	"github.com/spf13/cobra"
 
 	"github.com/castai/cast-cli/pkg/client"
+	"github.com/castai/cast-cli/pkg/client/sdk"
 	"github.com/castai/cast-cli/pkg/command"
-	"github.com/castai/cast-cli/pkg/sdk"
+	"github.com/castai/cast-cli/pkg/config"
 )
 
 type clusterCreateFlags struct {
@@ -46,7 +47,17 @@ type clusterCreateFlags struct {
 
 var clusterCreateFlagsData clusterCreateFlags
 
-func newClusterCreateCmd(log logrus.FieldLogger, api client.Interface) *cobra.Command {
+const (
+	vpnTypeWireGuardCrossLocationMesh = "wireguard_cross_location_mesh"
+	vpnTypeWireGuardFullMesh          = "wireguard_full_mesh"
+	vpnTypeCloudProvider              = "cloud_provider"
+
+	clusterConfigurationStarter = "starter"
+	clusterConfigurationBasic   = "basic"
+	clusterConfigurationHA      = "ha"
+)
+
+func newClusterCreateCmd(log logrus.FieldLogger, cfg *config.Config, api client.Interface) *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "create",
 		Short: "Create kubernetes cluster",
@@ -64,7 +75,7 @@ Examples:
     --region=eu-central \
     --credentials=aws --credentials=gcp --credentials=do \
     --configuration=ha \
-    --vpn=wiregaurd_cross_location_mesh \
+    --vpn=wireguard_cross_location_mesh \
     --wait --progress
 
   # Create HA cluster with 3 clouds from custom nodes definitions.
@@ -78,7 +89,7 @@ Examples:
     --node=aws,worker,smal \
     --node=gcp,worker,medium \
     --node=do,worker,large \
-    --vpn=wiregaurd_full_mesh \
+    --vpn=wireguard_full_mesh \
     --wait --progress
 `,
 		Run: func(cmd *cobra.Command, args []string) {
@@ -88,11 +99,11 @@ Examples:
 		},
 	}
 	cmd.PersistentFlags().StringVar(&clusterCreateFlagsData.Name, "name", "", "cluster name, eg. --name=my-demo-cluster")
-	cmd.PersistentFlags().StringVar(&clusterCreateFlagsData.Region, "region", "", "region in which cluster will be created, eg. --region=eu-central")
+	cmd.PersistentFlags().StringVar(&clusterCreateFlagsData.Region, "region", cfg.DefaultRegion, "region in which cluster will be created, eg. --region=eu-central")
 	cmd.PersistentFlags().StringSliceVar(&clusterCreateFlagsData.Credentials, "credentials", []string{}, "cloud credentials names, eg. --credentials=aws, --credentials=gcp")
 	cmd.PersistentFlags().StringSliceVar(&clusterCreateFlagsData.Nodes, "node", []string{}, "nodes configuration, eg. --node=aws,master,medium --node=gcp,worker,small")
-	cmd.PersistentFlags().StringVar(&clusterCreateFlagsData.Configuration, "configuration", "", "quick cluster nodes configuration, eg. --configuration=ha")
-	cmd.PersistentFlags().StringVar(&clusterCreateFlagsData.VPN, "vpn", "", "virtual private network type between clouds, eg. --vpn=wiregaurd_cross_location_mesh")
+	cmd.PersistentFlags().StringVar(&clusterCreateFlagsData.Configuration, "configuration", clusterConfigurationBasic, "quick cluster nodes configuration, eg. --configuration=ha")
+	cmd.PersistentFlags().StringVar(&clusterCreateFlagsData.VPN, "vpn", vpnTypeWireGuardCrossLocationMesh, "virtual private network type between clouds, eg. --vpn=cloud_provider")
 	cmd.PersistentFlags().BoolVar(&clusterCreateFlagsData.Wait, "wait", false, "wait until operation finishes, eg. --wait=true")
 	cmd.PersistentFlags().BoolVar(&clusterCreateFlagsData.Progress, "progress", false, "show progress bar with estimated time for finish, eg. --progress=true")
 	return cmd
@@ -126,10 +137,19 @@ func handleCreateCluster(cmd *cobra.Command, log logrus.FieldLogger, api client.
 	}
 
 	if clusterCreateFlagsData.Wait && !clusterCreateFlagsData.Progress {
-		return waitClusterCreated(cmd.Context(), cluster.Id, api)
+		err := waitClusterCreated(cmd.Context(), cluster.Id, api)
+		if err != nil {
+			return err
+		}
+		log.Info("Great! Cluster is ready.")
+		return nil
 	}
 
-	return waitClusterCreatedWithProgress(cmd.Context(), estimatedDuration, cluster.Id, api)
+	if err := waitClusterCreatedWithProgress(cmd.Context(), estimatedDuration, cluster.Id, api); err != nil {
+		return err
+	}
+	log.Info("Great! Cluster is ready.")
+	return nil
 }
 
 func estimateClusterCreationDuration(req *sdk.CreateNewClusterJSONRequestBody) time.Duration {
@@ -279,12 +299,14 @@ func toCreateClusterRequest(lists *clusterCreationSelectLists, flags clusterCrea
 		return nil, errors.New("cloud credentials are required, eg. --credentials=gcp-creds-1")
 	}
 	cloudCredentials := selectOptionList{}
-	for _, credential := range flags.Credentials {
+	cloudCredentialIDs := make([]string, len(flags.Credentials))
+	for i, credential := range flags.Credentials {
 		v, ok := lists.credentials.find(credential)
 		if !ok {
 			return nil, fmt.Errorf("cloud credentials value %s is not valid, available values: %s", credential, strings.Join(lists.credentials.names(), ", "))
 		}
 		cloudCredentials = append(cloudCredentials, v)
+		cloudCredentialIDs[i] = v.extra["id"]
 	}
 
 	region, ok := lists.regions.find(flags.Region)
@@ -318,7 +340,7 @@ func toCreateClusterRequest(lists *clusterCreationSelectLists, flags clusterCrea
 
 	return &sdk.CreateNewClusterJSONRequestBody{
 		Name:                flags.Name,
-		CloudCredentialsIDs: cloudCredentials.names(),
+		CloudCredentialsIDs: cloudCredentialIDs,
 		Region:              region.name,
 		Network:             toNetwork(vpn.name),
 		Addons:              defaultAddons(),
@@ -328,15 +350,15 @@ func toCreateClusterRequest(lists *clusterCreationSelectLists, flags clusterCrea
 
 func toNetwork(name string) *sdk.Network {
 	switch name {
-	case "wiregaurd_full_mesh":
+	case vpnTypeWireGuardFullMesh:
 		return &sdk.Network{Vpn: sdk.VpnConfig{
 			WireGuard: &sdk.WireGuardConfig{Topology: "fullMesh"},
 		}}
-	case "wiregaurd_cross_location_mesh":
+	case vpnTypeWireGuardCrossLocationMesh:
 		return &sdk.Network{Vpn: sdk.VpnConfig{
 			WireGuard: &sdk.WireGuardConfig{Topology: "crossLocationMesh"},
 		}}
-	case "cloud_provider":
+	case vpnTypeCloudProvider:
 		return &sdk.Network{Vpn: sdk.VpnConfig{
 			IpSec: &sdk.IpSecConfig{},
 		}}
@@ -399,7 +421,7 @@ func parseNodeFromString(n string) (sdk.Node, error) {
 func toAPINodesFromConfiguration(cloudCredentials selectOptionList, clusterConfigurationName string) []sdk.Node {
 	var nodes []sdk.Node
 	switch clusterConfigurationName {
-	case "starter":
+	case clusterConfigurationStarter:
 		// Add master node on first cloud.
 		firstCloudCredential := cloudCredentials[0]
 		nodes = append(nodes, sdk.Node{
@@ -413,7 +435,7 @@ func toAPINodesFromConfiguration(cloudCredentials selectOptionList, clusterConfi
 			Role:  "worker",
 			Shape: "medium",
 		})
-	case "basic":
+	case clusterConfigurationBasic:
 		// Add master node on first cloud.
 		firstCloudCredential := cloudCredentials[0]
 		nodes = append(nodes, sdk.Node{
@@ -429,7 +451,7 @@ func toAPINodesFromConfiguration(cloudCredentials selectOptionList, clusterConfi
 				Shape: "small",
 			})
 		}
-	case "ha":
+	case clusterConfigurationHA:
 		// Add master node on each cloud.
 		for i := 0; i < len(cloudCredentials); i++ {
 			nodes = append(nodes, sdk.Node{
@@ -505,9 +527,9 @@ func (d *clusterCreationSelectLists) load(ctx context.Context, api client.Interf
 	d.credentials = make([]selectOption, len(credentials))
 	for i, item := range credentials {
 		d.credentials[i] = selectOption{
-			name:        item.Id,
+			name:        item.Name,
 			displayName: fmt.Sprintf("(%s) %s", item.Cloud, item.Name),
-			extra:       map[string]string{"cloud": item.Cloud},
+			extra:       map[string]string{"cloud": item.Cloud, "id": item.Id},
 		}
 	}
 
@@ -530,11 +552,11 @@ func (d *clusterCreationSelectLists) load(ctx context.Context, api client.Interf
 	// Setup vpn options.
 	d.vpns = selectOptionList{
 		{
-			name:        "wiregaurd_cross_location_mesh",
+			name:        "wireguard_cross_location_mesh",
 			displayName: "WireGuard VPN (Cross location mesh)",
 		},
 		{
-			name:        "wiregaurd_full_mesh",
+			name:        "wireguard_full_mesh",
 			displayName: "WireGuard VPN (Full mesh)",
 		},
 		{

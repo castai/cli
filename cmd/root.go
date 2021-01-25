@@ -21,9 +21,10 @@ import (
 	"github.com/spf13/cobra"
 
 	"github.com/castai/cast-cli/pkg/client"
+	"github.com/castai/cast-cli/pkg/config"
 )
 
-func NewRootCmd(log logrus.FieldLogger, api client.Interface) *cobra.Command {
+func NewRootCmd(log logrus.FieldLogger, cfg *config.Config, api client.Interface) *cobra.Command {
 	rootCmd := &cobra.Command{
 		Use:   "cast",
 		Short: "CAST AI Command Line Interface",
@@ -39,7 +40,7 @@ func NewRootCmd(log logrus.FieldLogger, api client.Interface) *cobra.Command {
 	clusterCmd := newClusterCmd()
 	clusterCmd.AddCommand(newClusterListCmd(log, api))
 	clusterCmd.AddCommand(newClusterGetCmd(log, api))
-	clusterCmd.AddCommand(newClusterCreateCmd(log, api))
+	clusterCmd.AddCommand(newClusterCreateCmd(log, cfg, api))
 	clusterCmd.AddCommand(newClusterGetKubeconfigCmd(log, api))
 	clusterCmd.AddCommand(newClusterDeleteCmd(log, api))
 	rootCmd.AddCommand(clusterCmd)

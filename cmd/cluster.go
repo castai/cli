@@ -25,7 +25,7 @@ import (
 	"github.com/spf13/cobra"
 
 	"github.com/castai/cast-cli/pkg/client"
-	"github.com/castai/cast-cli/pkg/sdk"
+	"github.com/castai/cast-cli/pkg/client/sdk"
 )
 
 func newClusterCmd() *cobra.Command {
