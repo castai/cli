@@ -2,6 +2,8 @@
 
 NOTE: CAST AI CLI is in it's early stage. Feel free to contribute, ask questions, give feedback.
 
+![demo](https://raw.githubusercontent.com/castai/cast-cli/master/cluster_create.gif)
+
 ## Installation
 
 ### macOS
