@@ -48,7 +48,7 @@ It is possible to override all configuration with environment variables.
 | Variable          | Description          
 | ----------------- | ----------------- |
 | CASTAI_API_TOKEN | API access token |
-| CASTAI_API_HOSTNAME | API access token |
+| CASTAI_API_HOSTNAME | API hostname |
 | CASTAI_DEFAULT_REGION | Default region for cluster creation |
 | CASTAI_DEBUG | Enable debug mode | 
 | CASTAI_CONFIG | Custom path to CLI configuration file |
