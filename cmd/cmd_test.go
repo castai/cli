@@ -12,13 +12,19 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"github.com/castai/cast-cli/pkg/client"
+	"github.com/castai/cast-cli/pkg/config"
 )
 
-func TestCommands(t *testing.T) {
+func newTestRootCmd() *cobra.Command {
 	api := client.NewMock()
-	root := NewRootCmd(logrus.New(), api)
+	log := logrus.New()
+	return NewRootCmd(log, &config.Config{}, api)
+}
 
+func TestCommands(t *testing.T) {
 	t.Run("cluster list", func(t *testing.T) {
+		root := newTestRootCmd()
+
 		out, err := executeCommand(root, "cluster", "list")
 		require.NoError(t, err)
 		fmt.Println(out)
@@ -28,38 +34,43 @@ func TestCommands(t *testing.T) {
 	})
 
 	t.Run("cluster create from configuration", func(t *testing.T) {
-		out, err := executeCommand(
+		root := newTestRootCmd()
+
+		_, err := executeCommand(
 			root,
 			"cluster",
 			"create",
 			"--name", "test",
 			"--region", "eu-central",
-			"--credentials", "cred1",
-			"--vpn", "wiregaurd_cross_location_mesh",
+			"--credentials", "aws",
+			"--vpn", "wireguard_cross_location_mesh",
 			"--configuration", "ha",
 		)
 		require.NoError(t, err)
-		fmt.Println(out)
 	})
 
 	t.Run("cluster create from nodes", func(t *testing.T) {
+		root := newTestRootCmd()
+
 		out, err := executeCommand(
 			root,
 			"cluster",
 			"create",
 			"--name", "test",
 			"--region", "eu-central",
-			"--credentials", "cred1",
-			"--vpn", "wiregaurd_cross_location_mesh",
+			"--credentials", "gcp",
+			"--vpn", "wireguard_cross_location_mesh",
 			"--node", `"aws,master,medium"`,
 			"--node", `"aws,worker,small"`,
-			"--wait", "--progress",
+			"--wait",
 		)
 		require.NoError(t, err)
 		fmt.Println(out)
 	})
 
 	t.Run("cluster get by cluster name", func(t *testing.T) {
+		root := newTestRootCmd()
+
 		out, err := executeCommand(
 			root,
 			"cluster", "get", "test-cluster-1",
@@ -72,6 +83,8 @@ func TestCommands(t *testing.T) {
 	})
 
 	t.Run("cluster get-kubeconfig", func(t *testing.T) {
+		root := newTestRootCmd()
+
 		configPath := path.Join(t.TempDir(), "config")
 		out, err := executeCommand(
 			root,
@@ -84,15 +97,19 @@ func TestCommands(t *testing.T) {
 	})
 
 	t.Run("cluster delete", func(t *testing.T) {
+		root := newTestRootCmd()
+
 		out, err := executeCommand(
 			root,
-			"cluster", "delete", "test-cluster-1",
+			"cluster", "delete", "test-cluster-1", "-y",
 		)
 		require.NoError(t, err)
 		fmt.Println(out)
 	})
 
 	t.Run("region list", func(t *testing.T) {
+		root := newTestRootCmd()
+
 		out, err := executeCommand(root, "region", "list")
 		require.NoError(t, err)
 		fmt.Println(out)
@@ -102,6 +119,8 @@ func TestCommands(t *testing.T) {
 	})
 
 	t.Run("credentials list", func(t *testing.T) {
+		root := newTestRootCmd()
+
 		out, err := executeCommand(root, "credentials", "list")
 		require.NoError(t, err)
 		fmt.Println(out)

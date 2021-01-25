@@ -45,12 +45,13 @@ After done configuration file is saved to file system.
 ### Configure via environment variables
 It is possible to override all configuration with environment variables.
 
-| Variable          | Description          | Default |
-| ----------------- | ----------------- | ----------------- |
-| CASTAI_API_TOKEN | API access token | - |
-| CASTAI_API_HOSTNAME | API access token | api.cast.ai |
-| CASTAI_DEBUG | Enable debug mode | false |
-| CASTAI_CONFIG | Path to CLI configuration file | ~/.cast/config |
+| Variable          | Description          
+| ----------------- | ----------------- |
+| CASTAI_API_TOKEN | API access token |
+| CASTAI_API_HOSTNAME | API access token |
+| CASTAI_DEFAULT_REGION | Default region for cluster creation |
+| CASTAI_DEBUG | Enable debug mode | 
+| CASTAI_CONFIG | Custom path to CLI configuration file |
 
 ## Usage
 
@@ -75,6 +76,23 @@ Flags:
   -h, --help   help for cast
 
 Use "cast [command] --help" for more information about a command.
+```
+
+#### Create and access cluster
+
+Create cluster
+```
+cast cluster create --name=my-cluster --credentials=aws --progress
+```
+
+Setup kubeconfig
+```
+cast cluster get-kubeconfig my-cluster
+```
+
+Verify Kubernetes nodes
+```
+kubectl get nodes
 ```
 
 [Homebrew]: https://brew.sh

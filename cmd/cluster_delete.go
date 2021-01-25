@@ -17,12 +17,15 @@ limitations under the License.
 package cmd
 
 import (
+	"github.com/AlecAivazis/survey/v2"
 	"github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
 
 	"github.com/castai/cast-cli/pkg/client"
-	"github.com/castai/cast-cli/pkg/sdk"
+	"github.com/castai/cast-cli/pkg/client/sdk"
 )
+
+var flagDeleteClusterConfirm bool
 
 func newClusterDeleteCmd(log logrus.FieldLogger, api client.Interface) *cobra.Command {
 	cmd := &cobra.Command{
@@ -34,6 +37,7 @@ func newClusterDeleteCmd(log logrus.FieldLogger, api client.Interface) *cobra.Co
 			}
 		},
 	}
+	cmd.PersistentFlags().BoolVarP(&flagDeleteClusterConfirm, "yes", "y", false, "confirm cluster deletion")
 
 	return cmd
 }
@@ -42,6 +46,19 @@ func handleDeleteCluster(cmd *cobra.Command, log logrus.FieldLogger, api client.
 	clusterID, err := getClusterID(cmd, api)
 	if err != nil {
 		return err
+	}
+
+	if !flagDeleteClusterConfirm {
+		if err := survey.AskOne(&survey.Confirm{
+			Message: "Are you sure?",
+		}, &flagDeleteClusterConfirm); err != nil {
+			return err
+		}
+	}
+
+	if !flagDeleteClusterConfirm {
+		log.Info("Cluster delete canceled")
+		return nil
 	}
 
 	err = api.DeleteCluster(cmd.Context(), sdk.ClusterId(clusterID))

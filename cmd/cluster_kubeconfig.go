@@ -29,7 +29,7 @@ import (
 	"k8s.io/client-go/tools/clientcmd"
 
 	"github.com/castai/cast-cli/pkg/client"
-	"github.com/castai/cast-cli/pkg/sdk"
+	"github.com/castai/cast-cli/pkg/client/sdk"
 )
 
 var (

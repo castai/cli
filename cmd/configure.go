@@ -17,6 +17,7 @@ limitations under the License.
 package cmd
 
 import (
+	"context"
 	"fmt"
 
 	"github.com/AlecAivazis/survey/v2"
@@ -88,11 +89,49 @@ func handleConfigure(log logrus.FieldLogger, cmd *cobra.Command) error {
 		return fmt.Errorf("saving configuration: %w", err)
 	}
 
+	if err := configureDefaultRegion(cmd.Context(), cfg, api); err != nil {
+		return err
+	}
+
 	configPath, err := config.GetPath()
 	if err != nil {
 		return err
 	}
 	log.Infof("Configuration saved to %s", configPath)
+
+	return nil
+}
+
+func configureDefaultRegion(ctx context.Context, cfg *config.Config, api client.Interface) error {
+	regions, err := api.ListRegions(ctx)
+	if err != nil {
+		return err
+	}
+	regionsSelectList := make([]string, len(regions))
+	for i, region := range regions {
+		regionsSelectList[i] = region.DisplayName
+	}
+
+	var selectedRegion string
+	prompt := &survey.Select{
+		Message: "Default region:",
+		Options: regionsSelectList,
+		Default: regionsSelectList[0],
+	}
+
+	if err := survey.AskOne(prompt, &selectedRegion, survey.WithValidator(survey.Required)); err != nil {
+		return err
+	}
+
+	for _, region := range regions {
+		if region.DisplayName == selectedRegion {
+			cfg.DefaultRegion = region.Name
+			if err := config.Save(cfg); err != nil {
+				return err
+			}
+			return nil
+		}
+	}
 
 	return nil
 }

@@ -7,7 +7,7 @@ import (
 
 	"github.com/google/uuid"
 
-	"github.com/castai/cast-cli/pkg/sdk"
+	"github.com/castai/cast-cli/pkg/client/sdk"
 )
 
 func NewMock() Interface {

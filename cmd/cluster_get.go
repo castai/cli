@@ -21,8 +21,8 @@ import (
 	"github.com/spf13/cobra"
 
 	"github.com/castai/cast-cli/pkg/client"
+	"github.com/castai/cast-cli/pkg/client/sdk"
 	"github.com/castai/cast-cli/pkg/command"
-	"github.com/castai/cast-cli/pkg/sdk"
 )
 
 func newClusterGetCmd(log logrus.FieldLogger, api client.Interface) *cobra.Command {

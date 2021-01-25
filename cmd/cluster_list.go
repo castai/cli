@@ -25,8 +25,8 @@ import (
 	"github.com/spf13/cobra"
 
 	"github.com/castai/cast-cli/pkg/client"
+	"github.com/castai/cast-cli/pkg/client/sdk"
 	"github.com/castai/cast-cli/pkg/command"
-	"github.com/castai/cast-cli/pkg/sdk"
 )
 
 var (
@@ -62,7 +62,7 @@ func handleListClusters(cmd *cobra.Command, api client.Interface) error {
 
 	res := resp
 	if !flagIncludeDeletedClusters {
-		// TODO: Ideally API should all to pass query params to include deleted clusters in response.
+		// TODO: Ideally API should allow to pass query params to include deleted clusters in response.
 		res = []sdk.KubernetesCluster{}
 		for _, item := range resp {
 			if item.Status != "deleted" {
