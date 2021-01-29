@@ -29,34 +29,38 @@ import (
 	"github.com/castai/cast-cli/pkg/client/sdk"
 )
 
-func newClusterCmd() *cobra.Command {
+const (
+	flagCluster = "cluster"
+)
+
+func newNodeCmd() *cobra.Command {
 	return &cobra.Command{
-		Use:   "cluster",
-		Short: "Manage clusters",
+		Use:   "node",
+		Short: "Manage clusters nodes",
 	}
 }
 
-func parseClusterIDFromCMDArgs(cmd *cobra.Command, api client.Interface) (string, error) {
+func parseNodeIDFromCMDArgs(cmd *cobra.Command, api client.Interface, clusterID string) (string, error) {
 	if len(cmd.Flags().Args()) == 0 {
-		return "", errors.New("cluster ID or name is required")
+		return "", errors.New("node ID or name is required")
 	}
-	clusterIDOrName := cmd.Flags().Args()[0]
-	return parseClusterIDFromValue(cmd.Context(), api, clusterIDOrName)
+	nodeIDOrName := cmd.Flags().Args()[0]
+	return parseNodeIDFromValue(cmd.Context(), api, nodeIDOrName, clusterID)
 }
 
-func parseClusterIDFromValue(ctx context.Context, api client.Interface, value string) (string, error) {
-	uuidID, err := uuid.Parse(value)
+func parseNodeIDFromValue(ctx context.Context, api client.Interface, nodeIDOrName, clusterID string) (string, error) {
+	uuidID, err := uuid.Parse(nodeIDOrName)
 	if err == nil {
 		return uuidID.String(), nil
 	}
-	clusters, err := api.ListKubernetesClusters(ctx, &sdk.ListKubernetesClustersParams{})
+	nodes, err := api.ListClusterNodes(ctx, sdk.ClusterId(clusterID))
 	if err != nil {
 		return "", err
 	}
-	for _, cluster := range clusters {
-		if strings.ToLower(cluster.Name) == strings.ToLower(value) {
-			return cluster.Id, nil
+	for _, node := range nodes {
+		if node.Name != nil && node.Id != nil && strings.ToLower(*node.Name) == strings.ToLower(nodeIDOrName) {
+			return *node.Id, nil
 		}
 	}
-	return "", fmt.Errorf("clusterID for %s not found", value)
+	return "", fmt.Errorf("nodeID for %s not found", nodeIDOrName)
 }

@@ -31,6 +31,8 @@ tags:
     description: (BETA) Regions
   - name: report
     description: (BETA) Reports of current user's organization.
+  - name: users
+    description: Users
 security:
   - BearerAuth: []
   - ApiKeyAuth: []
@@ -251,6 +253,9 @@ paths:
                   items:
                     $ref: "#/components/schemas/Node"
                   description: Initial nodes of this cluster. Both masters and workers
+                network:
+                  $ref: '#/components/schemas/Network'
+                  description: Cluster network configuration.
       responses:
         "200":
           description: List of prices per cloud, per component.
@@ -907,6 +912,87 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/ErrorResponse'
+  /kubernetes/clusters/{clusterId}/nodes/{nodeId}/setup-ssh:
+    parameters:
+      - $ref: '#/components/parameters/clusterId'
+      - name: nodeId
+        in: path
+        required: true
+        schema:
+          type: string
+        description: The id of node.
+    post:
+      operationId: setup-node-ssh
+      tags:
+        - kubernetes
+        - node
+        - ssh
+      summary: >-
+        (BETA) Setup prerequisites to connect to node via SSH.
+      description: >-
+        Setup prerequisites to connect to node via SSH
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                publicKey:
+                  type: string
+                  description: Public authorized key ed25519 for node SSH connection.
+                sourceIp:
+                  type: string
+                  description: Client public source IP which will be added to firewall rules for SSH connection.
+              required:
+                - publicKey
+                - sourceIp
+      responses:
+        "200":
+          description: Operation completed succesfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  accessRuleId:
+                    type: string
+                    description: Access rule ID used to close firewall created for SSH session.
+                required:
+                  - accessRuleId
+  /kubernetes/clusters/{clusterId}/nodes/{nodeId}/close-ssh:
+    parameters:
+      - $ref: '#/components/parameters/clusterId'
+      - name: nodeId
+        in: path
+        required: true
+        schema:
+          type: string
+        description: The id of node.
+    post:
+      operationId: close-node-ssh
+      tags:
+        - kubernetes
+        - node
+        - ssh
+      summary: >-
+        (BETA) Close connect to node SSH.
+      description: >-
+        Close connection to node SSH.
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                accessRuleId:
+                  type: string
+                  description: Access rule ID used to close firewall created for SSH session.
+              required:
+                - accessRuleId
+                - sourceIp
+      responses:
+        "200":
+          description: Operation completed succesfully
   /regions:
     get:
       operationId: list-regions
@@ -947,6 +1033,44 @@ paths:
             text/csv:
               schema:
                 type: string
+  /me:
+    get:
+      operationId: current-user-profile
+      tags:
+        - users
+      summary: >-
+        Retrieve profile of current user
+      description: >-
+        Pulls full profile of current user
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UserProfile'
+          description:
+    post:
+      operationId: update-current-user-profile
+      tags:
+        - users
+      summary: >-
+        Update profile
+      description: >-
+        Updates profile of current user
+      requestBody:
+        required: true
+        description: Cluster with updated fields
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UserProfile'
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UserProfile'
+          description:
 components:
   securitySchemes:
     BearerAuth:
@@ -1624,6 +1748,27 @@ components:
           description: id for long running operation
       required:
         - operationId
+    Headroom:
+      type: object
+      description: Additional headroom based on cluster's total available capacity.
+      properties:
+        cpuPercentage:
+          description: Defines percentage of additional CPU capacity to be added
+          type: integer
+          default: 10
+          minimum: 0
+          maximum: 100
+          example: 10
+        memoryPercentage:
+          description: Defines percentage of additional memory capacity to be added
+          type: integer
+          default: 10
+          minimum: 0
+          maximum: 100
+          example: 10
+      required:
+        - cpuPercentage
+        - memoryPercentage
     PoliciesConfig:
       type: object
       properties:
@@ -1635,15 +1780,12 @@ components:
           $ref: '#/components/schemas/UnschedulablePodsPolicy'
         nodeDownscaler:
           $ref: '#/components/schemas/NodeDownscaler'
-        cpuUtilization:
-          $ref: '#/components/schemas/CpuUtilizationPolicies'
         clusterLimits:
           $ref: '#/components/schemas/ClusterLimitsPolicy'
         spotInstances:
           $ref: '#/components/schemas/SpotInstances'
       required:
         - enabled
-        - cpuUtilization
         - unschedulablePods
         - spotInstances
         - clusterLimits
@@ -1684,31 +1826,6 @@ components:
         - enabled
         - minCores
         - maxCores
-    ScaleUpThreshold:
-      type: object
-      description: CPU high watermark policy defines the higher bound of average cluster CPU load in percentages over the duration in seconds.
-      properties:
-        enabled:
-          description: Enable/disable Scale Up threshold
-          type: boolean
-          default: false
-        avgCpuLoadPercentageMoreThan:
-          description: Average cluster's worker CPU load in percentages.
-          type: integer
-          format: int64
-          minimum: 1
-          maximum: 100
-          exclusiveMaximum: true
-          example: 20
-        evaluationPeriodSeconds:
-          description: Duration in seconds.
-          type: integer
-          format: int64
-          example: 120
-      required:
-        - enabled
-        - avgCpuLoadPercentageMoreThan
-        - evaluationPeriodSeconds
     NodeDownscalerEmptyNodes:
       type: object
       properties:
@@ -1718,20 +1835,12 @@ components:
           default: false
     NodeDownscaler:
       type: object
-      description: Node Downscaler defines polcies for removing nodes based on the configured conditions.
+      description: Node Downscaler defines policies for removing nodes based on the configured conditions.
       properties:
         emptyNodes:
           $ref: '#/components/schemas/NodeDownscalerEmptyNodes'
       required:
         - emtpyNodes
-    CpuUtilizationPolicies:
-      type: object
-      description: Policy defining CPU high watermarks used by autoscaler to optimize cluster resources utilization.
-      properties:
-        scaleUpThreshold:
-          $ref: '#/components/schemas/ScaleUpThreshold'
-      required:
-        - highCpuUtilization
     UnschedulablePodsPolicy:
       type: object
       description: Policy defining autoscaler's behavior when unscedulable pods were detected.
@@ -1740,16 +1849,11 @@ components:
           description: Enable/disable unschedulable pods detection policy.
           type: boolean
           default: false
-        evaluationPeriodSeconds:
-          description: Duration in seconds for how long any of the pods should remain in 'Unschedulable' state to trigger upscaling action.
-          type: integer
-          format: int64
-          default: 30
-          minimum: 0
-          example: 120
+        headroom:
+          $ref: '#/components/schemas/Headroom'
       required:
         - enabled
-        - evaluationPeriodSeconds
+        - headroom
     SpotInstances:
       type: object
       description: Policy defining whether autoscaler can use spot instances for provisioning additional workloads.
@@ -1966,6 +2070,7 @@ components:
             - failed
             - deleting
             - deleted
+            - pausing
             - paused
             - resuming
         reconcileMode:
@@ -2001,7 +2106,26 @@ components:
         kubernetesVersion:
           type: string
           readOnly: true
+          example: 1.19.7
           description: Cluster kubernetes version.
+        createdAt:
+          type: string
+          format: date-time
+          description: Cluster creation UTC time in RFC3339 format.
+          example: 2022-10-02T15:00:00Z
+          readOnly: true
+        heartbeats:
+          type: object
+          readOnly: true
+          additionalProperties:
+            $ref: '#/components/schemas/Heartbeat'
+          example:
+            prometheus:
+              system: prometheus
+              receivedAt: "2001-02-03T11:22:33Z"
+            castadm:
+              system: castadm
+              receivedAt: "2002-03-04T22:33:44Z"
       required:
         - id
         - name
@@ -2126,6 +2250,12 @@ components:
           readOnly: true
           description: Node name generated at the time of node creation.
           example: cluster-33e75b9f-aws-8ca9
+        createdAt:
+          type: string
+          format: date-time
+          description: Node creation UTC time in RFC3339 format.
+          example: 2022-10-02T15:00:00Z
+          readOnly: true
         role:
           $ref: '#/components/schemas/NodeType'
         shape:
@@ -2140,11 +2270,26 @@ components:
           $ref: '#/components/schemas/NodeState'
         spotConfig:
           $ref: '#/components/schemas/NodeSpotConfig'
+        network:
+          $ref: '#/components/schemas/NodeNetwork'
       required:
         - role
         - cloud
         - shape
         - instanceType
+    NodeNetwork:
+      type: object
+      description: Kubernetes node network
+      properties:
+        publicIp:
+          type: string
+          description: node public IP
+        privateIp:
+          type: string
+          description: node private IP
+      required:
+        - publicIp
+        - privateIp
     DeletedNode:
       type: object
       description: Kubernetes node
@@ -2163,6 +2308,17 @@ components:
           description: when set to false, node deletion will be aborted if drain timeout expires.
       required:
         - id
+    Heartbeat:
+      type: object
+      properties:
+        system:
+          type: string
+          description: originating system name
+        receivedAt:
+          type: string
+          format: date-time
+          description: Timestamp of the last heartbeat from this system
+          example: "2010-01-02T03:04:05Z"
     KubernetesClusterList:
       type: object
       properties:
@@ -2405,3 +2561,39 @@ components:
         - fromDate
         - toDate
         - dates
+    UserProfileSurvey:
+      type: object
+      properties:
+        submitted:
+          type: boolean
+        companyName:
+          type: string
+          example: ACME co.
+        monthlyCpuUsage:
+          type: integer
+          example: 489
+        annualCloudBudget:
+          type: integer
+          description: current cloud spend in USD
+          example: 5000
+    UserProfile:
+      type: object
+      properties:
+        nickname:
+          type: string
+          description: internal username. globally unique
+          example: heresjohnny
+        name:
+          type: string
+          description: full name of logged-in user, e.g. "John Doe".
+          example: John Doe
+        email:
+          type: string
+          description: user email
+          example: john@doe.eml
+        survey:
+          $ref: '#/components/schemas/UserProfileSurvey'
+      required:
+        - nickname
+        - name
+        - email
