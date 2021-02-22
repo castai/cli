@@ -44,6 +44,11 @@ func NewRootCmd(log logrus.FieldLogger, cfg *config.Config, api client.Interface
 	clusterCmd.AddCommand(newClusterGetKubeconfigCmd(log, api))
 	clusterCmd.AddCommand(newClusterDeleteCmd(log, api))
 	rootCmd.AddCommand(clusterCmd)
+	// Cluster nodes.
+	nodeCmd := newNodeCmd()
+	nodeCmd.AddCommand(newNodeListCmd(log, api))
+	nodeCmd.AddCommand(newNodeSSHCmd(log, api))
+	rootCmd.AddCommand(nodeCmd)
 	// Completion.
 	rootCmd.AddCommand(newCompletionCmd())
 	// Region.

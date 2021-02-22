@@ -211,8 +211,18 @@ type ClientInterface interface {
 	// GetClusterNode request
 	GetClusterNode(ctx context.Context, clusterId ClusterId, nodeId string) (*http.Response, error)
 
+	// CloseNodeSsh request  with any body
+	CloseNodeSshWithBody(ctx context.Context, clusterId ClusterId, nodeId string, contentType string, body io.Reader) (*http.Response, error)
+
+	CloseNodeSsh(ctx context.Context, clusterId ClusterId, nodeId string, body CloseNodeSshJSONRequestBody) (*http.Response, error)
+
 	// InterruptClusterNode request
 	InterruptClusterNode(ctx context.Context, clusterId ClusterId, nodeId string) (*http.Response, error)
+
+	// SetupNodeSsh request  with any body
+	SetupNodeSshWithBody(ctx context.Context, clusterId ClusterId, nodeId string, contentType string, body io.Reader) (*http.Response, error)
+
+	SetupNodeSsh(ctx context.Context, clusterId ClusterId, nodeId string, body SetupNodeSshJSONRequestBody) (*http.Response, error)
 
 	// UpdateNodeList request  with any body
 	UpdateNodeListWithBody(ctx context.Context, clusterId ClusterId, contentType string, body io.Reader) (*http.Response, error)
@@ -237,6 +247,14 @@ type ClientInterface interface {
 
 	// GetOperation request
 	GetOperation(ctx context.Context, id string) (*http.Response, error)
+
+	// CurrentUserProfile request
+	CurrentUserProfile(ctx context.Context) (*http.Response, error)
+
+	// UpdateCurrentUserProfile request  with any body
+	UpdateCurrentUserProfileWithBody(ctx context.Context, contentType string, body io.Reader) (*http.Response, error)
+
+	UpdateCurrentUserProfile(ctx context.Context, body UpdateCurrentUserProfileJSONRequestBody) (*http.Response, error)
 
 	// ListRegions request
 	ListRegions(ctx context.Context) (*http.Response, error)
@@ -905,8 +923,68 @@ func (c *Client) GetClusterNode(ctx context.Context, clusterId ClusterId, nodeId
 	return c.Client.Do(req)
 }
 
+func (c *Client) CloseNodeSshWithBody(ctx context.Context, clusterId ClusterId, nodeId string, contentType string, body io.Reader) (*http.Response, error) {
+	req, err := NewCloseNodeSshRequestWithBody(c.Server, clusterId, nodeId, contentType, body)
+	if err != nil {
+		return nil, err
+	}
+	req = req.WithContext(ctx)
+	if c.RequestEditor != nil {
+		err = c.RequestEditor(ctx, req)
+		if err != nil {
+			return nil, err
+		}
+	}
+	return c.Client.Do(req)
+}
+
+func (c *Client) CloseNodeSsh(ctx context.Context, clusterId ClusterId, nodeId string, body CloseNodeSshJSONRequestBody) (*http.Response, error) {
+	req, err := NewCloseNodeSshRequest(c.Server, clusterId, nodeId, body)
+	if err != nil {
+		return nil, err
+	}
+	req = req.WithContext(ctx)
+	if c.RequestEditor != nil {
+		err = c.RequestEditor(ctx, req)
+		if err != nil {
+			return nil, err
+		}
+	}
+	return c.Client.Do(req)
+}
+
 func (c *Client) InterruptClusterNode(ctx context.Context, clusterId ClusterId, nodeId string) (*http.Response, error) {
 	req, err := NewInterruptClusterNodeRequest(c.Server, clusterId, nodeId)
+	if err != nil {
+		return nil, err
+	}
+	req = req.WithContext(ctx)
+	if c.RequestEditor != nil {
+		err = c.RequestEditor(ctx, req)
+		if err != nil {
+			return nil, err
+		}
+	}
+	return c.Client.Do(req)
+}
+
+func (c *Client) SetupNodeSshWithBody(ctx context.Context, clusterId ClusterId, nodeId string, contentType string, body io.Reader) (*http.Response, error) {
+	req, err := NewSetupNodeSshRequestWithBody(c.Server, clusterId, nodeId, contentType, body)
+	if err != nil {
+		return nil, err
+	}
+	req = req.WithContext(ctx)
+	if c.RequestEditor != nil {
+		err = c.RequestEditor(ctx, req)
+		if err != nil {
+			return nil, err
+		}
+	}
+	return c.Client.Do(req)
+}
+
+func (c *Client) SetupNodeSsh(ctx context.Context, clusterId ClusterId, nodeId string, body SetupNodeSshJSONRequestBody) (*http.Response, error) {
+	req, err := NewSetupNodeSshRequest(c.Server, clusterId, nodeId, body)
 	if err != nil {
 		return nil, err
 	}
@@ -1042,6 +1120,51 @@ func (c *Client) ResumeCluster(ctx context.Context, clusterId ClusterId) (*http.
 
 func (c *Client) GetOperation(ctx context.Context, id string) (*http.Response, error) {
 	req, err := NewGetOperationRequest(c.Server, id)
+	if err != nil {
+		return nil, err
+	}
+	req = req.WithContext(ctx)
+	if c.RequestEditor != nil {
+		err = c.RequestEditor(ctx, req)
+		if err != nil {
+			return nil, err
+		}
+	}
+	return c.Client.Do(req)
+}
+
+func (c *Client) CurrentUserProfile(ctx context.Context) (*http.Response, error) {
+	req, err := NewCurrentUserProfileRequest(c.Server)
+	if err != nil {
+		return nil, err
+	}
+	req = req.WithContext(ctx)
+	if c.RequestEditor != nil {
+		err = c.RequestEditor(ctx, req)
+		if err != nil {
+			return nil, err
+		}
+	}
+	return c.Client.Do(req)
+}
+
+func (c *Client) UpdateCurrentUserProfileWithBody(ctx context.Context, contentType string, body io.Reader) (*http.Response, error) {
+	req, err := NewUpdateCurrentUserProfileRequestWithBody(c.Server, contentType, body)
+	if err != nil {
+		return nil, err
+	}
+	req = req.WithContext(ctx)
+	if c.RequestEditor != nil {
+		err = c.RequestEditor(ctx, req)
+		if err != nil {
+			return nil, err
+		}
+	}
+	return c.Client.Do(req)
+}
+
+func (c *Client) UpdateCurrentUserProfile(ctx context.Context, body UpdateCurrentUserProfileJSONRequestBody) (*http.Response, error) {
+	req, err := NewUpdateCurrentUserProfileRequest(c.Server, body)
 	if err != nil {
 		return nil, err
 	}
@@ -2508,6 +2631,59 @@ func NewGetClusterNodeRequest(server string, clusterId ClusterId, nodeId string)
 	return req, nil
 }
 
+// NewCloseNodeSshRequest calls the generic CloseNodeSsh builder with application/json body
+func NewCloseNodeSshRequest(server string, clusterId ClusterId, nodeId string, body CloseNodeSshJSONRequestBody) (*http.Request, error) {
+	var bodyReader io.Reader
+	buf, err := json.Marshal(body)
+	if err != nil {
+		return nil, err
+	}
+	bodyReader = bytes.NewReader(buf)
+	return NewCloseNodeSshRequestWithBody(server, clusterId, nodeId, "application/json", bodyReader)
+}
+
+// NewCloseNodeSshRequestWithBody generates requests for CloseNodeSsh with any type of body
+func NewCloseNodeSshRequestWithBody(server string, clusterId ClusterId, nodeId string, contentType string, body io.Reader) (*http.Request, error) {
+	var err error
+
+	var pathParam0 string
+
+	pathParam0, err = runtime.StyleParam("simple", false, "clusterId", clusterId)
+	if err != nil {
+		return nil, err
+	}
+
+	var pathParam1 string
+
+	pathParam1, err = runtime.StyleParam("simple", false, "nodeId", nodeId)
+	if err != nil {
+		return nil, err
+	}
+
+	queryUrl, err := url.Parse(server)
+	if err != nil {
+		return nil, err
+	}
+
+	basePath := fmt.Sprintf("/kubernetes/clusters/%s/nodes/%s/close-ssh", pathParam0, pathParam1)
+	if basePath[0] == '/' {
+		basePath = basePath[1:]
+	}
+
+	queryUrl, err = queryUrl.Parse(basePath)
+	if err != nil {
+		return nil, err
+	}
+
+	req, err := http.NewRequest("POST", queryUrl.String(), body)
+	if err != nil {
+		return nil, err
+	}
+
+	req.Header.Add("Content-Type", contentType)
+	return req, nil
+}
+
 // NewInterruptClusterNodeRequest generates requests for InterruptClusterNode
 func NewInterruptClusterNodeRequest(server string, clusterId ClusterId, nodeId string) (*http.Request, error) {
 	var err error
@@ -2546,6 +2722,59 @@ func NewInterruptClusterNodeRequest(server string, clusterId ClusterId, nodeId s
 		return nil, err
 	}
 
+	return req, nil
+}
+
+// NewSetupNodeSshRequest calls the generic SetupNodeSsh builder with application/json body
+func NewSetupNodeSshRequest(server string, clusterId ClusterId, nodeId string, body SetupNodeSshJSONRequestBody) (*http.Request, error) {
+	var bodyReader io.Reader
+	buf, err := json.Marshal(body)
+	if err != nil {
+		return nil, err
+	}
+	bodyReader = bytes.NewReader(buf)
+	return NewSetupNodeSshRequestWithBody(server, clusterId, nodeId, "application/json", bodyReader)
+}
+
+// NewSetupNodeSshRequestWithBody generates requests for SetupNodeSsh with any type of body
+func NewSetupNodeSshRequestWithBody(server string, clusterId ClusterId, nodeId string, contentType string, body io.Reader) (*http.Request, error) {
+	var err error
+
+	var pathParam0 string
+
+	pathParam0, err = runtime.StyleParam("simple", false, "clusterId", clusterId)
+	if err != nil {
+		return nil, err
+	}
+
+	var pathParam1 string
+
+	pathParam1, err = runtime.StyleParam("simple", false, "nodeId", nodeId)
+	if err != nil {
+		return nil, err
+	}
+
+	queryUrl, err := url.Parse(server)
+	if err != nil {
+		return nil, err
+	}
+
+	basePath := fmt.Sprintf("/kubernetes/clusters/%s/nodes/%s/setup-ssh", pathParam0, pathParam1)
+	if basePath[0] == '/' {
+		basePath = basePath[1:]
+	}
+
+	queryUrl, err = queryUrl.Parse(basePath)
+	if err != nil {
+		return nil, err
+	}
+
+	req, err := http.NewRequest("POST", queryUrl.String(), body)
+	if err != nil {
+		return nil, err
+	}
+
+	req.Header.Add("Content-Type", contentType)
 	return req, nil
 }
 
@@ -2786,6 +3015,72 @@ func NewGetOperationRequest(server string, id string) (*http.Request, error) {
 		return nil, err
 	}
 
+	return req, nil
+}
+
+// NewCurrentUserProfileRequest generates requests for CurrentUserProfile
+func NewCurrentUserProfileRequest(server string) (*http.Request, error) {
+	var err error
+
+	queryUrl, err := url.Parse(server)
+	if err != nil {
+		return nil, err
+	}
+
+	basePath := fmt.Sprintf("/me")
+	if basePath[0] == '/' {
+		basePath = basePath[1:]
+	}
+
+	queryUrl, err = queryUrl.Parse(basePath)
+	if err != nil {
+		return nil, err
+	}
+
+	req, err := http.NewRequest("GET", queryUrl.String(), nil)
+	if err != nil {
+		return nil, err
+	}
+
+	return req, nil
+}
+
+// NewUpdateCurrentUserProfileRequest calls the generic UpdateCurrentUserProfile builder with application/json body
+func NewUpdateCurrentUserProfileRequest(server string, body UpdateCurrentUserProfileJSONRequestBody) (*http.Request, error) {
+	var bodyReader io.Reader
+	buf, err := json.Marshal(body)
+	if err != nil {
+		return nil, err
+	}
+	bodyReader = bytes.NewReader(buf)
+	return NewUpdateCurrentUserProfileRequestWithBody(server, "application/json", bodyReader)
+}
+
+// NewUpdateCurrentUserProfileRequestWithBody generates requests for UpdateCurrentUserProfile with any type of body
+func NewUpdateCurrentUserProfileRequestWithBody(server string, contentType string, body io.Reader) (*http.Request, error) {
+	var err error
+
+	queryUrl, err := url.Parse(server)
+	if err != nil {
+		return nil, err
+	}
+
+	basePath := fmt.Sprintf("/me")
+	if basePath[0] == '/' {
+		basePath = basePath[1:]
+	}
+
+	queryUrl, err = queryUrl.Parse(basePath)
+	if err != nil {
+		return nil, err
+	}
+
+	req, err := http.NewRequest("POST", queryUrl.String(), body)
+	if err != nil {
+		return nil, err
+	}
+
+	req.Header.Add("Content-Type", contentType)
 	return req, nil
 }
 
@@ -3047,8 +3342,18 @@ type ClientWithResponsesInterface interface {
 	// GetClusterNode request
 	GetClusterNodeWithResponse(ctx context.Context, clusterId ClusterId, nodeId string) (*GetClusterNodeResponse, error)
 
+	// CloseNodeSsh request  with any body
+	CloseNodeSshWithBodyWithResponse(ctx context.Context, clusterId ClusterId, nodeId string, contentType string, body io.Reader) (*CloseNodeSshResponse, error)
+
+	CloseNodeSshWithResponse(ctx context.Context, clusterId ClusterId, nodeId string, body CloseNodeSshJSONRequestBody) (*CloseNodeSshResponse, error)
+
 	// InterruptClusterNode request
 	InterruptClusterNodeWithResponse(ctx context.Context, clusterId ClusterId, nodeId string) (*InterruptClusterNodeResponse, error)
+
+	// SetupNodeSsh request  with any body
+	SetupNodeSshWithBodyWithResponse(ctx context.Context, clusterId ClusterId, nodeId string, contentType string, body io.Reader) (*SetupNodeSshResponse, error)
+
+	SetupNodeSshWithResponse(ctx context.Context, clusterId ClusterId, nodeId string, body SetupNodeSshJSONRequestBody) (*SetupNodeSshResponse, error)
 
 	// UpdateNodeList request  with any body
 	UpdateNodeListWithBodyWithResponse(ctx context.Context, clusterId ClusterId, contentType string, body io.Reader) (*UpdateNodeListResponse, error)
@@ -3073,6 +3378,14 @@ type ClientWithResponsesInterface interface {
 
 	// GetOperation request
 	GetOperationWithResponse(ctx context.Context, id string) (*GetOperationResponse, error)
+
+	// CurrentUserProfile request
+	CurrentUserProfileWithResponse(ctx context.Context) (*CurrentUserProfileResponse, error)
+
+	// UpdateCurrentUserProfile request  with any body
+	UpdateCurrentUserProfileWithBodyWithResponse(ctx context.Context, contentType string, body io.Reader) (*UpdateCurrentUserProfileResponse, error)
+
+	UpdateCurrentUserProfileWithResponse(ctx context.Context, body UpdateCurrentUserProfileJSONRequestBody) (*UpdateCurrentUserProfileResponse, error)
 
 	// ListRegions request
 	ListRegionsWithResponse(ctx context.Context) (*ListRegionsResponse, error)
@@ -4134,6 +4447,35 @@ func (r GetClusterNodeResponse) GetBody() []byte {
 
 // TODO: </castai customization> to have common interface. https://github.com/deepmap/oapi-codegen/issues/240
 
+type CloseNodeSshResponse struct {
+	Body         []byte
+	HTTPResponse *http.Response
+}
+
+// Status returns HTTPResponse.Status
+func (r CloseNodeSshResponse) Status() string {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.Status
+	}
+	return http.StatusText(0)
+}
+
+// StatusCode returns HTTPResponse.StatusCode
+func (r CloseNodeSshResponse) StatusCode() int {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.StatusCode
+	}
+	return 0
+}
+
+// TODO: <castai customization> to have common interface. https://github.com/deepmap/oapi-codegen/issues/240
+// Body returns body of byte array
+func (r CloseNodeSshResponse) GetBody() []byte {
+	return r.Body
+}
+
+// TODO: </castai customization> to have common interface. https://github.com/deepmap/oapi-codegen/issues/240
+
 type InterruptClusterNodeResponse struct {
 	Body         []byte
 	HTTPResponse *http.Response
@@ -4158,6 +4500,40 @@ func (r InterruptClusterNodeResponse) StatusCode() int {
 // TODO: <castai customization> to have common interface. https://github.com/deepmap/oapi-codegen/issues/240
 // Body returns body of byte array
 func (r InterruptClusterNodeResponse) GetBody() []byte {
+	return r.Body
+}
+
+// TODO: </castai customization> to have common interface. https://github.com/deepmap/oapi-codegen/issues/240
+
+type SetupNodeSshResponse struct {
+	Body         []byte
+	HTTPResponse *http.Response
+	JSON200      *struct {
+
+		// Access rule ID used to close firewall created for SSH session.
+		AccessRuleId string `json:"accessRuleId"`
+	}
+}
+
+// Status returns HTTPResponse.Status
+func (r SetupNodeSshResponse) Status() string {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.Status
+	}
+	return http.StatusText(0)
+}
+
+// StatusCode returns HTTPResponse.StatusCode
+func (r SetupNodeSshResponse) StatusCode() int {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.StatusCode
+	}
+	return 0
+}
+
+// TODO: <castai customization> to have common interface. https://github.com/deepmap/oapi-codegen/issues/240
+// Body returns body of byte array
+func (r SetupNodeSshResponse) GetBody() []byte {
 	return r.Body
 }
 
@@ -4338,6 +4714,66 @@ func (r GetOperationResponse) StatusCode() int {
 // TODO: <castai customization> to have common interface. https://github.com/deepmap/oapi-codegen/issues/240
 // Body returns body of byte array
 func (r GetOperationResponse) GetBody() []byte {
+	return r.Body
+}
+
+// TODO: </castai customization> to have common interface. https://github.com/deepmap/oapi-codegen/issues/240
+
+type CurrentUserProfileResponse struct {
+	Body         []byte
+	HTTPResponse *http.Response
+	JSON200      *UserProfile
+}
+
+// Status returns HTTPResponse.Status
+func (r CurrentUserProfileResponse) Status() string {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.Status
+	}
+	return http.StatusText(0)
+}
+
+// StatusCode returns HTTPResponse.StatusCode
+func (r CurrentUserProfileResponse) StatusCode() int {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.StatusCode
+	}
+	return 0
+}
+
+// TODO: <castai customization> to have common interface. https://github.com/deepmap/oapi-codegen/issues/240
+// Body returns body of byte array
+func (r CurrentUserProfileResponse) GetBody() []byte {
+	return r.Body
+}
+
+// TODO: </castai customization> to have common interface. https://github.com/deepmap/oapi-codegen/issues/240
+
+type UpdateCurrentUserProfileResponse struct {
+	Body         []byte
+	HTTPResponse *http.Response
+	JSON200      *UserProfile
+}
+
+// Status returns HTTPResponse.Status
+func (r UpdateCurrentUserProfileResponse) Status() string {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.Status
+	}
+	return http.StatusText(0)
+}
+
+// StatusCode returns HTTPResponse.StatusCode
+func (r UpdateCurrentUserProfileResponse) StatusCode() int {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.StatusCode
+	}
+	return 0
+}
+
+// TODO: <castai customization> to have common interface. https://github.com/deepmap/oapi-codegen/issues/240
+// Body returns body of byte array
+func (r UpdateCurrentUserProfileResponse) GetBody() []byte {
 	return r.Body
 }
 
@@ -4790,6 +5226,23 @@ func (c *ClientWithResponses) GetClusterNodeWithResponse(ctx context.Context, cl
 	return ParseGetClusterNodeResponse(rsp)
 }
 
+// CloseNodeSshWithBodyWithResponse request with arbitrary body returning *CloseNodeSshResponse
+func (c *ClientWithResponses) CloseNodeSshWithBodyWithResponse(ctx context.Context, clusterId ClusterId, nodeId string, contentType string, body io.Reader) (*CloseNodeSshResponse, error) {
+	rsp, err := c.CloseNodeSshWithBody(ctx, clusterId, nodeId, contentType, body)
+	if err != nil {
+		return nil, err
+	}
+	return ParseCloseNodeSshResponse(rsp)
+}
+
+func (c *ClientWithResponses) CloseNodeSshWithResponse(ctx context.Context, clusterId ClusterId, nodeId string, body CloseNodeSshJSONRequestBody) (*CloseNodeSshResponse, error) {
+	rsp, err := c.CloseNodeSsh(ctx, clusterId, nodeId, body)
+	if err != nil {
+		return nil, err
+	}
+	return ParseCloseNodeSshResponse(rsp)
+}
+
 // InterruptClusterNodeWithResponse request returning *InterruptClusterNodeResponse
 func (c *ClientWithResponses) InterruptClusterNodeWithResponse(ctx context.Context, clusterId ClusterId, nodeId string) (*InterruptClusterNodeResponse, error) {
 	rsp, err := c.InterruptClusterNode(ctx, clusterId, nodeId)
@@ -4797,6 +5250,23 @@ func (c *ClientWithResponses) InterruptClusterNodeWithResponse(ctx context.Conte
 		return nil, err
 	}
 	return ParseInterruptClusterNodeResponse(rsp)
+}
+
+// SetupNodeSshWithBodyWithResponse request with arbitrary body returning *SetupNodeSshResponse
+func (c *ClientWithResponses) SetupNodeSshWithBodyWithResponse(ctx context.Context, clusterId ClusterId, nodeId string, contentType string, body io.Reader) (*SetupNodeSshResponse, error) {
+	rsp, err := c.SetupNodeSshWithBody(ctx, clusterId, nodeId, contentType, body)
+	if err != nil {
+		return nil, err
+	}
+	return ParseSetupNodeSshResponse(rsp)
+}
+
+func (c *ClientWithResponses) SetupNodeSshWithResponse(ctx context.Context, clusterId ClusterId, nodeId string, body SetupNodeSshJSONRequestBody) (*SetupNodeSshResponse, error) {
+	rsp, err := c.SetupNodeSsh(ctx, clusterId, nodeId, body)
+	if err != nil {
+		return nil, err
+	}
+	return ParseSetupNodeSshResponse(rsp)
 }
 
 // UpdateNodeListWithBodyWithResponse request with arbitrary body returning *UpdateNodeListResponse
@@ -4875,6 +5345,32 @@ func (c *ClientWithResponses) GetOperationWithResponse(ctx context.Context, id s
 		return nil, err
 	}
 	return ParseGetOperationResponse(rsp)
+}
+
+// CurrentUserProfileWithResponse request returning *CurrentUserProfileResponse
+func (c *ClientWithResponses) CurrentUserProfileWithResponse(ctx context.Context) (*CurrentUserProfileResponse, error) {
+	rsp, err := c.CurrentUserProfile(ctx)
+	if err != nil {
+		return nil, err
+	}
+	return ParseCurrentUserProfileResponse(rsp)
+}
+
+// UpdateCurrentUserProfileWithBodyWithResponse request with arbitrary body returning *UpdateCurrentUserProfileResponse
+func (c *ClientWithResponses) UpdateCurrentUserProfileWithBodyWithResponse(ctx context.Context, contentType string, body io.Reader) (*UpdateCurrentUserProfileResponse, error) {
+	rsp, err := c.UpdateCurrentUserProfileWithBody(ctx, contentType, body)
+	if err != nil {
+		return nil, err
+	}
+	return ParseUpdateCurrentUserProfileResponse(rsp)
+}
+
+func (c *ClientWithResponses) UpdateCurrentUserProfileWithResponse(ctx context.Context, body UpdateCurrentUserProfileJSONRequestBody) (*UpdateCurrentUserProfileResponse, error) {
+	rsp, err := c.UpdateCurrentUserProfile(ctx, body)
+	if err != nil {
+		return nil, err
+	}
+	return ParseUpdateCurrentUserProfileResponse(rsp)
 }
 
 // ListRegionsWithResponse request returning *ListRegionsResponse
@@ -5763,6 +6259,25 @@ func ParseGetClusterNodeResponse(rsp *http.Response) (*GetClusterNodeResponse, e
 	return response, nil
 }
 
+// ParseCloseNodeSshResponse parses an HTTP response from a CloseNodeSshWithResponse call
+func ParseCloseNodeSshResponse(rsp *http.Response) (*CloseNodeSshResponse, error) {
+	bodyBytes, err := ioutil.ReadAll(rsp.Body)
+	defer rsp.Body.Close()
+	if err != nil {
+		return nil, err
+	}
+
+	response := &CloseNodeSshResponse{
+		Body:         bodyBytes,
+		HTTPResponse: rsp,
+	}
+
+	switch {
+	}
+
+	return response, nil
+}
+
 // ParseInterruptClusterNodeResponse parses an HTTP response from a InterruptClusterNodeWithResponse call
 func ParseInterruptClusterNodeResponse(rsp *http.Response) (*InterruptClusterNodeResponse, error) {
 	bodyBytes, err := ioutil.ReadAll(rsp.Body)
@@ -5777,6 +6292,36 @@ func ParseInterruptClusterNodeResponse(rsp *http.Response) (*InterruptClusterNod
 	}
 
 	switch {
+	}
+
+	return response, nil
+}
+
+// ParseSetupNodeSshResponse parses an HTTP response from a SetupNodeSshWithResponse call
+func ParseSetupNodeSshResponse(rsp *http.Response) (*SetupNodeSshResponse, error) {
+	bodyBytes, err := ioutil.ReadAll(rsp.Body)
+	defer rsp.Body.Close()
+	if err != nil {
+		return nil, err
+	}
+
+	response := &SetupNodeSshResponse{
+		Body:         bodyBytes,
+		HTTPResponse: rsp,
+	}
+
+	switch {
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 200:
+		var dest struct {
+
+			// Access rule ID used to close firewall created for SSH session.
+			AccessRuleId string `json:"accessRuleId"`
+		}
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON200 = &dest
+
 	}
 
 	return response, nil
@@ -5928,6 +6473,58 @@ func ParseGetOperationResponse(rsp *http.Response) (*GetOperationResponse, error
 	switch {
 	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 200:
 		var dest OperationResponse
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON200 = &dest
+
+	}
+
+	return response, nil
+}
+
+// ParseCurrentUserProfileResponse parses an HTTP response from a CurrentUserProfileWithResponse call
+func ParseCurrentUserProfileResponse(rsp *http.Response) (*CurrentUserProfileResponse, error) {
+	bodyBytes, err := ioutil.ReadAll(rsp.Body)
+	defer rsp.Body.Close()
+	if err != nil {
+		return nil, err
+	}
+
+	response := &CurrentUserProfileResponse{
+		Body:         bodyBytes,
+		HTTPResponse: rsp,
+	}
+
+	switch {
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 200:
+		var dest UserProfile
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON200 = &dest
+
+	}
+
+	return response, nil
+}
+
+// ParseUpdateCurrentUserProfileResponse parses an HTTP response from a UpdateCurrentUserProfileWithResponse call
+func ParseUpdateCurrentUserProfileResponse(rsp *http.Response) (*UpdateCurrentUserProfileResponse, error) {
+	bodyBytes, err := ioutil.ReadAll(rsp.Body)
+	defer rsp.Body.Close()
+	if err != nil {
+		return nil, err
+	}
+
+	response := &UpdateCurrentUserProfileResponse{
+		Body:         bodyBytes,
+		HTTPResponse: rsp,
+	}
+
+	switch {
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 200:
+		var dest UserProfile
 		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
 			return nil, err
 		}

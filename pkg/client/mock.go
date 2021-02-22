@@ -13,6 +13,19 @@ import (
 func NewMock() Interface {
 	cred1, cred2, cred3 := "cred1", "cred2", "cred3"
 	c1 := "c1"
+	n1 := "n1"
+	c1Nodes := []sdk.Node{
+		{
+			Id:           stringPointer(n1),
+			Cloud:        "aws",
+			InstanceType: "t3a.large",
+			Name:         stringPointer("node1"),
+			Role:         "master",
+			Shape:        "t3a.large",
+			SpotConfig:   nil,
+			State:        &sdk.NodeState{Phase: stringPointer("ready")},
+		},
+	}
 	return &mockClient{
 		credentials: []sdk.CloudCredentials{
 			{
@@ -45,11 +58,12 @@ func NewMock() Interface {
 					DisplayName: " Europe Central (Frankfurt)",
 				},
 				Status: "ready",
-				Nodes: []sdk.Node{
-					{
-						Cloud: "aws",
-					},
-				},
+				Nodes:  c1Nodes,
+			},
+		},
+		nodes: map[string]map[string]sdk.Node{
+			c1: {
+				n1: c1Nodes[0],
 			},
 		},
 		regions: []sdk.CastRegion{
@@ -83,12 +97,37 @@ func NewMock() Interface {
 	}
 }
 
+func stringPointer(v string) *string {
+	return &v
+}
+
 type mockClient struct {
 	credentials    []sdk.CloudCredentials
 	clusters       map[string]sdk.KubernetesCluster
+	nodes          map[string]map[string]sdk.Node
 	regions        []sdk.CastRegion
 	tokens         []sdk.AuthToken
 	feedbackEvents []sdk.KubernetesClusterFeedbackEvent
+}
+
+func (m *mockClient) CloseNodeSSH(ctx context.Context, clusterID sdk.ClusterId, nodeID string, accessRuleID string) error {
+	panic("implement me")
+}
+
+func (m *mockClient) GetClusterNode(ctx context.Context, clusterID sdk.ClusterId, nodeID string) (*sdk.Node, error) {
+	panic("implement me")
+}
+
+func (m *mockClient) SetupNodeSSH(ctx context.Context, clusterID sdk.ClusterId, nodeID string, req sdk.SetupNodeSshJSONRequestBody) (string, error) {
+	panic("implement me")
+}
+
+func (m *mockClient) ListClusterNodes(ctx context.Context, req sdk.ClusterId) ([]sdk.Node, error) {
+	var res []sdk.Node
+	for _, node := range m.nodes[string(req)] {
+		res = append(res, node)
+	}
+	return res, nil
 }
 
 func (m *mockClient) GetCluster(ctx context.Context, req sdk.ClusterId) (*sdk.KubernetesCluster, error) {

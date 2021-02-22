@@ -25,8 +25,12 @@ type Interface interface {
 	ListCloudCredentials(ctx context.Context) ([]sdk.CloudCredentials, error)
 	GetClusterKubeconfig(ctx context.Context, req sdk.ClusterId) ([]byte, error)
 	ListKubernetesClusters(ctx context.Context, req *sdk.ListKubernetesClustersParams) ([]sdk.KubernetesCluster, error)
+	ListClusterNodes(ctx context.Context, req sdk.ClusterId) ([]sdk.Node, error)
 	ListAuthTokens(ctx context.Context) ([]sdk.AuthToken, error)
 	FeedbackEvents(ctx context.Context, req sdk.ClusterId) ([]sdk.KubernetesClusterFeedbackEvent, error)
+	SetupNodeSSH(ctx context.Context, clusterID sdk.ClusterId, nodeID string, req sdk.SetupNodeSshJSONRequestBody) (string, error)
+	CloseNodeSSH(ctx context.Context, clusterID sdk.ClusterId, nodeID string, accessRuleID string) error
+	GetClusterNode(ctx context.Context, clusterID sdk.ClusterId, nodeID string) (*sdk.Node, error)
 }
 
 func New(cfg *config.Config, log logrus.FieldLogger) (Interface, error) {
@@ -62,6 +66,48 @@ func New(cfg *config.Config, log logrus.FieldLogger) (Interface, error) {
 type client struct {
 	apiURL string
 	api    sdk.ClientWithResponsesInterface
+}
+
+func (c *client) GetClusterNode(ctx context.Context, clusterID sdk.ClusterId, nodeID string) (*sdk.Node, error) {
+	resp, err := c.api.GetClusterNodeWithResponse(ctx, clusterID, nodeID)
+	if err != nil {
+		return nil, err
+	}
+	if err := c.checkResponse(resp, err, http.StatusOK); err != nil {
+		return nil, err
+	}
+	return resp.JSON200, nil
+}
+
+func (c *client) SetupNodeSSH(ctx context.Context, clusterID sdk.ClusterId, nodeID string, req sdk.SetupNodeSshJSONRequestBody) (string, error) {
+	resp, err := c.api.SetupNodeSshWithResponse(ctx, clusterID, nodeID, req)
+	if err != nil {
+		return "", err
+	}
+	if err := c.checkResponse(resp, err, http.StatusOK); err != nil {
+		return "", err
+	}
+
+	return resp.JSON200.AccessRuleId, nil
+}
+
+func (c *client) CloseNodeSSH(ctx context.Context, clusterID sdk.ClusterId, nodeID string, accessRuleID string) error {
+	resp, err := c.api.CloseNodeSshWithResponse(ctx, clusterID, nodeID, sdk.CloseNodeSshJSONRequestBody{AccessRuleId: accessRuleID})
+	if err != nil {
+		return err
+	}
+	return c.checkResponse(resp, err, http.StatusOK)
+}
+
+func (c *client) ListClusterNodes(ctx context.Context, req sdk.ClusterId) ([]sdk.Node, error) {
+	resp, err := c.api.GetClusterNodesWithResponse(ctx, req)
+	if err != nil {
+		return nil, err
+	}
+	if err := c.checkResponse(resp, err, http.StatusOK); err != nil {
+		return nil, err
+	}
+	return resp.JSON200.Items, nil
 }
 
 func (c *client) GetCluster(ctx context.Context, req sdk.ClusterId) (*sdk.KubernetesCluster, error) {

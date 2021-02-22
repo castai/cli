@@ -48,12 +48,6 @@ func newClusterListCmd(log logrus.FieldLogger, api client.Interface) *cobra.Comm
 	return cmd
 }
 
-//func init() {
-//	clusterListCmd.PersistentFlags().BoolVar(&flagIncludeDeletedClusters, "include-deleted", false, "Show deleted clusters too.")
-//	command.AddJSONOutput(clusterListCmd)
-//	clusterCmd.AddCommand(clusterListCmd)
-//}
-
 func handleListClusters(cmd *cobra.Command, api client.Interface) error {
 	resp, err := api.ListKubernetesClusters(cmd.Context(), &sdk.ListKubernetesClustersParams{})
 	if err != nil {

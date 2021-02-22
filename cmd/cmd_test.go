@@ -107,6 +107,17 @@ func TestCommands(t *testing.T) {
 		fmt.Println(out)
 	})
 
+	t.Run("node list", func(t *testing.T) {
+		root := newTestRootCmd()
+
+		out, err := executeCommand(
+			root,
+			"node", "list", "-c", "test-cluster-1",
+		)
+		require.NoError(t, err)
+		fmt.Println(out)
+	})
+
 	t.Run("region list", func(t *testing.T) {
 		root := newTestRootCmd()
 

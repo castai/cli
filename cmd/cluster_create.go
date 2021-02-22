@@ -324,18 +324,18 @@ func toCreateClusterRequest(lists *clusterCreationSelectLists, flags clusterCrea
 	}
 
 	var nodes []sdk.Node
-	if flags.Configuration != "" {
-		configuration, ok := lists.clusterConfigurations.find(flags.Configuration)
-		if !ok {
-			return nil, fmt.Errorf("configuration value %s is not valid", flags.VPN)
-		}
-		nodes = toAPINodesFromConfiguration(cloudCredentials, configuration.name)
-	} else {
+	if len(flags.Nodes) > 0 {
 		var err error
 		nodes, err = toAPINodesFromFlags(flags.Nodes)
 		if err != nil {
 			return nil, err
 		}
+	} else {
+		configuration, ok := lists.clusterConfigurations.find(flags.Configuration)
+		if !ok {
+			return nil, fmt.Errorf("configuration value %s is not valid", flags.VPN)
+		}
+		nodes = toAPINodesFromConfiguration(cloudCredentials, configuration.name)
 	}
 
 	return &sdk.CreateNewClusterJSONRequestBody{

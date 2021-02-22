@@ -32,8 +32,8 @@ import (
 	"github.com/castai/cast-cli/pkg/client/sdk"
 )
 
-var (
-	flagKubeconfigPath string
+const (
+	flagKubeconfigPath = "path"
 )
 
 func newClusterGetKubeconfigCmd(log logrus.FieldLogger, api client.Interface) *cobra.Command {
@@ -47,7 +47,7 @@ func newClusterGetKubeconfigCmd(log logrus.FieldLogger, api client.Interface) *c
 		},
 	}
 	defaultKubeConfigDir := getDefaultKubeconfigPath()
-	cmd.PersistentFlags().StringVar(&flagKubeconfigPath, "path", defaultKubeConfigDir, "(optional) absolute path to the kubeconfig file")
+	cmd.PersistentFlags().String(flagKubeconfigPath, defaultKubeConfigDir, "(optional) absolute path to the kubeconfig file")
 	if defaultKubeConfigDir == "" {
 		cmd.MarkPersistentFlagRequired("path")
 	}
@@ -63,7 +63,12 @@ func getDefaultKubeconfigPath() string {
 }
 
 func handleClusterGetKubeconfig(cmd *cobra.Command, log logrus.FieldLogger, api client.Interface) (err error) {
-	clusterID, err := getClusterID(cmd, api)
+	kubeconfigPath, err := cmd.Flags().GetString(flagKubeconfigPath)
+	if err != nil {
+		return err
+	}
+
+	clusterID, err := parseClusterIDFromCMDArgs(cmd, api)
 	if err != nil {
 		return err
 	}
@@ -79,20 +84,20 @@ func handleClusterGetKubeconfig(cmd *cobra.Command, log logrus.FieldLogger, api 
 
 	defer func() {
 		if err == nil {
-			log.Infof("Kubeconfig saved to %s", flagKubeconfigPath)
+			log.Infof("Kubeconfig saved to %s", kubeconfigPath)
 		}
 	}()
 
 	// If there is no already created kubconfig in given path create it and exit.
-	if _, err := os.Stat(flagKubeconfigPath); os.IsNotExist(err) {
-		if err := clientcmd.WriteToFile(newConfig, flagKubeconfigPath); err != nil {
+	if _, err := os.Stat(kubeconfigPath); os.IsNotExist(err) {
+		if err := clientcmd.WriteToFile(newConfig, kubeconfigPath); err != nil {
 			return err
 		}
 		return nil
 	}
 
 	// Merge with existing kubeconfig and set default context to new config's context.
-	currentConfigBytes, err := ioutil.ReadFile(flagKubeconfigPath)
+	currentConfigBytes, err := ioutil.ReadFile(kubeconfigPath)
 	if err != nil {
 		return err
 	}
@@ -102,7 +107,7 @@ func handleClusterGetKubeconfig(cmd *cobra.Command, log logrus.FieldLogger, api 
 	}
 
 	currentConfig = mergeConfigs(currentConfig, newConfig)
-	if err := clientcmd.WriteToFile(currentConfig, flagKubeconfigPath); err != nil {
+	if err := clientcmd.WriteToFile(currentConfig, kubeconfigPath); err != nil {
 		return err
 	}
 

@@ -43,7 +43,7 @@ func newClusterDeleteCmd(log logrus.FieldLogger, api client.Interface) *cobra.Co
 }
 
 func handleDeleteCluster(cmd *cobra.Command, log logrus.FieldLogger, api client.Interface) error {
-	clusterID, err := getClusterID(cmd, api)
+	clusterID, err := parseClusterIDFromCMDArgs(cmd, api)
 	if err != nil {
 		return err
 	}
