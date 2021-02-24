@@ -2,37 +2,45 @@ package ssh
 
 import (
 	"context"
+	"encoding/base64"
+	"errors"
 	"fmt"
+	"net"
 	"os"
+	"path/filepath"
+	"time"
 
+	"github.com/sirupsen/logrus"
 	"golang.org/x/crypto/ssh"
+	"golang.org/x/crypto/ssh/knownhosts"
 	"golang.org/x/term"
 )
 
-type TerminalConfig struct {
+type ConnectConfig struct {
 	PrivateKey []byte
 	User       string
 	Addr       string
 }
 
-func Terminal(ctx context.Context, cfg TerminalConfig) error {
-	// Create SSH connection.
-	signer, err := ssh.ParsePrivateKey(cfg.PrivateKey)
-	if err != nil {
-		return fmt.Errorf("parsing private key: %w", err)
-	}
+type Terminal interface {
+	Connect(ctx context.Context, cfg ConnectConfig) error
+}
 
-	conn, err := ssh.Dial("tcp", cfg.Addr, &ssh.ClientConfig{
-		User: cfg.User,
-		Auth: []ssh.AuthMethod{
-			ssh.PublicKeys(signer),
-		},
-		// TODO: Implement server host key validation.
-		HostKeyCallback: ssh.InsecureIgnoreHostKey(),
-	})
+func NewTerminal(log logrus.FieldLogger) Terminal {
+	return &terminal{log: log}
+}
+
+type terminal struct {
+	log logrus.FieldLogger
+}
+
+func (t *terminal) Connect(ctx context.Context, cfg ConnectConfig) error {
+	// Create SSH connection.
+	conn, err := t.dial(ctx, cfg)
 	if err != nil {
 		return err
 	}
+	defer conn.Close()
 
 	// Create SSH session.
 	sess, err := conn.NewSession()
@@ -92,4 +100,93 @@ func Terminal(ctx context.Context, cfg TerminalConfig) error {
 		return fmt.Errorf("ssh: %w", err)
 	}
 	return nil
+}
+
+func (t *terminal) dial(ctx context.Context, cfg ConnectConfig) (*ssh.Client, error) {
+	signer, err := ssh.ParsePrivateKey(cfg.PrivateKey)
+	if err != nil {
+		return nil, fmt.Errorf("parsing private key: %w", err)
+	}
+
+	home, err := os.UserHomeDir()
+	if err != nil {
+		return nil, err
+	}
+	knownhostsFilePath := filepath.Join(home, ".ssh", "known_hosts")
+	if err := ensureKnownHostsFile(knownhostsFilePath); err != nil {
+		return nil, err
+	}
+
+	var conn *ssh.Client
+	connTimeout := time.After(2 * time.Minute)
+	for {
+		var connerr error
+		conn, connerr = ssh.Dial("tcp", cfg.Addr, &ssh.ClientConfig{
+			User: cfg.User,
+			Auth: []ssh.AuthMethod{
+				ssh.PublicKeys(signer),
+			},
+			HostKeyCallback: t.validateHostKey(knownhostsFilePath),
+			Timeout:         1 * time.Minute,
+		})
+		if connerr == nil {
+			return conn, nil
+		}
+		select {
+		case <-time.After(2 * time.Second):
+		case <-connTimeout:
+			return nil, fmt.Errorf("connection timeout: %w", connerr)
+		case <-ctx.Done():
+			return nil, ctx.Err()
+		}
+	}
+}
+
+// validateHostKey tries to validate known hosts file and adds new entry if host is unknown.
+func (t *terminal) validateHostKey(knownhostsFilePath string) ssh.HostKeyCallback {
+	return func(addr string, remote net.Addr, key ssh.PublicKey) error {
+		validate, err := knownhosts.New(knownhostsFilePath)
+		if err != nil {
+			return err
+		}
+
+		err = validate(addr, remote, key)
+		var keyErr *knownhosts.KeyError
+		// Add host key to know hosts only if key is unknown.
+		if errors.As(err, &keyErr) && len(keyErr.Want) == 0 {
+			f, err := os.OpenFile(knownhostsFilePath, os.O_APPEND|os.O_WRONLY, 0644)
+			if err != nil {
+				return err
+			}
+			defer f.Close()
+			hostname, _, err := net.SplitHostPort(addr)
+			if err != nil {
+				return err
+			}
+			key := fmt.Sprintf("%s %s %s\n", hostname, key.Type(), base64.StdEncoding.EncodeToString(key.Marshal()))
+			_, err = f.WriteString(key)
+			if err != nil {
+				return err
+			}
+			t.log.Warnf("added %s to known hosts in %s", hostname, knownhostsFilePath)
+			return nil
+		}
+		return err
+	}
+}
+
+func ensureKnownHostsFile(path string) error {
+	_, err := os.Stat(path)
+	if os.IsNotExist(err) {
+		f, err := os.Create(path)
+		if err != nil {
+			return err
+		}
+		if err := f.Chmod(0644); err != nil {
+			return err
+		}
+		defer f.Close()
+		return nil
+	}
+	return err
 }

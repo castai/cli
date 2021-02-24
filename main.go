@@ -21,13 +21,15 @@ import (
 	"github.com/castai/cast-cli/cmd"
 	"github.com/castai/cast-cli/pkg/client"
 	"github.com/castai/cast-cli/pkg/config"
+	"github.com/castai/cast-cli/pkg/ssh"
 )
 
 func main() {
 	log := logrus.New()
 	log.SetFormatter(&logrus.TextFormatter{
-		DisableTimestamp:       false,
+		DisableTimestamp:       true,
 		DisableLevelTruncation: true,
+		DisableColors:          false,
 	})
 
 	cfg, err := config.LoadFromEnv()
@@ -43,7 +45,9 @@ func main() {
 		log.Fatal(err)
 	}
 
-	root := cmd.NewRootCmd(log, cfg, api)
+	terminal := ssh.NewTerminal(log)
+
+	root := cmd.NewRootCmd(log, cfg, api, terminal)
 	if err := root.Execute(); err != nil {
 		log.Fatal(err)
 	}

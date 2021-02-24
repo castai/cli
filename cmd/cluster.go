@@ -22,6 +22,7 @@ import (
 	"fmt"
 	"strings"
 
+	"github.com/AlecAivazis/survey/v2"
 	"github.com/google/uuid"
 	"github.com/spf13/cobra"
 
@@ -36,15 +37,39 @@ func newClusterCmd() *cobra.Command {
 	}
 }
 
-func parseClusterIDFromCMDArgs(cmd *cobra.Command, api client.Interface) (string, error) {
+func getClusterIDFromArgs(cmd *cobra.Command, api client.Interface) (string, error) {
+	ctx := cmd.Context()
 	if len(cmd.Flags().Args()) == 0 {
-		return "", errors.New("cluster ID or name is required")
+		cluster, err := selectCluster(ctx, api)
+		if err != nil {
+			return "", err
+		}
+		return cluster.Id, nil
 	}
-	clusterIDOrName := cmd.Flags().Args()[0]
-	return parseClusterIDFromValue(cmd.Context(), api, clusterIDOrName)
+
+	value := cmd.Flags().Args()[0]
+	return getClusterID(ctx, api, value)
 }
 
-func parseClusterIDFromValue(ctx context.Context, api client.Interface, value string) (string, error) {
+func getClusterIDFromFlag(cmd *cobra.Command, api client.Interface) (string, error) {
+	ctx := cmd.Context()
+	value, err := cmd.Flags().GetString(flagCluster)
+	if err != nil {
+		return "", err
+	}
+
+	if value == "" {
+		cluster, err := selectCluster(ctx, api)
+		if err != nil {
+			return "", err
+		}
+		return cluster.Id, nil
+	}
+
+	return getClusterID(ctx, api, value)
+}
+
+func getClusterID(ctx context.Context, api client.Interface, value string) (string, error) {
 	uuidID, err := uuid.Parse(value)
 	if err == nil {
 		return uuidID.String(), nil
@@ -59,4 +84,34 @@ func parseClusterIDFromValue(ctx context.Context, api client.Interface, value st
 		}
 	}
 	return "", fmt.Errorf("clusterID for %s not found", value)
+}
+
+func selectCluster(ctx context.Context, api client.Interface) (*sdk.KubernetesCluster, error) {
+	items, err := api.ListKubernetesClusters(ctx, &sdk.ListKubernetesClustersParams{})
+	if err != nil {
+		return nil, err
+	}
+	selectList := make([]string, len(items))
+	for i, item := range items {
+		selectList[i] = item.Name
+	}
+
+	var selected string
+	prompt := &survey.Select{
+		Message: "Select cluster:",
+		Options: selectList,
+		Default: selectList[0],
+	}
+
+	if err := survey.AskOne(prompt, &selected, survey.WithValidator(survey.Required)); err != nil {
+		return nil, err
+	}
+
+	for _, item := range items {
+		if item.Name == selected {
+			return &item, nil
+		}
+	}
+
+	return nil, errors.New("cluster not found")
 }

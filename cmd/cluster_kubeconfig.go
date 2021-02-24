@@ -68,7 +68,7 @@ func handleClusterGetKubeconfig(cmd *cobra.Command, log logrus.FieldLogger, api 
 		return err
 	}
 
-	clusterID, err := parseClusterIDFromCMDArgs(cmd, api)
+	clusterID, err := getClusterIDFromArgs(cmd, api)
 	if err != nil {
 		return err
 	}

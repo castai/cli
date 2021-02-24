@@ -22,9 +22,10 @@ import (
 
 	"github.com/castai/cast-cli/pkg/client"
 	"github.com/castai/cast-cli/pkg/config"
+	"github.com/castai/cast-cli/pkg/ssh"
 )
 
-func NewRootCmd(log logrus.FieldLogger, cfg *config.Config, api client.Interface) *cobra.Command {
+func NewRootCmd(log logrus.FieldLogger, cfg *config.Config, api client.Interface, terminal ssh.Terminal) *cobra.Command {
 	rootCmd := &cobra.Command{
 		Use:   "cast",
 		Short: "CAST AI Command Line Interface",
@@ -47,7 +48,7 @@ func NewRootCmd(log logrus.FieldLogger, cfg *config.Config, api client.Interface
 	// Cluster nodes.
 	nodeCmd := newNodeCmd()
 	nodeCmd.AddCommand(newNodeListCmd(log, api))
-	nodeCmd.AddCommand(newNodeSSHCmd(log, api))
+	nodeCmd.AddCommand(newNodeSSHCmd(log, api, terminal))
 	rootCmd.AddCommand(nodeCmd)
 	// Completion.
 	rootCmd.AddCommand(newCompletionCmd())

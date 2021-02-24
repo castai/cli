@@ -35,7 +35,7 @@ func newConfigureCmd(log logrus.FieldLogger) *cobra.Command {
 		Long:  ``,
 		Run: func(cmd *cobra.Command, args []string) {
 			if err := handleConfigure(log, cmd); err != nil {
-				log.Fatalf("configuration failed: %v", err)
+				log.Fatalf("Configuration failed: %v", err)
 				return
 			}
 		},

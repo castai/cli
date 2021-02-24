@@ -2,6 +2,7 @@ package cmd
 
 import (
 	"bytes"
+	"context"
 	"fmt"
 	"os"
 	"path"
@@ -13,12 +14,13 @@ import (
 
 	"github.com/castai/cast-cli/pkg/client"
 	"github.com/castai/cast-cli/pkg/config"
+	"github.com/castai/cast-cli/pkg/ssh"
 )
 
 func newTestRootCmd() *cobra.Command {
 	api := client.NewMock()
 	log := logrus.New()
-	return NewRootCmd(log, &config.Config{}, api)
+	return NewRootCmd(log, &config.Config{}, api, &mockTerminal{})
 }
 
 func TestCommands(t *testing.T) {
@@ -118,6 +120,17 @@ func TestCommands(t *testing.T) {
 		fmt.Println(out)
 	})
 
+	t.Run("node ssh", func(t *testing.T) {
+		root := newTestRootCmd()
+
+		out, err := executeCommand(
+			root,
+			"node", "ssh", "node1", "-c", "test-cluster-1",
+		)
+		require.NoError(t, err)
+		fmt.Println(out)
+	})
+
 	t.Run("region list", func(t *testing.T) {
 		root := newTestRootCmd()
 
@@ -135,10 +148,10 @@ func TestCommands(t *testing.T) {
 		out, err := executeCommand(root, "credentials", "list")
 		require.NoError(t, err)
 		fmt.Println(out)
-		expected := ` ID     NAME   CLOUD  USEDBY 
- cred1  aws    aws         0 
- cred2  gcp    gcp         0 
- cred3  azure  azure       0`
+		expected := ` ID     NAME   CLOUD  CLUSTERS 
+ cred1  aws    aws           0 
+ cred2  gcp    gcp           0 
+ cred3  azure  azure         0`
 		require.Equal(t, expected+" \n", out)
 	})
 }
@@ -157,4 +170,11 @@ func executeCommandC(root *cobra.Command, args ...string) (c *cobra.Command, out
 	c, err = root.ExecuteC()
 
 	return c, buf.String(), err
+}
+
+type mockTerminal struct {
+}
+
+func (m *mockTerminal) Connect(ctx context.Context, cfg ssh.ConnectConfig) error {
+	return nil
 }
