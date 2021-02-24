@@ -69,15 +69,7 @@ func handleNodeSSH(cmd *cobra.Command, log logrus.FieldLogger, api client.Interf
 		return errors.New("node is not ready yet")
 	}
 
-	home, err := os.UserHomeDir()
-	if err != nil {
-		return err
-	}
-	keysPath := path.Join(home, ".ssh")
-	privateKeyPath := filepath.Join(keysPath, sshPrivateKeyName)
-	publicKeyPath := filepath.Join(keysPath, sshPublicKeyName)
-
-	keys, err := generateKeys(privateKeyPath, publicKeyPath)
+	keys, err := generateKeys()
 	if err != nil {
 		return err
 	}
@@ -115,11 +107,24 @@ func handleNodeSSH(cmd *cobra.Command, log logrus.FieldLogger, api client.Interf
 	return nil
 }
 
-func generateKeys(privateKeyPath, publicKeyPath string) (*ssh.Keys, error) {
-	_, err := os.Stat(privateKeyPath)
+func generateKeys() (*ssh.Keys, error) {
+	home, err := os.UserHomeDir()
+	if err != nil {
+		return nil, err
+	}
+	keysDir := path.Join(home, ".ssh")
+	privateKeyPath := filepath.Join(keysDir, sshPrivateKeyName)
+	publicKeyPath := filepath.Join(keysDir, sshPublicKeyName)
+	// Create .ssh folder if not exist.
+	if _, err := os.Stat(keysDir); os.IsNotExist(err) {
+		if err := os.Mkdir(keysDir, 0700); err != nil {
+			return nil, err
+		}
+	}
 
-	// If no keys yet generate and return.
-	if os.IsNotExist(err) {
+	// Generate new keys if not exist.
+	_, err = os.Stat(privateKeyPath)
+	if _, err := os.Stat(privateKeyPath); os.IsNotExist(err) {
 		keys, err := ssh.GenerateKeys("ubuntu@cast-cli")
 		if err != nil {
 			return nil, err
@@ -133,7 +138,7 @@ func generateKeys(privateKeyPath, publicKeyPath string) (*ssh.Keys, error) {
 		return keys, nil
 	}
 
-	// Read already generated keys from files
+	// Read already generated keys from files.
 	priv, err := ioutil.ReadFile(privateKeyPath)
 	if err != nil {
 		return nil, err
