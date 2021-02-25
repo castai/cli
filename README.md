@@ -69,6 +69,7 @@ Available Commands:
   configure   Setup initial configuration
   credentials Manage credentials
   help        Help about any command
+  node        Manage clusters nodes
   region      Manage regions
   version     Print version
 
@@ -80,20 +81,40 @@ Use "cast [command] --help" for more information about a command.
 
 #### Create and access cluster
 
-Create cluster
+1. Create cluster
 ```
 cast cluster create --name=my-cluster --credentials=aws --progress
 ```
 
-Setup kubeconfig
+2. List clusters
+
 ```
-cast cluster get-kubeconfig my-cluster
+cast cluster list
+```
+
+3. Setup kubeconfig
+```
+cast cluster get-kubeconfig my-cluster-name
 ```
 
 Verify Kubernetes nodes
 ```
 kubectl get nodes
 ```
+
+#### Connect to node via SSH
+
+Interactive move
+```
+cast node ssh
+```
+
+Declerative mode
+
+```
+cast node ssh my-node-name-123 -c=my-cluster-name
+```
+
 
 [Homebrew]: https://brew.sh
 [releases page]: https://github.com/castai/cli/releases/latest
