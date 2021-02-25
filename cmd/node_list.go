@@ -39,18 +39,12 @@ func newNodeListCmd(log logrus.FieldLogger, api client.Interface) *cobra.Command
 		},
 	}
 	cmd.PersistentFlags().StringP(flagCluster, "c", "", "cluster name or ID")
-	cmd.MarkPersistentFlagRequired(flagCluster)
 	command.AddJSONOutput(cmd)
 	return cmd
 }
 
 func handleListNodes(cmd *cobra.Command, api client.Interface) error {
-	clusterIDOrName, err := cmd.Flags().GetString(flagCluster)
-	if err != nil {
-		return err
-	}
-
-	clusterID, err := parseClusterIDFromValue(cmd.Context(), api, clusterIDOrName)
+	clusterID, err := getClusterIDFromFlag(cmd, api)
 	if err != nil {
 		return err
 	}
@@ -76,10 +70,7 @@ func printNodesListTable(out io.Writer, items []sdk.Node) {
 	t.AppendHeader(table.Row{"ID", "Name", "Role", "Shape", "Status", "Cloud", "Public_IP", "Private_IP"})
 	for _, item := range items {
 		if item.Network == nil {
-			item.Network = &sdk.NodeNetwork{
-				PrivateIp: "pending",
-				PublicIp:  "pending",
-			}
+			item.Network = &sdk.NodeNetwork{}
 		}
 		if item.State == nil {
 			var empty string

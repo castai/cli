@@ -61,7 +61,7 @@ func printCredentialsListTable(out io.Writer, items []sdk.CloudCredentials) {
 	t := table.NewWriter()
 	t.SetStyle(command.DefaultTableStyle)
 	t.SetOutputMirror(out)
-	t.AppendHeader(table.Row{"ID", "Name", "Cloud", "UsedBy"})
+	t.AppendHeader(table.Row{"ID", "Name", "Cloud", "Clusters"})
 	for _, item := range items {
 		t.AppendRow(table.Row{
 			item.Id,

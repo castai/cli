@@ -22,6 +22,7 @@ import (
 	"fmt"
 	"strings"
 
+	"github.com/AlecAivazis/survey/v2"
 	"github.com/google/uuid"
 	"github.com/spf13/cobra"
 
@@ -40,27 +41,67 @@ func newNodeCmd() *cobra.Command {
 	}
 }
 
-func parseNodeIDFromCMDArgs(cmd *cobra.Command, api client.Interface, clusterID string) (string, error) {
+func getNode(cmd *cobra.Command, api client.Interface, clusterID string) (*sdk.Node, error) {
+	ctx := cmd.Context()
+	// Select node from interactive picker if no args passed.
 	if len(cmd.Flags().Args()) == 0 {
-		return "", errors.New("node ID or name is required")
+		node, err := selectNode(ctx, api, clusterID)
+		if err != nil {
+			return nil, err
+		}
+		return node, err
 	}
-	nodeIDOrName := cmd.Flags().Args()[0]
-	return parseNodeIDFromValue(cmd.Context(), api, nodeIDOrName, clusterID)
-}
 
-func parseNodeIDFromValue(ctx context.Context, api client.Interface, nodeIDOrName, clusterID string) (string, error) {
-	uuidID, err := uuid.Parse(nodeIDOrName)
+	// Try to search single node by uuid.
+	value := cmd.Flags().Args()[0]
+	uuidID, err := uuid.Parse(value)
 	if err == nil {
-		return uuidID.String(), nil
+		node, err := api.GetClusterNode(cmd.Context(), sdk.ClusterId(clusterID), uuidID.String())
+		if err != nil {
+			return nil, err
+		}
+		return node, nil
 	}
+
+	// List all nodes and search by node name.
 	nodes, err := api.ListClusterNodes(ctx, sdk.ClusterId(clusterID))
 	if err != nil {
-		return "", err
+		return nil, err
 	}
 	for _, node := range nodes {
-		if node.Name != nil && node.Id != nil && strings.ToLower(*node.Name) == strings.ToLower(nodeIDOrName) {
-			return *node.Id, nil
+		if node.Name != nil && node.Id != nil && strings.ToLower(*node.Name) == strings.ToLower(value) {
+			return &node, nil
 		}
 	}
-	return "", fmt.Errorf("nodeID for %s not found", nodeIDOrName)
+	return nil, fmt.Errorf("node not found, searched by value=%s", value)
+}
+
+func selectNode(ctx context.Context, api client.Interface, clusterID string) (*sdk.Node, error) {
+	items, err := api.ListClusterNodes(ctx, sdk.ClusterId(clusterID))
+	if err != nil {
+		return nil, err
+	}
+	selectList := make([]string, len(items))
+	for i, item := range items {
+		selectList[i] = *item.Name
+	}
+
+	var selected string
+	prompt := &survey.Select{
+		Message: "Select node:",
+		Options: selectList,
+		Default: selectList[0],
+	}
+
+	if err := survey.AskOne(prompt, &selected, survey.WithValidator(survey.Required)); err != nil {
+		return nil, err
+	}
+
+	for _, item := range items {
+		if *item.Name == selected {
+			return &item, nil
+		}
+	}
+
+	return nil, errors.New("cluster node not found")
 }

@@ -458,6 +458,21 @@ type EstimatedPriceAmount struct {
 	Monthly *string `json:"monthly,omitempty"`
 }
 
+// ExternalCluster defines model for ExternalCluster.
+type ExternalCluster struct {
+
+	// Cluster ID, generated at the time of creation
+	Id string `json:"id"`
+
+	// Name of this infrastructure object. Needs to be unique per organization.
+	Name string `json:"name"`
+}
+
+// ExternalClustersList defines model for ExternalClustersList.
+type ExternalClustersList struct {
+	Items []ExternalCluster `json:"items"`
+}
+
 // FieldViolation defines model for FieldViolation.
 type FieldViolation struct {
 	Description string `json:"description"`
@@ -537,6 +552,44 @@ type IngressLoadBalancer struct {
 	Type string `json:"type"`
 }
 
+// InstanceType defines model for InstanceType.
+type InstanceType struct {
+
+	// Instance type creation in our system timestamp in RFC3339Nano format.
+	CreatedAt time.Time `json:"createdAt"`
+
+	// ID of the instance type object.
+	Id string `json:"id"`
+
+	// Instance type name.
+	InstanceType string `json:"instanceType"`
+
+	// The price of the instance type. Value is in $/hour.
+	Price string `json:"price"`
+
+	// Short provider name.
+	Provider string `json:"provider"`
+
+	// Number of available memory in megabytes.
+	Ram int `json:"ram"`
+
+	// Region name. This value is provider specific.
+	Region string `json:"region"`
+
+	// Instance type last update in our system timestamp in RFC3339Nano format.
+	UpdatedAt time.Time `json:"updatedAt"`
+
+	// Number of VCPU cores.
+	Vcpu int `json:"vcpu"`
+}
+
+// InstanceTypesResponse defines model for InstanceTypesResponse.
+type InstanceTypesResponse struct {
+
+	// List of instance types.
+	InstanceTypes []InstanceType `json:"instanceTypes"`
+}
+
 // IpSecConfig defines model for IpSecConfig.
 type IpSecConfig map[string]interface{}
 
@@ -574,6 +627,9 @@ type KubernetesCluster struct {
 	// Optional notes added when pausing the cluster.
 	PausedNotes   *string `json:"pausedNotes,omitempty"`
 	ReconcileMode string  `json:"reconcileMode"`
+
+	// Last cluster reconcile UTC time in RFC3339 format.
+	ReconciledAt *time.Time `json:"reconciledAt,omitempty"`
 
 	// CAST AI region used by cluster.
 	Region ClusterRegion `json:"region"`
@@ -1028,6 +1084,24 @@ type DeleteGslbJSONBody GSLBDeleteRequest
 // CreateOrUpdateGslbJSONBody defines parameters for CreateOrUpdateGslb.
 type CreateOrUpdateGslbJSONBody GSLBRequest
 
+// ListInstanceTypesParams defines parameters for ListInstanceTypes.
+type ListInstanceTypesParams struct {
+
+	// Optional parameter to filter results based on the provider.
+	// You can choose multiple providers from these available: `aws`, `azure`, `do`, `gcp`.
+	Providers *[]string `json:"providers,omitempty"`
+
+	// Optional parameter to filter results based on the instance type region.
+	// Regions names are provider specific.
+	// Please consult the documentation of individual providers for possible values.
+	Regions *[]string `json:"regions,omitempty"`
+
+	// Optional paramter to filter results based on the instance type name.
+	// Instance type names are provider specific.
+	// Please consult the documentation of individual providers for possible values.
+	InstanceTypes *[]string `json:"instanceTypes,omitempty"`
+}
+
 // ListKubernetesClustersParams defines parameters for ListKubernetesClusters.
 type ListKubernetesClustersParams struct {
 
@@ -1053,21 +1127,11 @@ type GetClusterMetricsParams struct {
 // AddClusterNodeJSONBody defines parameters for AddClusterNode.
 type AddClusterNodeJSONBody Node
 
-// CloseNodeSshJSONBody defines parameters for CloseNodeSsh.
-type CloseNodeSshJSONBody struct {
-
-	// Access rule ID used to close firewall created for SSH session.
-	AccessRuleId string `json:"accessRuleId"`
-}
-
 // SetupNodeSshJSONBody defines parameters for SetupNodeSsh.
 type SetupNodeSshJSONBody struct {
 
 	// Public authorized key ed25519 for node SSH connection.
 	PublicKey string `json:"publicKey"`
-
-	// Client public source IP which will be added to firewall rules for SSH connection.
-	SourceIp string `json:"sourceIp"`
 }
 
 // UpdateNodeListJSONBody defines parameters for UpdateNodeList.
@@ -1078,6 +1142,9 @@ type PauseClusterJSONBody PauseCluster
 
 // UpsertPoliciesJSONBody defines parameters for UpsertPolicies.
 type UpsertPoliciesJSONBody PoliciesConfig
+
+// RegisterExternalClusterJSONBody defines parameters for RegisterExternalCluster.
+type RegisterExternalClusterJSONBody ExternalCluster
 
 // UpdateCurrentUserProfileJSONBody defines parameters for UpdateCurrentUserProfile.
 type UpdateCurrentUserProfileJSONBody UserProfile
@@ -1122,9 +1189,6 @@ type ConfigureClusterAddonsJSONRequestBody ConfigureClusterAddonsJSONBody
 // AddClusterNodeRequestBody defines body for AddClusterNode for application/json ContentType.
 type AddClusterNodeJSONRequestBody AddClusterNodeJSONBody
 
-// CloseNodeSshRequestBody defines body for CloseNodeSsh for application/json ContentType.
-type CloseNodeSshJSONRequestBody CloseNodeSshJSONBody
-
 // SetupNodeSshRequestBody defines body for SetupNodeSsh for application/json ContentType.
 type SetupNodeSshJSONRequestBody SetupNodeSshJSONBody
 
@@ -1136,6 +1200,9 @@ type PauseClusterJSONRequestBody PauseClusterJSONBody
 
 // UpsertPoliciesRequestBody defines body for UpsertPolicies for application/json ContentType.
 type UpsertPoliciesJSONRequestBody UpsertPoliciesJSONBody
+
+// RegisterExternalClusterRequestBody defines body for RegisterExternalCluster for application/json ContentType.
+type RegisterExternalClusterJSONRequestBody RegisterExternalClusterJSONBody
 
 // UpdateCurrentUserProfileRequestBody defines body for UpdateCurrentUserProfile for application/json ContentType.
 type UpdateCurrentUserProfileJSONRequestBody UpdateCurrentUserProfileJSONBody

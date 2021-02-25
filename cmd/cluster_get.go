@@ -40,7 +40,7 @@ func newClusterGetCmd(log logrus.FieldLogger, api client.Interface) *cobra.Comma
 }
 
 func handleGetCluster(cmd *cobra.Command, api client.Interface) error {
-	clusterID, err := parseClusterIDFromCMDArgs(cmd, api)
+	clusterID, err := getClusterIDFromArgs(cmd, api)
 	if err != nil {
 		return err
 	}

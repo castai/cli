@@ -21,8 +21,12 @@ tags:
     description: (BETA) Initial Cluster Costs Plan
   - name: cloud-credentials
     description: Cloud credentials
+  - name: external-kubernetes
+    description: Remotely managed Kubernetes clusters
   - name: gslb
     description: (BETA) GSLB
+  - name: inventory
+    description: (BETA) Inventory API
   - name: cluster-policies
     description: (BETA) Cluster policies
   - name: kubernetes-cluster
@@ -328,6 +332,44 @@ paths:
       responses:
         "204":
           description: The resource has been deleted.
+  /kubernetes/external-clusters:
+    get:
+      operationId: list-external-clusters
+      tags:
+        - external-kubernetes
+      summary: >-
+        List external clusters
+      description: >-
+        TODO
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ExternalClustersList'
+          description:
+    post:
+      operationId: register-external-cluster
+      tags:
+        - external-kubernetes
+      summary: >-
+        Register external cluster
+      description: >-
+        TODO
+      requestBody:
+        required: true
+        description: Cluster to be registered
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ExternalCluster'
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ExternalCluster'
+          description:
   /gslb:
     post:
       operationId: create-or-update-gslb
@@ -369,6 +411,50 @@ paths:
       responses:
         "204":
           description: GSLB was deleted
+  /inventory/instance-types:
+    get:
+      operationId: list-instance-types
+      tags:
+        - inventory
+      summary: (BETA) List instance types.
+      description: Lists instance types. The list can be filtered to narrow down your search.
+      parameters:
+        - name: providers
+          in: query
+          schema:
+            type: array
+            items:
+              type: string
+          description: |
+            Optional parameter to filter results based on the provider.
+            You can choose multiple providers from these available: `aws`, `azure`, `do`, `gcp`.
+        - name: regions
+          in: query
+          schema:
+            type: array
+            items:
+              type: string
+          description: |
+            Optional parameter to filter results based on the instance type region.
+            Regions names are provider specific.
+            Please consult the documentation of individual providers for possible values.
+        - name: instanceTypes
+          in: query
+          schema:
+            type: array
+            items:
+              type: string
+          description: |
+            Optional paramter to filter results based on the instance type name.
+            Instance type names are provider specific.
+            Please consult the documentation of individual providers for possible values.
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/InstanceTypesResponse'
   /kubernetes/operations/{id}:
     parameters:
       - name: id
@@ -886,6 +972,62 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/ErrorResponse'
+  /kubernetes/clusters/{clusterId}/pause-reconcile:
+    parameters:
+      - $ref: '#/components/parameters/clusterId'
+    post:
+      tags:
+        - kubernetes-cluster
+      summary: >-
+        (BETA) Pause cluster reconcile
+      description: |
+        Pauses cluster reconcile. When reconcile is paused CAST AI platform does not managed provisioned cluster.
+      operationId: pause-cluster-reconcile
+      responses:
+        "200":
+          description: Operation completed succesfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/KubernetesCluster'
+        "404":
+          description: Cluster was not found
+  /kubernetes/clusters/{clusterId}/resume-reconcile:
+    parameters:
+      - $ref: '#/components/parameters/clusterId'
+    post:
+      tags:
+        - kubernetes-cluster
+      summary: >-
+        (BETA) Resume cluster reconcile
+      description: |
+        Resume cluster reconcile. When reconcile is resumed CAST AI platform manages provisioned cluster.
+      operationId: resume-cluster-reconcile
+      responses:
+        "200":
+          description: Operation completed succesfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/KubernetesCluster'
+        "404":
+          description: Cluster was not found
+  /kubernetes/clusters/{clusterId}/trigger-reconcile:
+    parameters:
+      - $ref: '#/components/parameters/clusterId'
+    post:
+      tags:
+        - kubernetes-cluster
+      summary: >-
+        (BETA) Trigger cluster reconcile
+      description: |
+        Trigger cluster reconcile schedules next reconcile to start sooner.
+      operationId: trigger-cluster-reconcile
+      responses:
+        "200":
+          description: Operation completed succesfully
+        "404":
+          description: Cluster was not found
   /kubernetes/clusters/{clusterId}/ingress-controller:
     parameters:
       - $ref: '#/components/parameters/clusterId'
@@ -940,25 +1082,11 @@ paths:
                 publicKey:
                   type: string
                   description: Public authorized key ed25519 for node SSH connection.
-                sourceIp:
-                  type: string
-                  description: Client public source IP which will be added to firewall rules for SSH connection.
               required:
                 - publicKey
-                - sourceIp
       responses:
         "200":
           description: Operation completed succesfully
-          content:
-            application/json:
-              schema:
-                type: object
-                properties:
-                  accessRuleId:
-                    type: string
-                    description: Access rule ID used to close firewall created for SSH session.
-                required:
-                  - accessRuleId
   /kubernetes/clusters/{clusterId}/nodes/{nodeId}/close-ssh:
     parameters:
       - $ref: '#/components/parameters/clusterId'
@@ -978,18 +1106,6 @@ paths:
         (BETA) Close connect to node SSH.
       description: >-
         Close connection to node SSH.
-      requestBody:
-        content:
-          application/json:
-            schema:
-              type: object
-              properties:
-                accessRuleId:
-                  type: string
-                  description: Access rule ID used to close firewall created for SSH session.
-              required:
-                - accessRuleId
-                - sourceIp
       responses:
         "200":
           description: Operation completed succesfully
@@ -1624,6 +1740,28 @@ components:
             $ref: '#/components/schemas/CloudCredentials'
       required:
         - items
+    ExternalClustersList:
+      type: object
+      properties:
+        items:
+          type: array
+          items:
+            $ref: '#/components/schemas/ExternalCluster'
+      required:
+        - items
+    ExternalCluster:
+      type: object
+      properties:
+        id:
+          type: string
+          description: Cluster ID, generated at the time of creation
+          readOnly: true
+        name:
+          type: string
+          description: Name of this infrastructure object. Needs to be unique per organization.
+      required:
+        - id
+        - name
     GSLBRequest:
       type: object
       properties:
@@ -1681,6 +1819,67 @@ components:
         - clusterId
         - serviceName
         - serviceNamespace
+    InstanceTypesResponse:
+      type: object
+      properties:
+        instanceTypes:
+          type: array
+          items:
+            $ref: '#/components/schemas/InstanceType'
+          description: List of instance types.
+      required:
+        - instanceTypes
+    InstanceType:
+      type: object
+      properties:
+        id:
+          type: string
+          description: ID of the instance type object.
+          example: 336f509e-0035-42cf-ae41-8cbb5352bb11
+        provider:
+          type: string
+          description: Short provider name.
+          example: aws
+        region:
+          type: string
+          description: Region name. This value is provider specific.
+          example: eu-central-1
+        instanceType:
+          type: string
+          description: Instance type name.
+          example: t3a.medium
+        vcpu:
+          type: integer
+          description: Number of VCPU cores.
+          example: 2
+        ram:
+          type: integer
+          description: Number of available memory in megabytes.
+          example: 4096
+        price:
+          type: string
+          description: The price of the instance type. Value is in $/hour.
+          example: 0.0432
+        createdAt:
+          type: string
+          format: date-time
+          description: Instance type creation in our system timestamp in RFC3339Nano format.
+          example: 2020-12-15T15:25:44.887899Z
+        updatedAt:
+          type: string
+          format: date-time
+          description: Instance type last update in our system timestamp in RFC3339Nano format.
+          example: 2020-12-15T15:25:44.887899Z
+      required:
+        - id
+        - provider
+        - region
+        - instanceType
+        - vcpu
+        - ram
+        - price
+        - createdAt
+        - updatedAt
     OperationResponse:
       type: object
       properties:
@@ -2112,6 +2311,12 @@ components:
           type: string
           format: date-time
           description: Cluster creation UTC time in RFC3339 format.
+          example: 2022-10-02T15:00:00Z
+          readOnly: true
+        reconciledAt:
+          type: string
+          format: date-time
+          description: Last cluster reconcile UTC time in RFC3339 format.
           example: 2022-10-02T15:00:00Z
           readOnly: true
         heartbeats:

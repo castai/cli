@@ -21,12 +21,9 @@ import (
 	"errors"
 	"fmt"
 	"io/ioutil"
-	"net/http"
 	"os"
 	"path"
 	"path/filepath"
-	"strings"
-	"time"
 
 	"github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
@@ -42,39 +39,28 @@ const (
 	sshPrivateKeyName = "cast_ed25519"
 )
 
-func newNodeSSHCmd(log logrus.FieldLogger, api client.Interface) *cobra.Command {
+func newNodeSSHCmd(log logrus.FieldLogger, api client.Interface, terminal ssh.Terminal) *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "ssh",
 		Short: "SSH into cluster node",
 		Run: func(cmd *cobra.Command, args []string) {
-			if err := handleNodeSSH(cmd, log, api); err != nil {
+			if err := handleNodeSSH(cmd, log, api, terminal); err != nil {
 				log.Fatal(err)
 			}
 		},
 	}
 	cmd.PersistentFlags().StringP(flagCluster, "c", "", "cluster name or ID")
-	cmd.MarkPersistentFlagRequired(flagCluster)
 	command.AddJSONOutput(cmd)
 	return cmd
 }
 
-func handleNodeSSH(cmd *cobra.Command, log logrus.FieldLogger, api client.Interface) error {
-	clusterIDOrName, err := cmd.Flags().GetString(flagCluster)
+func handleNodeSSH(cmd *cobra.Command, log logrus.FieldLogger, api client.Interface, terminal ssh.Terminal) error {
+	clusterID, err := getClusterIDFromFlag(cmd, api)
 	if err != nil {
 		return err
 	}
 
-	clusterID, err := parseClusterIDFromValue(cmd.Context(), api, clusterIDOrName)
-	if err != nil {
-		return err
-	}
-
-	nodeID, err := parseNodeIDFromCMDArgs(cmd, api, clusterID)
-	if err != nil {
-		return err
-	}
-
-	node, err := api.GetClusterNode(cmd.Context(), sdk.ClusterId(clusterID), nodeID)
+	node, err := getNode(cmd, api, clusterID)
 	if err != nil {
 		return err
 	}
@@ -83,68 +69,63 @@ func handleNodeSSH(cmd *cobra.Command, log logrus.FieldLogger, api client.Interf
 		return errors.New("node is not ready yet")
 	}
 
-	home, err := os.UserHomeDir()
-	if err != nil {
-		return err
-	}
-	keysPath := path.Join(home, ".ssh")
-	privateKeyPath := filepath.Join(keysPath, sshPrivateKeyName)
-	publicKeyPath := filepath.Join(keysPath, sshPublicKeyName)
-
-	keys, err := generateKeys(privateKeyPath, publicKeyPath)
+	keys, err := generateKeys()
 	if err != nil {
 		return err
 	}
 
 	// Send public key to CAST AI.
-	publicIP, err := getPublicIP()
-	if err != nil {
-		return err
-	}
-	log.Info("configuring firewall for SSH access")
-	accessRuleID, err := api.SetupNodeSSH(cmd.Context(), sdk.ClusterId(clusterID), nodeID, sdk.SetupNodeSshJSONRequestBody{
+	log.Info("Configuring firewall for SSH access")
+	err = api.SetupNodeSSH(cmd.Context(), sdk.ClusterId(clusterID), *node.Id, sdk.SetupNodeSshJSONRequestBody{
 		PublicKey: base64.StdEncoding.EncodeToString(keys.Public),
-		SourceIp:  publicIP,
 	})
 	if err != nil {
 		return err
 	}
 
-	// TODO: Fix different users and use 'ubuntu' user on all clouds.
-	var user string
-	switch node.Cloud {
-	case sdk.CloudType_do:
+	user := "ubuntu"
+	if node.Cloud == sdk.CloudType_do {
+		// TODO: Add ubuntu user login for DigitalOcean.
 		user = "root"
-	case sdk.CloudType_aws:
-	case sdk.CloudType_azure:
-		user = "ubuntu"
-	case sdk.CloudType_gcp:
-		user = "TODO"
 	}
 
-	log.Info("establishing secure ssh session")
-	if err := ssh.Terminal(cmd.Context(), ssh.TerminalConfig{
+	log.Info("Establishing secure SSH session")
+	addr := fmt.Sprintf("%s:22", node.Network.PublicIp)
+	if err := terminal.Connect(cmd.Context(), ssh.ConnectConfig{
 		PrivateKey: keys.Private,
 		User:       user,
-		Addr:       fmt.Sprintf("%s:22", node.Network.PublicIp),
+		Addr:       addr,
 	}); err != nil {
-		return err
+		return fmt.Errorf("connecting to %s@%s: %w", user, addr, err)
 	}
 
-	log.Info("closing firewall access")
-	if err := api.CloseNodeSSH(cmd.Context(), sdk.ClusterId(clusterID), nodeID, accessRuleID); err != nil {
-		log.Fatal(err)
+	log.Info("Closing firewall access")
+	if err := api.CloseNodeSSH(cmd.Context(), sdk.ClusterId(clusterID), *node.Id); err != nil {
+		return err
 	}
 
 	return nil
 }
 
-func generateKeys(privateKeyPath, publicKeyPath string) (*ssh.Keys, error) {
-	_, err := os.Stat(privateKeyPath)
+func generateKeys() (*ssh.Keys, error) {
+	home, err := os.UserHomeDir()
+	if err != nil {
+		return nil, err
+	}
+	keysDir := path.Join(home, ".ssh")
+	privateKeyPath := filepath.Join(keysDir, sshPrivateKeyName)
+	publicKeyPath := filepath.Join(keysDir, sshPublicKeyName)
+	// Create .ssh folder if not exist.
+	if _, err := os.Stat(keysDir); os.IsNotExist(err) {
+		if err := os.Mkdir(keysDir, 0700); err != nil {
+			return nil, err
+		}
+	}
 
-	// If no keys yet generate and return.
-	if os.IsNotExist(err) {
-		keys, err := ssh.GenerateKeys("cast-cli")
+	// Generate new keys if not exist.
+	_, err = os.Stat(privateKeyPath)
+	if _, err := os.Stat(privateKeyPath); os.IsNotExist(err) {
+		keys, err := ssh.GenerateKeys("ubuntu@cast-cli")
 		if err != nil {
 			return nil, err
 		}
@@ -157,7 +138,7 @@ func generateKeys(privateKeyPath, publicKeyPath string) (*ssh.Keys, error) {
 		return keys, nil
 	}
 
-	// Read already generated keys from files
+	// Read already generated keys from files.
 	priv, err := ioutil.ReadFile(privateKeyPath)
 	if err != nil {
 		return nil, err
@@ -170,18 +151,4 @@ func generateKeys(privateKeyPath, publicKeyPath string) (*ssh.Keys, error) {
 		Public:  pub,
 		Private: priv,
 	}, nil
-}
-
-func getPublicIP() (string, error) {
-	c := http.Client{Timeout: 30 * time.Second}
-	resp, err := c.Get("https://api.ipify.org")
-	if err != nil {
-		return "", err
-	}
-	defer resp.Body.Close()
-	b, err := ioutil.ReadAll(resp.Body)
-	if err != nil {
-		return "", err
-	}
-	return strings.TrimSpace(string(b)), nil
 }

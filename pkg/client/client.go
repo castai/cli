@@ -2,7 +2,9 @@ package client
 
 import (
 	"context"
+	"errors"
 	"fmt"
+	"io/ioutil"
 	"net/http"
 	"strings"
 	"time"
@@ -28,8 +30,8 @@ type Interface interface {
 	ListClusterNodes(ctx context.Context, req sdk.ClusterId) ([]sdk.Node, error)
 	ListAuthTokens(ctx context.Context) ([]sdk.AuthToken, error)
 	FeedbackEvents(ctx context.Context, req sdk.ClusterId) ([]sdk.KubernetesClusterFeedbackEvent, error)
-	SetupNodeSSH(ctx context.Context, clusterID sdk.ClusterId, nodeID string, req sdk.SetupNodeSshJSONRequestBody) (string, error)
-	CloseNodeSSH(ctx context.Context, clusterID sdk.ClusterId, nodeID string, accessRuleID string) error
+	SetupNodeSSH(ctx context.Context, clusterID sdk.ClusterId, nodeID string, req sdk.SetupNodeSshJSONRequestBody) error
+	CloseNodeSSH(ctx context.Context, clusterID sdk.ClusterId, nodeID string) error
 	GetClusterNode(ctx context.Context, clusterID sdk.ClusterId, nodeID string) (*sdk.Node, error)
 }
 
@@ -58,14 +60,16 @@ func New(cfg *config.Config, log logrus.FieldLogger) (Interface, error) {
 	}
 
 	return &client{
-		apiURL: apiURL,
-		api:    apiClient,
+		apiURL:   apiURL,
+		hostname: cfg.Hostname,
+		api:      apiClient,
 	}, nil
 }
 
 type client struct {
-	apiURL string
-	api    sdk.ClientWithResponsesInterface
+	apiURL   string
+	hostname string
+	api      sdk.ClientWithResponsesInterface
 }
 
 func (c *client) GetClusterNode(ctx context.Context, clusterID sdk.ClusterId, nodeID string) (*sdk.Node, error) {
@@ -79,20 +83,19 @@ func (c *client) GetClusterNode(ctx context.Context, clusterID sdk.ClusterId, no
 	return resp.JSON200, nil
 }
 
-func (c *client) SetupNodeSSH(ctx context.Context, clusterID sdk.ClusterId, nodeID string, req sdk.SetupNodeSshJSONRequestBody) (string, error) {
+func (c *client) SetupNodeSSH(ctx context.Context, clusterID sdk.ClusterId, nodeID string, req sdk.SetupNodeSshJSONRequestBody) error {
 	resp, err := c.api.SetupNodeSshWithResponse(ctx, clusterID, nodeID, req)
 	if err != nil {
-		return "", err
+		return err
 	}
 	if err := c.checkResponse(resp, err, http.StatusOK); err != nil {
-		return "", err
+		return err
 	}
-
-	return resp.JSON200.AccessRuleId, nil
+	return nil
 }
 
-func (c *client) CloseNodeSSH(ctx context.Context, clusterID sdk.ClusterId, nodeID string, accessRuleID string) error {
-	resp, err := c.api.CloseNodeSshWithResponse(ctx, clusterID, nodeID, sdk.CloseNodeSshJSONRequestBody{AccessRuleId: accessRuleID})
+func (c *client) CloseNodeSSH(ctx context.Context, clusterID sdk.ClusterId, nodeID string) error {
+	resp, err := c.api.CloseNodeSshWithResponse(ctx, clusterID, nodeID)
 	if err != nil {
 		return err
 	}
@@ -209,6 +212,20 @@ func (c *client) ListAuthTokens(ctx context.Context) ([]sdk.AuthToken, error) {
 	return resp.JSON200.Items, nil
 }
 
+func (c *client) GetMyPublicIP(ctx context.Context) (string, error) {
+	client := http.Client{Timeout: 30 * time.Second}
+	resp, err := client.Get(fmt.Sprintf("https://%s/my-public-ip", c.hostname))
+	if err != nil {
+		return "", err
+	}
+	defer resp.Body.Close()
+	b, err := ioutil.ReadAll(resp.Body)
+	if err != nil {
+		return "", err
+	}
+	return strings.TrimSpace(string(b)), nil
+}
+
 func (c *client) checkResponse(resp sdk.Response, err error, expectedStatus int) error {
 	if err != nil {
 		return err
@@ -217,6 +234,9 @@ func (c *client) checkResponse(resp sdk.Response, err error, expectedStatus int)
 		errBody := strings.ToLower(strings.TrimSpace(string(resp.GetBody())))
 		if resp.StatusCode() == http.StatusUnauthorized {
 			return fmt.Errorf("unauthorized to access %s: %s, run 'cast configure' to setup access token", c.apiURL, errBody)
+		}
+		if resp.StatusCode() == http.StatusInternalServerError {
+			return errors.New("internal server error occurred, please try again")
 		}
 		return fmt.Errorf("expected status code %d, received: status=%d body=%s", expectedStatus, resp.StatusCode(), errBody)
 	}

@@ -54,23 +54,12 @@ func handleListClusters(cmd *cobra.Command, api client.Interface) error {
 		return err
 	}
 
-	res := resp
-	if !flagIncludeDeletedClusters {
-		// TODO: Ideally API should allow to pass query params to include deleted clusters in response.
-		res = []sdk.KubernetesCluster{}
-		for _, item := range resp {
-			if item.Status != "deleted" {
-				res = append(res, item)
-			}
-		}
-	}
-
 	if command.OutputJSON() {
-		command.PrintOutput(res)
+		command.PrintOutput(resp)
 		return nil
 	}
 
-	printClustersListTable(cmd.OutOrStdout(), res)
+	printClustersListTable(cmd.OutOrStdout(), resp)
 	return nil
 }
 

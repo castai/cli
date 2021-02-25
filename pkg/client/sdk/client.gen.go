@@ -154,6 +154,9 @@ type ClientInterface interface {
 
 	CreateOrUpdateGslb(ctx context.Context, body CreateOrUpdateGslbJSONRequestBody) (*http.Response, error)
 
+	// ListInstanceTypes request
+	ListInstanceTypes(ctx context.Context, params *ListInstanceTypesParams) (*http.Response, error)
+
 	// ListKubernetesClusters request
 	ListKubernetesClusters(ctx context.Context, params *ListKubernetesClustersParams) (*http.Response, error)
 
@@ -211,10 +214,8 @@ type ClientInterface interface {
 	// GetClusterNode request
 	GetClusterNode(ctx context.Context, clusterId ClusterId, nodeId string) (*http.Response, error)
 
-	// CloseNodeSsh request  with any body
-	CloseNodeSshWithBody(ctx context.Context, clusterId ClusterId, nodeId string, contentType string, body io.Reader) (*http.Response, error)
-
-	CloseNodeSsh(ctx context.Context, clusterId ClusterId, nodeId string, body CloseNodeSshJSONRequestBody) (*http.Response, error)
+	// CloseNodeSsh request
+	CloseNodeSsh(ctx context.Context, clusterId ClusterId, nodeId string) (*http.Response, error)
 
 	// InterruptClusterNode request
 	InterruptClusterNode(ctx context.Context, clusterId ClusterId, nodeId string) (*http.Response, error)
@@ -234,6 +235,9 @@ type ClientInterface interface {
 
 	PauseCluster(ctx context.Context, clusterId ClusterId, body PauseClusterJSONRequestBody) (*http.Response, error)
 
+	// PauseClusterReconcile request
+	PauseClusterReconcile(ctx context.Context, clusterId ClusterId) (*http.Response, error)
+
 	// GetPolicies request
 	GetPolicies(ctx context.Context, clusterId ClusterId) (*http.Response, error)
 
@@ -244,6 +248,20 @@ type ClientInterface interface {
 
 	// ResumeCluster request
 	ResumeCluster(ctx context.Context, clusterId ClusterId) (*http.Response, error)
+
+	// ResumeClusterReconcile request
+	ResumeClusterReconcile(ctx context.Context, clusterId ClusterId) (*http.Response, error)
+
+	// TriggerClusterReconcile request
+	TriggerClusterReconcile(ctx context.Context, clusterId ClusterId) (*http.Response, error)
+
+	// ListExternalClusters request
+	ListExternalClusters(ctx context.Context) (*http.Response, error)
+
+	// RegisterExternalCluster request  with any body
+	RegisterExternalClusterWithBody(ctx context.Context, contentType string, body io.Reader) (*http.Response, error)
+
+	RegisterExternalCluster(ctx context.Context, body RegisterExternalClusterJSONRequestBody) (*http.Response, error)
 
 	// GetOperation request
 	GetOperation(ctx context.Context, id string) (*http.Response, error)
@@ -623,6 +641,21 @@ func (c *Client) CreateOrUpdateGslb(ctx context.Context, body CreateOrUpdateGslb
 	return c.Client.Do(req)
 }
 
+func (c *Client) ListInstanceTypes(ctx context.Context, params *ListInstanceTypesParams) (*http.Response, error) {
+	req, err := NewListInstanceTypesRequest(c.Server, params)
+	if err != nil {
+		return nil, err
+	}
+	req = req.WithContext(ctx)
+	if c.RequestEditor != nil {
+		err = c.RequestEditor(ctx, req)
+		if err != nil {
+			return nil, err
+		}
+	}
+	return c.Client.Do(req)
+}
+
 func (c *Client) ListKubernetesClusters(ctx context.Context, params *ListKubernetesClustersParams) (*http.Response, error) {
 	req, err := NewListKubernetesClustersRequest(c.Server, params)
 	if err != nil {
@@ -923,23 +956,8 @@ func (c *Client) GetClusterNode(ctx context.Context, clusterId ClusterId, nodeId
 	return c.Client.Do(req)
 }
 
-func (c *Client) CloseNodeSshWithBody(ctx context.Context, clusterId ClusterId, nodeId string, contentType string, body io.Reader) (*http.Response, error) {
-	req, err := NewCloseNodeSshRequestWithBody(c.Server, clusterId, nodeId, contentType, body)
-	if err != nil {
-		return nil, err
-	}
-	req = req.WithContext(ctx)
-	if c.RequestEditor != nil {
-		err = c.RequestEditor(ctx, req)
-		if err != nil {
-			return nil, err
-		}
-	}
-	return c.Client.Do(req)
-}
-
-func (c *Client) CloseNodeSsh(ctx context.Context, clusterId ClusterId, nodeId string, body CloseNodeSshJSONRequestBody) (*http.Response, error) {
-	req, err := NewCloseNodeSshRequest(c.Server, clusterId, nodeId, body)
+func (c *Client) CloseNodeSsh(ctx context.Context, clusterId ClusterId, nodeId string) (*http.Response, error) {
+	req, err := NewCloseNodeSshRequest(c.Server, clusterId, nodeId)
 	if err != nil {
 		return nil, err
 	}
@@ -1058,6 +1076,21 @@ func (c *Client) PauseCluster(ctx context.Context, clusterId ClusterId, body Pau
 	return c.Client.Do(req)
 }
 
+func (c *Client) PauseClusterReconcile(ctx context.Context, clusterId ClusterId) (*http.Response, error) {
+	req, err := NewPauseClusterReconcileRequest(c.Server, clusterId)
+	if err != nil {
+		return nil, err
+	}
+	req = req.WithContext(ctx)
+	if c.RequestEditor != nil {
+		err = c.RequestEditor(ctx, req)
+		if err != nil {
+			return nil, err
+		}
+	}
+	return c.Client.Do(req)
+}
+
 func (c *Client) GetPolicies(ctx context.Context, clusterId ClusterId) (*http.Response, error) {
 	req, err := NewGetPoliciesRequest(c.Server, clusterId)
 	if err != nil {
@@ -1105,6 +1138,81 @@ func (c *Client) UpsertPolicies(ctx context.Context, clusterId ClusterId, body U
 
 func (c *Client) ResumeCluster(ctx context.Context, clusterId ClusterId) (*http.Response, error) {
 	req, err := NewResumeClusterRequest(c.Server, clusterId)
+	if err != nil {
+		return nil, err
+	}
+	req = req.WithContext(ctx)
+	if c.RequestEditor != nil {
+		err = c.RequestEditor(ctx, req)
+		if err != nil {
+			return nil, err
+		}
+	}
+	return c.Client.Do(req)
+}
+
+func (c *Client) ResumeClusterReconcile(ctx context.Context, clusterId ClusterId) (*http.Response, error) {
+	req, err := NewResumeClusterReconcileRequest(c.Server, clusterId)
+	if err != nil {
+		return nil, err
+	}
+	req = req.WithContext(ctx)
+	if c.RequestEditor != nil {
+		err = c.RequestEditor(ctx, req)
+		if err != nil {
+			return nil, err
+		}
+	}
+	return c.Client.Do(req)
+}
+
+func (c *Client) TriggerClusterReconcile(ctx context.Context, clusterId ClusterId) (*http.Response, error) {
+	req, err := NewTriggerClusterReconcileRequest(c.Server, clusterId)
+	if err != nil {
+		return nil, err
+	}
+	req = req.WithContext(ctx)
+	if c.RequestEditor != nil {
+		err = c.RequestEditor(ctx, req)
+		if err != nil {
+			return nil, err
+		}
+	}
+	return c.Client.Do(req)
+}
+
+func (c *Client) ListExternalClusters(ctx context.Context) (*http.Response, error) {
+	req, err := NewListExternalClustersRequest(c.Server)
+	if err != nil {
+		return nil, err
+	}
+	req = req.WithContext(ctx)
+	if c.RequestEditor != nil {
+		err = c.RequestEditor(ctx, req)
+		if err != nil {
+			return nil, err
+		}
+	}
+	return c.Client.Do(req)
+}
+
+func (c *Client) RegisterExternalClusterWithBody(ctx context.Context, contentType string, body io.Reader) (*http.Response, error) {
+	req, err := NewRegisterExternalClusterRequestWithBody(c.Server, contentType, body)
+	if err != nil {
+		return nil, err
+	}
+	req = req.WithContext(ctx)
+	if c.RequestEditor != nil {
+		err = c.RequestEditor(ctx, req)
+		if err != nil {
+			return nil, err
+		}
+	}
+	return c.Client.Do(req)
+}
+
+func (c *Client) RegisterExternalCluster(ctx context.Context, body RegisterExternalClusterJSONRequestBody) (*http.Response, error) {
+	req, err := NewRegisterExternalClusterRequest(c.Server, body)
 	if err != nil {
 		return nil, err
 	}
@@ -1977,6 +2085,85 @@ func NewCreateOrUpdateGslbRequestWithBody(server string, contentType string, bod
 	return req, nil
 }
 
+// NewListInstanceTypesRequest generates requests for ListInstanceTypes
+func NewListInstanceTypesRequest(server string, params *ListInstanceTypesParams) (*http.Request, error) {
+	var err error
+
+	queryUrl, err := url.Parse(server)
+	if err != nil {
+		return nil, err
+	}
+
+	basePath := fmt.Sprintf("/inventory/instance-types")
+	if basePath[0] == '/' {
+		basePath = basePath[1:]
+	}
+
+	queryUrl, err = queryUrl.Parse(basePath)
+	if err != nil {
+		return nil, err
+	}
+
+	queryValues := queryUrl.Query()
+
+	if params.Providers != nil {
+
+		if queryFrag, err := runtime.StyleParam("form", true, "providers", *params.Providers); err != nil {
+			return nil, err
+		} else if parsed, err := url.ParseQuery(queryFrag); err != nil {
+			return nil, err
+		} else {
+			for k, v := range parsed {
+				for _, v2 := range v {
+					queryValues.Add(k, v2)
+				}
+			}
+		}
+
+	}
+
+	if params.Regions != nil {
+
+		if queryFrag, err := runtime.StyleParam("form", true, "regions", *params.Regions); err != nil {
+			return nil, err
+		} else if parsed, err := url.ParseQuery(queryFrag); err != nil {
+			return nil, err
+		} else {
+			for k, v := range parsed {
+				for _, v2 := range v {
+					queryValues.Add(k, v2)
+				}
+			}
+		}
+
+	}
+
+	if params.InstanceTypes != nil {
+
+		if queryFrag, err := runtime.StyleParam("form", true, "instanceTypes", *params.InstanceTypes); err != nil {
+			return nil, err
+		} else if parsed, err := url.ParseQuery(queryFrag); err != nil {
+			return nil, err
+		} else {
+			for k, v := range parsed {
+				for _, v2 := range v {
+					queryValues.Add(k, v2)
+				}
+			}
+		}
+
+	}
+
+	queryUrl.RawQuery = queryValues.Encode()
+
+	req, err := http.NewRequest("GET", queryUrl.String(), nil)
+	if err != nil {
+		return nil, err
+	}
+
+	return req, nil
+}
+
 // NewListKubernetesClustersRequest generates requests for ListKubernetesClusters
 func NewListKubernetesClustersRequest(server string, params *ListKubernetesClustersParams) (*http.Request, error) {
 	var err error
@@ -2631,19 +2818,8 @@ func NewGetClusterNodeRequest(server string, clusterId ClusterId, nodeId string)
 	return req, nil
 }
 
-// NewCloseNodeSshRequest calls the generic CloseNodeSsh builder with application/json body
-func NewCloseNodeSshRequest(server string, clusterId ClusterId, nodeId string, body CloseNodeSshJSONRequestBody) (*http.Request, error) {
-	var bodyReader io.Reader
-	buf, err := json.Marshal(body)
-	if err != nil {
-		return nil, err
-	}
-	bodyReader = bytes.NewReader(buf)
-	return NewCloseNodeSshRequestWithBody(server, clusterId, nodeId, "application/json", bodyReader)
-}
-
-// NewCloseNodeSshRequestWithBody generates requests for CloseNodeSsh with any type of body
-func NewCloseNodeSshRequestWithBody(server string, clusterId ClusterId, nodeId string, contentType string, body io.Reader) (*http.Request, error) {
+// NewCloseNodeSshRequest generates requests for CloseNodeSsh
+func NewCloseNodeSshRequest(server string, clusterId ClusterId, nodeId string) (*http.Request, error) {
 	var err error
 
 	var pathParam0 string
@@ -2675,12 +2851,11 @@ func NewCloseNodeSshRequestWithBody(server string, clusterId ClusterId, nodeId s
 		return nil, err
 	}
 
-	req, err := http.NewRequest("POST", queryUrl.String(), body)
+	req, err := http.NewRequest("POST", queryUrl.String(), nil)
 	if err != nil {
 		return nil, err
 	}
 
-	req.Header.Add("Content-Type", contentType)
 	return req, nil
 }
 
@@ -2870,6 +3045,40 @@ func NewPauseClusterRequestWithBody(server string, clusterId ClusterId, contentT
 	return req, nil
 }
 
+// NewPauseClusterReconcileRequest generates requests for PauseClusterReconcile
+func NewPauseClusterReconcileRequest(server string, clusterId ClusterId) (*http.Request, error) {
+	var err error
+
+	var pathParam0 string
+
+	pathParam0, err = runtime.StyleParam("simple", false, "clusterId", clusterId)
+	if err != nil {
+		return nil, err
+	}
+
+	queryUrl, err := url.Parse(server)
+	if err != nil {
+		return nil, err
+	}
+
+	basePath := fmt.Sprintf("/kubernetes/clusters/%s/pause-reconcile", pathParam0)
+	if basePath[0] == '/' {
+		basePath = basePath[1:]
+	}
+
+	queryUrl, err = queryUrl.Parse(basePath)
+	if err != nil {
+		return nil, err
+	}
+
+	req, err := http.NewRequest("POST", queryUrl.String(), nil)
+	if err != nil {
+		return nil, err
+	}
+
+	return req, nil
+}
+
 // NewGetPoliciesRequest generates requests for GetPolicies
 func NewGetPoliciesRequest(server string, clusterId ClusterId) (*http.Request, error) {
 	var err error
@@ -2981,6 +3190,140 @@ func NewResumeClusterRequest(server string, clusterId ClusterId) (*http.Request,
 		return nil, err
 	}
 
+	return req, nil
+}
+
+// NewResumeClusterReconcileRequest generates requests for ResumeClusterReconcile
+func NewResumeClusterReconcileRequest(server string, clusterId ClusterId) (*http.Request, error) {
+	var err error
+
+	var pathParam0 string
+
+	pathParam0, err = runtime.StyleParam("simple", false, "clusterId", clusterId)
+	if err != nil {
+		return nil, err
+	}
+
+	queryUrl, err := url.Parse(server)
+	if err != nil {
+		return nil, err
+	}
+
+	basePath := fmt.Sprintf("/kubernetes/clusters/%s/resume-reconcile", pathParam0)
+	if basePath[0] == '/' {
+		basePath = basePath[1:]
+	}
+
+	queryUrl, err = queryUrl.Parse(basePath)
+	if err != nil {
+		return nil, err
+	}
+
+	req, err := http.NewRequest("POST", queryUrl.String(), nil)
+	if err != nil {
+		return nil, err
+	}
+
+	return req, nil
+}
+
+// NewTriggerClusterReconcileRequest generates requests for TriggerClusterReconcile
+func NewTriggerClusterReconcileRequest(server string, clusterId ClusterId) (*http.Request, error) {
+	var err error
+
+	var pathParam0 string
+
+	pathParam0, err = runtime.StyleParam("simple", false, "clusterId", clusterId)
+	if err != nil {
+		return nil, err
+	}
+
+	queryUrl, err := url.Parse(server)
+	if err != nil {
+		return nil, err
+	}
+
+	basePath := fmt.Sprintf("/kubernetes/clusters/%s/trigger-reconcile", pathParam0)
+	if basePath[0] == '/' {
+		basePath = basePath[1:]
+	}
+
+	queryUrl, err = queryUrl.Parse(basePath)
+	if err != nil {
+		return nil, err
+	}
+
+	req, err := http.NewRequest("POST", queryUrl.String(), nil)
+	if err != nil {
+		return nil, err
+	}
+
+	return req, nil
+}
+
+// NewListExternalClustersRequest generates requests for ListExternalClusters
+func NewListExternalClustersRequest(server string) (*http.Request, error) {
+	var err error
+
+	queryUrl, err := url.Parse(server)
+	if err != nil {
+		return nil, err
+	}
+
+	basePath := fmt.Sprintf("/kubernetes/external-clusters")
+	if basePath[0] == '/' {
+		basePath = basePath[1:]
+	}
+
+	queryUrl, err = queryUrl.Parse(basePath)
+	if err != nil {
+		return nil, err
+	}
+
+	req, err := http.NewRequest("GET", queryUrl.String(), nil)
+	if err != nil {
+		return nil, err
+	}
+
+	return req, nil
+}
+
+// NewRegisterExternalClusterRequest calls the generic RegisterExternalCluster builder with application/json body
+func NewRegisterExternalClusterRequest(server string, body RegisterExternalClusterJSONRequestBody) (*http.Request, error) {
+	var bodyReader io.Reader
+	buf, err := json.Marshal(body)
+	if err != nil {
+		return nil, err
+	}
+	bodyReader = bytes.NewReader(buf)
+	return NewRegisterExternalClusterRequestWithBody(server, "application/json", bodyReader)
+}
+
+// NewRegisterExternalClusterRequestWithBody generates requests for RegisterExternalCluster with any type of body
+func NewRegisterExternalClusterRequestWithBody(server string, contentType string, body io.Reader) (*http.Request, error) {
+	var err error
+
+	queryUrl, err := url.Parse(server)
+	if err != nil {
+		return nil, err
+	}
+
+	basePath := fmt.Sprintf("/kubernetes/external-clusters")
+	if basePath[0] == '/' {
+		basePath = basePath[1:]
+	}
+
+	queryUrl, err = queryUrl.Parse(basePath)
+	if err != nil {
+		return nil, err
+	}
+
+	req, err := http.NewRequest("POST", queryUrl.String(), body)
+	if err != nil {
+		return nil, err
+	}
+
+	req.Header.Add("Content-Type", contentType)
 	return req, nil
 }
 
@@ -3285,6 +3628,9 @@ type ClientWithResponsesInterface interface {
 
 	CreateOrUpdateGslbWithResponse(ctx context.Context, body CreateOrUpdateGslbJSONRequestBody) (*CreateOrUpdateGslbResponse, error)
 
+	// ListInstanceTypes request
+	ListInstanceTypesWithResponse(ctx context.Context, params *ListInstanceTypesParams) (*ListInstanceTypesResponse, error)
+
 	// ListKubernetesClusters request
 	ListKubernetesClustersWithResponse(ctx context.Context, params *ListKubernetesClustersParams) (*ListKubernetesClustersResponse, error)
 
@@ -3342,10 +3688,8 @@ type ClientWithResponsesInterface interface {
 	// GetClusterNode request
 	GetClusterNodeWithResponse(ctx context.Context, clusterId ClusterId, nodeId string) (*GetClusterNodeResponse, error)
 
-	// CloseNodeSsh request  with any body
-	CloseNodeSshWithBodyWithResponse(ctx context.Context, clusterId ClusterId, nodeId string, contentType string, body io.Reader) (*CloseNodeSshResponse, error)
-
-	CloseNodeSshWithResponse(ctx context.Context, clusterId ClusterId, nodeId string, body CloseNodeSshJSONRequestBody) (*CloseNodeSshResponse, error)
+	// CloseNodeSsh request
+	CloseNodeSshWithResponse(ctx context.Context, clusterId ClusterId, nodeId string) (*CloseNodeSshResponse, error)
 
 	// InterruptClusterNode request
 	InterruptClusterNodeWithResponse(ctx context.Context, clusterId ClusterId, nodeId string) (*InterruptClusterNodeResponse, error)
@@ -3365,6 +3709,9 @@ type ClientWithResponsesInterface interface {
 
 	PauseClusterWithResponse(ctx context.Context, clusterId ClusterId, body PauseClusterJSONRequestBody) (*PauseClusterResponse, error)
 
+	// PauseClusterReconcile request
+	PauseClusterReconcileWithResponse(ctx context.Context, clusterId ClusterId) (*PauseClusterReconcileResponse, error)
+
 	// GetPolicies request
 	GetPoliciesWithResponse(ctx context.Context, clusterId ClusterId) (*GetPoliciesResponse, error)
 
@@ -3375,6 +3722,20 @@ type ClientWithResponsesInterface interface {
 
 	// ResumeCluster request
 	ResumeClusterWithResponse(ctx context.Context, clusterId ClusterId) (*ResumeClusterResponse, error)
+
+	// ResumeClusterReconcile request
+	ResumeClusterReconcileWithResponse(ctx context.Context, clusterId ClusterId) (*ResumeClusterReconcileResponse, error)
+
+	// TriggerClusterReconcile request
+	TriggerClusterReconcileWithResponse(ctx context.Context, clusterId ClusterId) (*TriggerClusterReconcileResponse, error)
+
+	// ListExternalClusters request
+	ListExternalClustersWithResponse(ctx context.Context) (*ListExternalClustersResponse, error)
+
+	// RegisterExternalCluster request  with any body
+	RegisterExternalClusterWithBodyWithResponse(ctx context.Context, contentType string, body io.Reader) (*RegisterExternalClusterResponse, error)
+
+	RegisterExternalClusterWithResponse(ctx context.Context, body RegisterExternalClusterJSONRequestBody) (*RegisterExternalClusterResponse, error)
 
 	// GetOperation request
 	GetOperationWithResponse(ctx context.Context, id string) (*GetOperationResponse, error)
@@ -3931,6 +4292,36 @@ func (r CreateOrUpdateGslbResponse) StatusCode() int {
 // TODO: <castai customization> to have common interface. https://github.com/deepmap/oapi-codegen/issues/240
 // Body returns body of byte array
 func (r CreateOrUpdateGslbResponse) GetBody() []byte {
+	return r.Body
+}
+
+// TODO: </castai customization> to have common interface. https://github.com/deepmap/oapi-codegen/issues/240
+
+type ListInstanceTypesResponse struct {
+	Body         []byte
+	HTTPResponse *http.Response
+	JSON200      *InstanceTypesResponse
+}
+
+// Status returns HTTPResponse.Status
+func (r ListInstanceTypesResponse) Status() string {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.Status
+	}
+	return http.StatusText(0)
+}
+
+// StatusCode returns HTTPResponse.StatusCode
+func (r ListInstanceTypesResponse) StatusCode() int {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.StatusCode
+	}
+	return 0
+}
+
+// TODO: <castai customization> to have common interface. https://github.com/deepmap/oapi-codegen/issues/240
+// Body returns body of byte array
+func (r ListInstanceTypesResponse) GetBody() []byte {
 	return r.Body
 }
 
@@ -4508,11 +4899,6 @@ func (r InterruptClusterNodeResponse) GetBody() []byte {
 type SetupNodeSshResponse struct {
 	Body         []byte
 	HTTPResponse *http.Response
-	JSON200      *struct {
-
-		// Access rule ID used to close firewall created for SSH session.
-		AccessRuleId string `json:"accessRuleId"`
-	}
 }
 
 // Status returns HTTPResponse.Status
@@ -4594,6 +4980,36 @@ func (r PauseClusterResponse) StatusCode() int {
 // TODO: <castai customization> to have common interface. https://github.com/deepmap/oapi-codegen/issues/240
 // Body returns body of byte array
 func (r PauseClusterResponse) GetBody() []byte {
+	return r.Body
+}
+
+// TODO: </castai customization> to have common interface. https://github.com/deepmap/oapi-codegen/issues/240
+
+type PauseClusterReconcileResponse struct {
+	Body         []byte
+	HTTPResponse *http.Response
+	JSON200      *KubernetesCluster
+}
+
+// Status returns HTTPResponse.Status
+func (r PauseClusterReconcileResponse) Status() string {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.Status
+	}
+	return http.StatusText(0)
+}
+
+// StatusCode returns HTTPResponse.StatusCode
+func (r PauseClusterReconcileResponse) StatusCode() int {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.StatusCode
+	}
+	return 0
+}
+
+// TODO: <castai customization> to have common interface. https://github.com/deepmap/oapi-codegen/issues/240
+// Body returns body of byte array
+func (r PauseClusterReconcileResponse) GetBody() []byte {
 	return r.Body
 }
 
@@ -4684,6 +5100,125 @@ func (r ResumeClusterResponse) StatusCode() int {
 // TODO: <castai customization> to have common interface. https://github.com/deepmap/oapi-codegen/issues/240
 // Body returns body of byte array
 func (r ResumeClusterResponse) GetBody() []byte {
+	return r.Body
+}
+
+// TODO: </castai customization> to have common interface. https://github.com/deepmap/oapi-codegen/issues/240
+
+type ResumeClusterReconcileResponse struct {
+	Body         []byte
+	HTTPResponse *http.Response
+	JSON200      *KubernetesCluster
+}
+
+// Status returns HTTPResponse.Status
+func (r ResumeClusterReconcileResponse) Status() string {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.Status
+	}
+	return http.StatusText(0)
+}
+
+// StatusCode returns HTTPResponse.StatusCode
+func (r ResumeClusterReconcileResponse) StatusCode() int {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.StatusCode
+	}
+	return 0
+}
+
+// TODO: <castai customization> to have common interface. https://github.com/deepmap/oapi-codegen/issues/240
+// Body returns body of byte array
+func (r ResumeClusterReconcileResponse) GetBody() []byte {
+	return r.Body
+}
+
+// TODO: </castai customization> to have common interface. https://github.com/deepmap/oapi-codegen/issues/240
+
+type TriggerClusterReconcileResponse struct {
+	Body         []byte
+	HTTPResponse *http.Response
+}
+
+// Status returns HTTPResponse.Status
+func (r TriggerClusterReconcileResponse) Status() string {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.Status
+	}
+	return http.StatusText(0)
+}
+
+// StatusCode returns HTTPResponse.StatusCode
+func (r TriggerClusterReconcileResponse) StatusCode() int {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.StatusCode
+	}
+	return 0
+}
+
+// TODO: <castai customization> to have common interface. https://github.com/deepmap/oapi-codegen/issues/240
+// Body returns body of byte array
+func (r TriggerClusterReconcileResponse) GetBody() []byte {
+	return r.Body
+}
+
+// TODO: </castai customization> to have common interface. https://github.com/deepmap/oapi-codegen/issues/240
+
+type ListExternalClustersResponse struct {
+	Body         []byte
+	HTTPResponse *http.Response
+	JSON200      *ExternalClustersList
+}
+
+// Status returns HTTPResponse.Status
+func (r ListExternalClustersResponse) Status() string {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.Status
+	}
+	return http.StatusText(0)
+}
+
+// StatusCode returns HTTPResponse.StatusCode
+func (r ListExternalClustersResponse) StatusCode() int {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.StatusCode
+	}
+	return 0
+}
+
+// TODO: <castai customization> to have common interface. https://github.com/deepmap/oapi-codegen/issues/240
+// Body returns body of byte array
+func (r ListExternalClustersResponse) GetBody() []byte {
+	return r.Body
+}
+
+// TODO: </castai customization> to have common interface. https://github.com/deepmap/oapi-codegen/issues/240
+
+type RegisterExternalClusterResponse struct {
+	Body         []byte
+	HTTPResponse *http.Response
+	JSON200      *ExternalCluster
+}
+
+// Status returns HTTPResponse.Status
+func (r RegisterExternalClusterResponse) Status() string {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.Status
+	}
+	return http.StatusText(0)
+}
+
+// StatusCode returns HTTPResponse.StatusCode
+func (r RegisterExternalClusterResponse) StatusCode() int {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.StatusCode
+	}
+	return 0
+}
+
+// TODO: <castai customization> to have common interface. https://github.com/deepmap/oapi-codegen/issues/240
+// Body returns body of byte array
+func (r RegisterExternalClusterResponse) GetBody() []byte {
 	return r.Body
 }
 
@@ -5049,6 +5584,15 @@ func (c *ClientWithResponses) CreateOrUpdateGslbWithResponse(ctx context.Context
 	return ParseCreateOrUpdateGslbResponse(rsp)
 }
 
+// ListInstanceTypesWithResponse request returning *ListInstanceTypesResponse
+func (c *ClientWithResponses) ListInstanceTypesWithResponse(ctx context.Context, params *ListInstanceTypesParams) (*ListInstanceTypesResponse, error) {
+	rsp, err := c.ListInstanceTypes(ctx, params)
+	if err != nil {
+		return nil, err
+	}
+	return ParseListInstanceTypesResponse(rsp)
+}
+
 // ListKubernetesClustersWithResponse request returning *ListKubernetesClustersResponse
 func (c *ClientWithResponses) ListKubernetesClustersWithResponse(ctx context.Context, params *ListKubernetesClustersParams) (*ListKubernetesClustersResponse, error) {
 	rsp, err := c.ListKubernetesClusters(ctx, params)
@@ -5226,17 +5770,9 @@ func (c *ClientWithResponses) GetClusterNodeWithResponse(ctx context.Context, cl
 	return ParseGetClusterNodeResponse(rsp)
 }
 
-// CloseNodeSshWithBodyWithResponse request with arbitrary body returning *CloseNodeSshResponse
-func (c *ClientWithResponses) CloseNodeSshWithBodyWithResponse(ctx context.Context, clusterId ClusterId, nodeId string, contentType string, body io.Reader) (*CloseNodeSshResponse, error) {
-	rsp, err := c.CloseNodeSshWithBody(ctx, clusterId, nodeId, contentType, body)
-	if err != nil {
-		return nil, err
-	}
-	return ParseCloseNodeSshResponse(rsp)
-}
-
-func (c *ClientWithResponses) CloseNodeSshWithResponse(ctx context.Context, clusterId ClusterId, nodeId string, body CloseNodeSshJSONRequestBody) (*CloseNodeSshResponse, error) {
-	rsp, err := c.CloseNodeSsh(ctx, clusterId, nodeId, body)
+// CloseNodeSshWithResponse request returning *CloseNodeSshResponse
+func (c *ClientWithResponses) CloseNodeSshWithResponse(ctx context.Context, clusterId ClusterId, nodeId string) (*CloseNodeSshResponse, error) {
+	rsp, err := c.CloseNodeSsh(ctx, clusterId, nodeId)
 	if err != nil {
 		return nil, err
 	}
@@ -5303,6 +5839,15 @@ func (c *ClientWithResponses) PauseClusterWithResponse(ctx context.Context, clus
 	return ParsePauseClusterResponse(rsp)
 }
 
+// PauseClusterReconcileWithResponse request returning *PauseClusterReconcileResponse
+func (c *ClientWithResponses) PauseClusterReconcileWithResponse(ctx context.Context, clusterId ClusterId) (*PauseClusterReconcileResponse, error) {
+	rsp, err := c.PauseClusterReconcile(ctx, clusterId)
+	if err != nil {
+		return nil, err
+	}
+	return ParsePauseClusterReconcileResponse(rsp)
+}
+
 // GetPoliciesWithResponse request returning *GetPoliciesResponse
 func (c *ClientWithResponses) GetPoliciesWithResponse(ctx context.Context, clusterId ClusterId) (*GetPoliciesResponse, error) {
 	rsp, err := c.GetPolicies(ctx, clusterId)
@@ -5336,6 +5881,50 @@ func (c *ClientWithResponses) ResumeClusterWithResponse(ctx context.Context, clu
 		return nil, err
 	}
 	return ParseResumeClusterResponse(rsp)
+}
+
+// ResumeClusterReconcileWithResponse request returning *ResumeClusterReconcileResponse
+func (c *ClientWithResponses) ResumeClusterReconcileWithResponse(ctx context.Context, clusterId ClusterId) (*ResumeClusterReconcileResponse, error) {
+	rsp, err := c.ResumeClusterReconcile(ctx, clusterId)
+	if err != nil {
+		return nil, err
+	}
+	return ParseResumeClusterReconcileResponse(rsp)
+}
+
+// TriggerClusterReconcileWithResponse request returning *TriggerClusterReconcileResponse
+func (c *ClientWithResponses) TriggerClusterReconcileWithResponse(ctx context.Context, clusterId ClusterId) (*TriggerClusterReconcileResponse, error) {
+	rsp, err := c.TriggerClusterReconcile(ctx, clusterId)
+	if err != nil {
+		return nil, err
+	}
+	return ParseTriggerClusterReconcileResponse(rsp)
+}
+
+// ListExternalClustersWithResponse request returning *ListExternalClustersResponse
+func (c *ClientWithResponses) ListExternalClustersWithResponse(ctx context.Context) (*ListExternalClustersResponse, error) {
+	rsp, err := c.ListExternalClusters(ctx)
+	if err != nil {
+		return nil, err
+	}
+	return ParseListExternalClustersResponse(rsp)
+}
+
+// RegisterExternalClusterWithBodyWithResponse request with arbitrary body returning *RegisterExternalClusterResponse
+func (c *ClientWithResponses) RegisterExternalClusterWithBodyWithResponse(ctx context.Context, contentType string, body io.Reader) (*RegisterExternalClusterResponse, error) {
+	rsp, err := c.RegisterExternalClusterWithBody(ctx, contentType, body)
+	if err != nil {
+		return nil, err
+	}
+	return ParseRegisterExternalClusterResponse(rsp)
+}
+
+func (c *ClientWithResponses) RegisterExternalClusterWithResponse(ctx context.Context, body RegisterExternalClusterJSONRequestBody) (*RegisterExternalClusterResponse, error) {
+	rsp, err := c.RegisterExternalCluster(ctx, body)
+	if err != nil {
+		return nil, err
+	}
+	return ParseRegisterExternalClusterResponse(rsp)
 }
 
 // GetOperationWithResponse request returning *GetOperationResponse
@@ -5800,6 +6389,32 @@ func ParseCreateOrUpdateGslbResponse(rsp *http.Response) (*CreateOrUpdateGslbRes
 	switch {
 	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 200:
 		var dest GSLBResponse
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON200 = &dest
+
+	}
+
+	return response, nil
+}
+
+// ParseListInstanceTypesResponse parses an HTTP response from a ListInstanceTypesWithResponse call
+func ParseListInstanceTypesResponse(rsp *http.Response) (*ListInstanceTypesResponse, error) {
+	bodyBytes, err := ioutil.ReadAll(rsp.Body)
+	defer rsp.Body.Close()
+	if err != nil {
+		return nil, err
+	}
+
+	response := &ListInstanceTypesResponse{
+		Body:         bodyBytes,
+		HTTPResponse: rsp,
+	}
+
+	switch {
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 200:
+		var dest InstanceTypesResponse
 		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
 			return nil, err
 		}
@@ -6311,17 +6926,6 @@ func ParseSetupNodeSshResponse(rsp *http.Response) (*SetupNodeSshResponse, error
 	}
 
 	switch {
-	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 200:
-		var dest struct {
-
-			// Access rule ID used to close firewall created for SSH session.
-			AccessRuleId string `json:"accessRuleId"`
-		}
-		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
-			return nil, err
-		}
-		response.JSON200 = &dest
-
 	}
 
 	return response, nil
@@ -6362,6 +6966,32 @@ func ParsePauseClusterResponse(rsp *http.Response) (*PauseClusterResponse, error
 	}
 
 	response := &PauseClusterResponse{
+		Body:         bodyBytes,
+		HTTPResponse: rsp,
+	}
+
+	switch {
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 200:
+		var dest KubernetesCluster
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON200 = &dest
+
+	}
+
+	return response, nil
+}
+
+// ParsePauseClusterReconcileResponse parses an HTTP response from a PauseClusterReconcileWithResponse call
+func ParsePauseClusterReconcileResponse(rsp *http.Response) (*PauseClusterReconcileResponse, error) {
+	bodyBytes, err := ioutil.ReadAll(rsp.Body)
+	defer rsp.Body.Close()
+	if err != nil {
+		return nil, err
+	}
+
+	response := &PauseClusterReconcileResponse{
 		Body:         bodyBytes,
 		HTTPResponse: rsp,
 	}
@@ -6447,6 +7077,103 @@ func ParseResumeClusterResponse(rsp *http.Response) (*ResumeClusterResponse, err
 	switch {
 	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 200:
 		var dest KubernetesCluster
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON200 = &dest
+
+	}
+
+	return response, nil
+}
+
+// ParseResumeClusterReconcileResponse parses an HTTP response from a ResumeClusterReconcileWithResponse call
+func ParseResumeClusterReconcileResponse(rsp *http.Response) (*ResumeClusterReconcileResponse, error) {
+	bodyBytes, err := ioutil.ReadAll(rsp.Body)
+	defer rsp.Body.Close()
+	if err != nil {
+		return nil, err
+	}
+
+	response := &ResumeClusterReconcileResponse{
+		Body:         bodyBytes,
+		HTTPResponse: rsp,
+	}
+
+	switch {
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 200:
+		var dest KubernetesCluster
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON200 = &dest
+
+	}
+
+	return response, nil
+}
+
+// ParseTriggerClusterReconcileResponse parses an HTTP response from a TriggerClusterReconcileWithResponse call
+func ParseTriggerClusterReconcileResponse(rsp *http.Response) (*TriggerClusterReconcileResponse, error) {
+	bodyBytes, err := ioutil.ReadAll(rsp.Body)
+	defer rsp.Body.Close()
+	if err != nil {
+		return nil, err
+	}
+
+	response := &TriggerClusterReconcileResponse{
+		Body:         bodyBytes,
+		HTTPResponse: rsp,
+	}
+
+	switch {
+	}
+
+	return response, nil
+}
+
+// ParseListExternalClustersResponse parses an HTTP response from a ListExternalClustersWithResponse call
+func ParseListExternalClustersResponse(rsp *http.Response) (*ListExternalClustersResponse, error) {
+	bodyBytes, err := ioutil.ReadAll(rsp.Body)
+	defer rsp.Body.Close()
+	if err != nil {
+		return nil, err
+	}
+
+	response := &ListExternalClustersResponse{
+		Body:         bodyBytes,
+		HTTPResponse: rsp,
+	}
+
+	switch {
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 200:
+		var dest ExternalClustersList
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON200 = &dest
+
+	}
+
+	return response, nil
+}
+
+// ParseRegisterExternalClusterResponse parses an HTTP response from a RegisterExternalClusterWithResponse call
+func ParseRegisterExternalClusterResponse(rsp *http.Response) (*RegisterExternalClusterResponse, error) {
+	bodyBytes, err := ioutil.ReadAll(rsp.Body)
+	defer rsp.Body.Close()
+	if err != nil {
+		return nil, err
+	}
+
+	response := &RegisterExternalClusterResponse{
+		Body:         bodyBytes,
+		HTTPResponse: rsp,
+	}
+
+	switch {
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 200:
+		var dest ExternalCluster
 		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
 			return nil, err
 		}

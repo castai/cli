@@ -24,6 +24,10 @@ func NewMock() Interface {
 			Shape:        "t3a.large",
 			SpotConfig:   nil,
 			State:        &sdk.NodeState{Phase: stringPointer("ready")},
+			Network: &sdk.NodeNetwork{
+				PrivateIp: "127.0.0.1",
+				PublicIp:  "1.1.1.1",
+			},
 		},
 	}
 	return &mockClient{
@@ -110,16 +114,24 @@ type mockClient struct {
 	feedbackEvents []sdk.KubernetesClusterFeedbackEvent
 }
 
-func (m *mockClient) CloseNodeSSH(ctx context.Context, clusterID sdk.ClusterId, nodeID string, accessRuleID string) error {
-	panic("implement me")
+func (m *mockClient) CloseNodeSSH(ctx context.Context, clusterID sdk.ClusterId, nodeID string) error {
+	return nil
 }
 
 func (m *mockClient) GetClusterNode(ctx context.Context, clusterID sdk.ClusterId, nodeID string) (*sdk.Node, error) {
-	panic("implement me")
+	nodes, ok := m.nodes[string(clusterID)]
+	if !ok {
+		return nil, fmt.Errorf("cluster %s not found", clusterID)
+	}
+	node, ok := nodes[nodeID]
+	if !ok {
+		return nil, fmt.Errorf("node %s not found", nodeID)
+	}
+	return &node, nil
 }
 
-func (m *mockClient) SetupNodeSSH(ctx context.Context, clusterID sdk.ClusterId, nodeID string, req sdk.SetupNodeSshJSONRequestBody) (string, error) {
-	panic("implement me")
+func (m *mockClient) SetupNodeSSH(ctx context.Context, clusterID sdk.ClusterId, nodeID string, req sdk.SetupNodeSshJSONRequestBody) error {
+	return nil
 }
 
 func (m *mockClient) ListClusterNodes(ctx context.Context, req sdk.ClusterId) ([]sdk.Node, error) {
