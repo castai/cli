@@ -97,7 +97,7 @@ cast cluster list
 cast cluster get-kubeconfig my-cluster-name
 ```
 
-Verify Kubernetes nodes
+4. Verify Kubernetes nodes
 ```
 kubectl get nodes
 ```
