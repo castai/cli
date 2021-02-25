@@ -11,8 +11,8 @@ import (
 
 	"github.com/sirupsen/logrus"
 
-	"github.com/castai/cast-cli/pkg/client/sdk"
-	"github.com/castai/cast-cli/pkg/config"
+	"github.com/castai/cli/pkg/client/sdk"
+	"github.com/castai/cli/pkg/config"
 )
 
 const (

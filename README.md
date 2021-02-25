@@ -14,7 +14,7 @@ NOTE: CAST AI CLI is in it's early stage. Feel free to contribute, ask questions
 
 | Install:          | Upgrade:          |
 | ----------------- | ----------------- |
-| `brew install castai/tap/cast-cli` | `brew upgrade castai/tap/cast-cli` |
+| `brew install castai/tap/cli` | `brew upgrade castai/tap/cli` |
 
 ### Linux
 
@@ -24,7 +24,7 @@ NOTE: CAST AI CLI is in it's early stage. Feel free to contribute, ask questions
 
 | Install:          | Upgrade:          |
 | ----------------- | ----------------- |
-| `brew install castai/tap/cast-cli` | `brew upgrade castai/tap/cast-cli` |
+| `brew install castai/tap/cli` | `brew upgrade castai/tap/cli` |
 
 ### Windows
 
@@ -96,4 +96,4 @@ kubectl get nodes
 ```
 
 [Homebrew]: https://brew.sh
-[releases page]: https://github.com/castai/cast-cli/releases/latest
+[releases page]: https://github.com/castai/cli/releases/latest

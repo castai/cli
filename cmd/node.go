@@ -26,8 +26,8 @@ import (
 	"github.com/google/uuid"
 	"github.com/spf13/cobra"
 
-	"github.com/castai/cast-cli/pkg/client"
-	"github.com/castai/cast-cli/pkg/client/sdk"
+	"github.com/castai/cli/pkg/client"
+	"github.com/castai/cli/pkg/client/sdk"
 )
 
 const (

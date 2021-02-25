@@ -1,6 +1,6 @@
-module github.com/castai/cast-cli
+module github.com/castai/cli
 
-go 1.15
+go 1.16
 
 require (
 	github.com/AlecAivazis/survey/v2 v2.2.7

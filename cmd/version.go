@@ -21,7 +21,7 @@ import (
 
 	"github.com/spf13/cobra"
 
-	"github.com/castai/cast-cli/pkg/version"
+	"github.com/castai/cli/pkg/version"
 )
 
 func newVersionCmd() *cobra.Command {

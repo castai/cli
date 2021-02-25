@@ -18,10 +18,10 @@ package main
 import (
 	"github.com/sirupsen/logrus"
 
-	"github.com/castai/cast-cli/cmd"
-	"github.com/castai/cast-cli/pkg/client"
-	"github.com/castai/cast-cli/pkg/config"
-	"github.com/castai/cast-cli/pkg/ssh"
+	"github.com/castai/cli/cmd"
+	"github.com/castai/cli/pkg/client"
+	"github.com/castai/cli/pkg/config"
+	"github.com/castai/cli/pkg/ssh"
 )
 
 func main() {
