@@ -77,13 +77,20 @@ func getNode(cmd *cobra.Command, api client.Interface, clusterID string) (*sdk.N
 }
 
 func selectNode(ctx context.Context, api client.Interface, clusterID string) (*sdk.Node, error) {
+	displayName := func(item sdk.Node) string {
+		var phase string
+		if item.State != nil && item.State.Phase != nil {
+			phase = *item.State.Phase
+		}
+		return fmt.Sprintf("%s-45s %s %s %s", *item.Name, item.Role, phase, item.Cloud)
+	}
 	items, err := api.ListClusterNodes(ctx, sdk.ClusterId(clusterID))
 	if err != nil {
 		return nil, err
 	}
 	selectList := make([]string, len(items))
 	for i, item := range items {
-		selectList[i] = *item.Name
+		selectList[i] = displayName(item)
 	}
 
 	var selected string
@@ -98,7 +105,7 @@ func selectNode(ctx context.Context, api client.Interface, clusterID string) (*s
 	}
 
 	for _, item := range items {
-		if *item.Name == selected {
+		if displayName(item) == selected {
 			return &item, nil
 		}
 	}

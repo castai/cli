@@ -14,6 +14,7 @@ func NewMock() Interface {
 	cred1, cred2, cred3 := "cred1", "cred2", "cred3"
 	c1 := "c1"
 	n1 := "n1"
+	now := time.Now()
 	c1Nodes := []sdk.Node{
 		{
 			Id:           stringPointer(n1),
@@ -28,6 +29,7 @@ func NewMock() Interface {
 				PrivateIp: "127.0.0.1",
 				PublicIp:  "1.1.1.1",
 			},
+			CreatedAt: &now,
 		},
 	}
 	return &mockClient{
@@ -61,8 +63,9 @@ func NewMock() Interface {
 					Name:        "eu-central",
 					DisplayName: " Europe Central (Frankfurt)",
 				},
-				Status: "ready",
-				Nodes:  c1Nodes,
+				Status:    "ready",
+				Nodes:     c1Nodes,
+				CreatedAt: &now,
 			},
 		},
 		nodes: map[string]map[string]sdk.Node{
