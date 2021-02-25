@@ -27,6 +27,7 @@ import (
 	"github.com/castai/cli/pkg/client"
 	"github.com/castai/cli/pkg/client/sdk"
 	"github.com/castai/cli/pkg/command"
+	"github.com/castai/cli/pkg/prettytime"
 )
 
 var (
@@ -67,7 +68,7 @@ func printClustersListTable(out io.Writer, items []sdk.KubernetesCluster) {
 	t := table.NewWriter()
 	t.SetStyle(command.DefaultTableStyle)
 	t.SetOutputMirror(out)
-	t.AppendHeader(table.Row{"ID", "Name", "Status", "Clouds", "Region"})
+	t.AppendHeader(table.Row{"ID", "Name", "Status", "Clouds", "Region", "Age"})
 	for _, item := range items {
 		t.AppendRow(table.Row{
 			item.Id,
@@ -75,6 +76,7 @@ func printClustersListTable(out io.Writer, items []sdk.KubernetesCluster) {
 			item.Status,
 			strings.Join(getClusterCloudsNames(item), " "),
 			item.Region.DisplayName,
+			prettytime.Format(*item.CreatedAt),
 		})
 	}
 	t.Render()

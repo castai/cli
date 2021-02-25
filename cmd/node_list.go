@@ -26,6 +26,7 @@ import (
 	"github.com/castai/cli/pkg/client"
 	"github.com/castai/cli/pkg/client/sdk"
 	"github.com/castai/cli/pkg/command"
+	"github.com/castai/cli/pkg/prettytime"
 )
 
 func newNodeListCmd(log logrus.FieldLogger, api client.Interface) *cobra.Command {
@@ -67,7 +68,7 @@ func printNodesListTable(out io.Writer, items []sdk.Node) {
 	t := table.NewWriter()
 	t.SetStyle(command.DefaultTableStyle)
 	t.SetOutputMirror(out)
-	t.AppendHeader(table.Row{"ID", "Name", "Role", "Shape", "Status", "Cloud", "Public_IP", "Private_IP"})
+	t.AppendHeader(table.Row{"ID", "Name", "Role", "Shape", "Status", "Cloud", "Age", "Public_IP", "Private_IP"})
 	for _, item := range items {
 		if item.Network == nil {
 			item.Network = &sdk.NodeNetwork{}
@@ -83,6 +84,7 @@ func printNodesListTable(out io.Writer, items []sdk.Node) {
 			item.Shape,
 			nodeValueString(item.State.Phase),
 			item.Cloud,
+			prettytime.Format(*item.CreatedAt),
 			item.Network.PublicIp,
 			item.Network.PrivateIp,
 		})
