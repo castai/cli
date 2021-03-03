@@ -127,13 +127,14 @@ func (t *terminal) dial(ctx context.Context, cfg ConnectConfig) (*ssh.Client, er
 				ssh.PublicKeys(signer),
 			},
 			HostKeyCallback: t.validateHostKey(knownhostsFilePath),
-			Timeout:         1 * time.Minute,
+			Timeout:         15 * time.Second,
 		})
 		if connerr == nil {
 			return conn, nil
 		}
 		select {
 		case <-time.After(2 * time.Second):
+			t.log.Debugf("ssh connection failed, reconnecting: %v", connerr)
 		case <-connTimeout:
 			return nil, fmt.Errorf("connection timeout: %w", connerr)
 		case <-ctx.Done():

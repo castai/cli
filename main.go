@@ -21,6 +21,7 @@ import (
 	"github.com/castai/cli/cmd"
 	"github.com/castai/cli/pkg/client"
 	"github.com/castai/cli/pkg/config"
+	"github.com/castai/cli/pkg/ipify"
 	"github.com/castai/cli/pkg/ssh"
 )
 
@@ -46,8 +47,9 @@ func main() {
 	}
 
 	terminal := ssh.NewTerminal(log)
+	ipifyClient := ipify.NewClient()
 
-	root := cmd.NewRootCmd(log, cfg, api, terminal)
+	root := cmd.NewRootCmd(log, cfg, api, terminal, ipifyClient)
 	if err := root.Execute(); err != nil {
 		log.Fatal(err)
 	}

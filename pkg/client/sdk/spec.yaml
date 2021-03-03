@@ -15,8 +15,8 @@ tags:
     description: User authentication
   - name: auth-tokens
     description: (BETA) User authentication tokens
-  - name: chargebee
-    description: utility endpoints for chargebee integration
+  - name: billing
+    description: utility endpoints for billing integrations
   - name: initial-cluster-costs
     description: (BETA) Initial Cluster Costs Plan
   - name: cloud-credentials
@@ -209,11 +209,12 @@ paths:
       responses:
         "204":
           description: The auth token has been deleted.
-  /chargebee/sso:
+  /billing/sso:
     get:
-      operationId: chargebee-sso
+      operationId: billing-sso
       tags:
-        - chargebee
+        - billing
+        - sso
       parameters:
         - name: forwardUrl
           in: query
@@ -221,14 +222,44 @@ paths:
             type: string
           required: false
           description: |
-            Optional parameter: desired destination URL within Chargebee. See https://apidocs.chargebee.com/docs/api/portal_sessions#create_a_portal_session_forward_url for more details.
+            Desired destination URL within ChargeBee.
+            See https://apidocs.chargebee.com/docs/api/portal_sessions#create_a_portal_session_forward_url for more details.
       summary: >-
-        Single-signon for chargebee
+        Single sign-on of ChargeBee portal.
       description: >-
-        Builds URL to use in end-customer's browser session to open Chargebee iframe contents
+        Builds URL to use in end-customer's browser session as an iframe. URL will direct to ChargeBee portal session. Can be tailored with specific portal URL.
       responses:
         "302":
-          description: responds with Chargebee login URL with single-use token in the url.
+          description: ChargeBee login URL with single-use token in the URL.
+  /billing/subscription:
+    get:
+      operationId: subscription
+      tags:
+        - subscription
+      summary: >-
+        Retrieves current user's subscription details.
+      description: >-
+        Retrieves user's subscription details from ChargeBee.
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Subscription'
+          description: subscription details.
+  /billing/subscription/checkout:
+    get:
+      operationId: subscription-checkout
+      tags:
+        - subscription
+        - checkout
+      summary: >-
+        Checkout current user's subscription.
+      description: >-
+        Builds URL to use in end-customer's browser session as an iframe. URL will direct to ChargeBee default subscription checkout form.
+      responses:
+        "302":
+          description: subscription checkout form iframe URL.
   /cluster-price-plan:
     post:
       operationId: plan-cluster-price
@@ -332,6 +363,22 @@ paths:
       responses:
         "204":
           description: The resource has been deleted.
+  /me/external-clusters-token:
+    get:
+      operationId: get-external-clusters-token
+      tags:
+        - external-kubernetes
+      summary: >-
+        Get a token for registering an external cluster
+      description: >-
+        TODO
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ExternalClusterRegistrationToken'
+          description:
   /kubernetes/external-clusters:
     get:
       operationId: list-external-clusters
@@ -370,6 +417,118 @@ paths:
               schema:
                 $ref: '#/components/schemas/ExternalCluster'
           description:
+  /kubernetes/external-clusters/{clusterId}:
+    parameters:
+      - name: clusterId
+        in: path
+        schema:
+          type: string
+        required: true
+        description: The id of the cluster.
+    get:
+      operationId: get-external-cluster
+      tags:
+        - external-kubernetes
+      summary: >-
+        Get external cluster by name
+      description: >-
+        TODO
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ExternalCluster'
+          description:
+    post:
+      operationId: update-external-cluster
+      tags:
+        - external-kubernetes
+      summary: >-
+        Update external cluster
+      description: >-
+        Provide additional external cluster configuration
+      requestBody:
+        required: true
+        description: Configuration change
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ExternalClusterEditParams'
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ExternalCluster'
+          description:
+  /kubernetes/external-clusters/{clusterId}/nodes:
+    parameters:
+      - name: clusterId
+        in: path
+        schema:
+          type: string
+        required: true
+        description: The id of the cluster.
+    get:
+      operationId: list-external-cluster-nodes
+      tags:
+        - external-kubernetes
+      summary: >-
+        List all nodes for an external cluster
+      description: >-
+        List all nodes for an external cluster
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ExternalClusterNodes'
+          description:
+    post:
+      operationId: add-external-cluster-node
+      tags:
+        - external-kubernetes
+      summary: >-
+        Add node to external cluster
+      description: >-
+        Add node to external cluster
+      requestBody:
+        required: true
+        description:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/AddExternalClusterNode'
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ExternalClusterNode'
+          description:
+  /kubernetes/external-clusters/{clusterId}/nodes/{nodeId}:
+    parameters:
+      - name: clusterId
+        in: path
+        schema:
+          type: string
+        required: true
+        description: The id of the cluster.
+      - name: nodeId
+        in: path
+        schema:
+          type: string
+        required: true
+        description: The id of the node.
+    delete:
+      operationId: delete-external-cluster-node
+      tags:
+        - external-kubernetes
+      summary: >-
+        Delete node from external cluster
+      description: >-
+        Delete node from external cluster
   /gslb:
     post:
       operationId: create-or-update-gslb
@@ -1082,8 +1241,12 @@ paths:
                 publicKey:
                   type: string
                   description: Public authorized key ed25519 for node SSH connection.
+                sourceIp:
+                  type: string
+                  description: Public source IP for firewall access.
               required:
                 - publicKey
+                - sourceIp
       responses:
         "200":
           description: Operation completed succesfully
@@ -1517,6 +1680,49 @@ components:
         - email
         - nickname
         - picture
+    Subscription:
+      type: object
+      properties:
+        id:
+          type: string
+          description: subscription id.
+          example: AzZltkSPw1tgCe5C
+        status:
+          type: string
+          enum:
+            - future
+            - in_trial
+            - active
+            - non_renewing
+            - paused
+            - cancelled
+          description: current state of the subscription.
+        plan:
+          $ref: '#/components/schemas/Plan'
+        trialEnd:
+          type: string
+          format: date-time
+          description: trial end UTC time in RFC3339 format.
+          example: 2022-10-02T15:00:00Z
+      required:
+        - id
+        - status
+        - plan
+    Plan:
+      type: object
+      description: specifies details of a subscription plan.
+      properties:
+        id:
+          type: string
+          description: plan id.
+          example: super_plan_1
+        name:
+          type: string
+          description: plan name.
+          example: Super Plan 1
+      required:
+        - id
+        - name
     EstimatedComponentTypePrice:
       type: object
       description: Price for all of the component type
@@ -1756,12 +1962,73 @@ components:
           type: string
           description: Cluster ID, generated at the time of creation
           readOnly: true
+        organizationId:
+          type: string
+          description: Organization ID to register cluster for.
+        token:
+          type: string
+          writeOnly: true
+          description: agent token to use when registering the cluster
         name:
           type: string
           description: Name of this infrastructure object. Needs to be unique per organization.
+        eks:
+          $ref: '#/components/schemas/ExternalClusterEksConfiguration'
       required:
         - id
         - name
+        - organization
+    ExternalClusterEksConfiguration:
+      type: object
+      properties:
+        clusterName:
+          type: string
+          description: EKS cluster name
+        region:
+          type: string
+          description: EKS cluster region
+    ExternalClusterRegistrationToken:
+      type: object
+      properties:
+        token:
+          type: string
+          readOnly: true
+          description: Token to use when deploying monitoring agent on remote clusters.
+      required:
+        - token
+    ExternalClusterEditParams:
+      type: object
+      properties:
+        credentialsId:
+          type: string
+          description: ID of previously saved cloud credentials.
+      required:
+        - credentialsId
+    AddExternalClusterNode:
+      type: object
+      properties:
+        instanceType:
+          type: string
+          description: Instance type for the new VM.
+      required:
+        - credentialsId
+    ExternalClusterNode:
+      type: object
+      properties:
+        nodeId:
+          type: string
+          description: node ID.
+      required:
+        - nodeId
+    ExternalClusterNodes:
+      type: object
+      properties:
+        items:
+          type: array
+          items:
+            $ref: '#/components/schemas/ExternalClusterNode'
+      required:
+        - items
     GSLBRequest:
       type: object
       properties:

@@ -88,6 +88,9 @@ func selectNode(ctx context.Context, api client.Interface, clusterID string) (*s
 	if err != nil {
 		return nil, err
 	}
+	if len(items) == 0 {
+		return nil, errors.New("no nodes found")
+	}
 	selectList := make([]string, len(items))
 	for i, item := range items {
 		selectList[i] = displayName(item)

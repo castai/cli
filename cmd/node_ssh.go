@@ -31,6 +31,7 @@ import (
 	"github.com/castai/cli/pkg/client"
 	"github.com/castai/cli/pkg/client/sdk"
 	"github.com/castai/cli/pkg/command"
+	"github.com/castai/cli/pkg/ipify"
 	"github.com/castai/cli/pkg/ssh"
 )
 
@@ -39,12 +40,12 @@ const (
 	sshPrivateKeyName = "cast_ed25519"
 )
 
-func newNodeSSHCmd(log logrus.FieldLogger, api client.Interface, terminal ssh.Terminal) *cobra.Command {
+func newNodeSSHCmd(log logrus.FieldLogger, api client.Interface, terminal ssh.Terminal, ipify ipify.Client) *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "ssh",
 		Short: "SSH into cluster node",
 		Run: func(cmd *cobra.Command, args []string) {
-			if err := handleNodeSSH(cmd, log, api, terminal); err != nil {
+			if err := handleNodeSSH(cmd, log, api, terminal, ipify); err != nil {
 				log.Fatal(err)
 			}
 		},
@@ -54,7 +55,8 @@ func newNodeSSHCmd(log logrus.FieldLogger, api client.Interface, terminal ssh.Te
 	return cmd
 }
 
-func handleNodeSSH(cmd *cobra.Command, log logrus.FieldLogger, api client.Interface, terminal ssh.Terminal) error {
+func handleNodeSSH(cmd *cobra.Command, log logrus.FieldLogger, api client.Interface, terminal ssh.Terminal, ipify ipify.Client) error {
+	ctx := cmd.Context()
 	clusterID, err := getClusterIDFromFlag(cmd, api)
 	if err != nil {
 		return err
@@ -76,8 +78,13 @@ func handleNodeSSH(cmd *cobra.Command, log logrus.FieldLogger, api client.Interf
 
 	// Send public key to CAST AI.
 	log.Info("Configuring firewall for SSH access")
-	err = api.SetupNodeSSH(cmd.Context(), sdk.ClusterId(clusterID), *node.Id, sdk.SetupNodeSshJSONRequestBody{
+	publicIP, err := ipify.GetPublicIP(ctx)
+	if err != nil {
+		return fmt.Errorf("getting public IP: %w", err)
+	}
+	err = api.SetupNodeSSH(ctx, sdk.ClusterId(clusterID), *node.Id, sdk.SetupNodeSshJSONRequestBody{
 		PublicKey: base64.StdEncoding.EncodeToString(keys.Public),
+		SourceIp:  publicIP,
 	})
 	if err != nil {
 		return err
@@ -91,7 +98,7 @@ func handleNodeSSH(cmd *cobra.Command, log logrus.FieldLogger, api client.Interf
 
 	log.Info("Establishing secure SSH session")
 	addr := fmt.Sprintf("%s:22", node.Network.PublicIp)
-	if err := terminal.Connect(cmd.Context(), ssh.ConnectConfig{
+	if err := terminal.Connect(ctx, ssh.ConnectConfig{
 		PrivateKey: keys.Private,
 		User:       user,
 		Addr:       addr,
@@ -100,7 +107,7 @@ func handleNodeSSH(cmd *cobra.Command, log logrus.FieldLogger, api client.Interf
 	}
 
 	log.Info("Closing firewall access")
-	if err := api.CloseNodeSSH(cmd.Context(), sdk.ClusterId(clusterID), *node.Id); err != nil {
+	if err := api.CloseNodeSSH(ctx, sdk.ClusterId(clusterID), *node.Id); err != nil {
 		return err
 	}
 

@@ -11,6 +11,13 @@ import (
 	"github.com/pkg/errors"
 )
 
+// AddExternalClusterNode defines model for AddExternalClusterNode.
+type AddExternalClusterNode struct {
+
+	// Instance type for the new VM.
+	InstanceType *string `json:"instanceType,omitempty"`
+}
+
 // AddNodeResult defines model for AddNodeResult.
 type AddNodeResult struct {
 
@@ -460,12 +467,55 @@ type EstimatedPriceAmount struct {
 
 // ExternalCluster defines model for ExternalCluster.
 type ExternalCluster struct {
+	Eks *ExternalClusterEksConfiguration `json:"eks,omitempty"`
 
 	// Cluster ID, generated at the time of creation
 	Id string `json:"id"`
 
 	// Name of this infrastructure object. Needs to be unique per organization.
 	Name string `json:"name"`
+
+	// Organization ID to register cluster for.
+	OrganizationId *string `json:"organizationId,omitempty"`
+
+	// agent token to use when registering the cluster
+	Token *string `json:"token,omitempty"`
+}
+
+// ExternalClusterEditParams defines model for ExternalClusterEditParams.
+type ExternalClusterEditParams struct {
+
+	// ID of previously saved cloud credentials.
+	CredentialsId string `json:"credentialsId"`
+}
+
+// ExternalClusterEksConfiguration defines model for ExternalClusterEksConfiguration.
+type ExternalClusterEksConfiguration struct {
+
+	// EKS cluster name
+	ClusterName *string `json:"clusterName,omitempty"`
+
+	// EKS cluster region
+	Region *string `json:"region,omitempty"`
+}
+
+// ExternalClusterNode defines model for ExternalClusterNode.
+type ExternalClusterNode struct {
+
+	// node ID.
+	NodeId string `json:"nodeId"`
+}
+
+// ExternalClusterNodes defines model for ExternalClusterNodes.
+type ExternalClusterNodes struct {
+	Items []ExternalClusterNode `json:"items"`
+}
+
+// ExternalClusterRegistrationToken defines model for ExternalClusterRegistrationToken.
+type ExternalClusterRegistrationToken struct {
+
+	// Token to use when deploying monitoring agent on remote clusters.
+	Token string `json:"token"`
 }
 
 // ExternalClustersList defines model for ExternalClustersList.
@@ -844,6 +894,16 @@ type PauseCluster struct {
 	Notes *string `json:"notes,omitempty"`
 }
 
+// Plan defines model for Plan.
+type Plan struct {
+
+	// plan id.
+	Id string `json:"id"`
+
+	// plan name.
+	Name string `json:"name"`
+}
+
 // PoliciesConfig defines model for PoliciesConfig.
 type PoliciesConfig struct {
 
@@ -898,6 +958,22 @@ type SpotInstances struct {
 
 	// Enable/disable spot instances policy.
 	Enabled bool `json:"enabled"`
+}
+
+// Subscription defines model for Subscription.
+type Subscription struct {
+
+	// subscription id.
+	Id string `json:"id"`
+
+	// specifies details of a subscription plan.
+	Plan Plan `json:"plan"`
+
+	// current state of the subscription.
+	Status string `json:"status"`
+
+	// trial end UTC time in RFC3339 format.
+	TrialEnd *time.Time `json:"trialEnd,omitempty"`
 }
 
 // UnschedulablePodsPolicy defines model for UnschedulablePodsPolicy.
@@ -1055,10 +1131,11 @@ type CreateAuthTokenJSONBody AuthToken
 // UpdateAuthTokenJSONBody defines parameters for UpdateAuthToken.
 type UpdateAuthTokenJSONBody AuthTokenUpdateRequest
 
-// ChargebeeSsoParams defines parameters for ChargebeeSso.
-type ChargebeeSsoParams struct {
+// BillingSsoParams defines parameters for BillingSso.
+type BillingSsoParams struct {
 
-	// Optional parameter: desired destination URL within Chargebee. See https://apidocs.chargebee.com/docs/api/portal_sessions#create_a_portal_session_forward_url for more details.
+	// Desired destination URL within ChargeBee.
+	// See https://apidocs.chargebee.com/docs/api/portal_sessions#create_a_portal_session_forward_url for more details.
 	ForwardUrl *string `json:"forwardUrl,omitempty"`
 }
 
@@ -1132,6 +1209,9 @@ type SetupNodeSshJSONBody struct {
 
 	// Public authorized key ed25519 for node SSH connection.
 	PublicKey string `json:"publicKey"`
+
+	// Public source IP for firewall access.
+	SourceIp string `json:"sourceIp"`
 }
 
 // UpdateNodeListJSONBody defines parameters for UpdateNodeList.
@@ -1145,6 +1225,12 @@ type UpsertPoliciesJSONBody PoliciesConfig
 
 // RegisterExternalClusterJSONBody defines parameters for RegisterExternalCluster.
 type RegisterExternalClusterJSONBody ExternalCluster
+
+// UpdateExternalClusterJSONBody defines parameters for UpdateExternalCluster.
+type UpdateExternalClusterJSONBody ExternalClusterEditParams
+
+// AddExternalClusterNodeJSONBody defines parameters for AddExternalClusterNode.
+type AddExternalClusterNodeJSONBody AddExternalClusterNode
 
 // UpdateCurrentUserProfileJSONBody defines parameters for UpdateCurrentUserProfile.
 type UpdateCurrentUserProfileJSONBody UserProfile
@@ -1203,6 +1289,12 @@ type UpsertPoliciesJSONRequestBody UpsertPoliciesJSONBody
 
 // RegisterExternalClusterRequestBody defines body for RegisterExternalCluster for application/json ContentType.
 type RegisterExternalClusterJSONRequestBody RegisterExternalClusterJSONBody
+
+// UpdateExternalClusterRequestBody defines body for UpdateExternalCluster for application/json ContentType.
+type UpdateExternalClusterJSONRequestBody UpdateExternalClusterJSONBody
+
+// AddExternalClusterNodeRequestBody defines body for AddExternalClusterNode for application/json ContentType.
+type AddExternalClusterNodeJSONRequestBody AddExternalClusterNodeJSONBody
 
 // UpdateCurrentUserProfileRequestBody defines body for UpdateCurrentUserProfile for application/json ContentType.
 type UpdateCurrentUserProfileJSONRequestBody UpdateCurrentUserProfileJSONBody

@@ -122,8 +122,14 @@ type ClientInterface interface {
 
 	UpdateAuthToken(ctx context.Context, authTokenId AuthTokenId, body UpdateAuthTokenJSONRequestBody) (*http.Response, error)
 
-	// ChargebeeSso request
-	ChargebeeSso(ctx context.Context, params *ChargebeeSsoParams) (*http.Response, error)
+	// BillingSso request
+	BillingSso(ctx context.Context, params *BillingSsoParams) (*http.Response, error)
+
+	// Subscription request
+	Subscription(ctx context.Context) (*http.Response, error)
+
+	// SubscriptionCheckout request
+	SubscriptionCheckout(ctx context.Context) (*http.Response, error)
 
 	// PlanClusterPrice request  with any body
 	PlanClusterPriceWithBody(ctx context.Context, contentType string, body io.Reader) (*http.Response, error)
@@ -263,6 +269,25 @@ type ClientInterface interface {
 
 	RegisterExternalCluster(ctx context.Context, body RegisterExternalClusterJSONRequestBody) (*http.Response, error)
 
+	// GetExternalCluster request
+	GetExternalCluster(ctx context.Context, clusterId string) (*http.Response, error)
+
+	// UpdateExternalCluster request  with any body
+	UpdateExternalClusterWithBody(ctx context.Context, clusterId string, contentType string, body io.Reader) (*http.Response, error)
+
+	UpdateExternalCluster(ctx context.Context, clusterId string, body UpdateExternalClusterJSONRequestBody) (*http.Response, error)
+
+	// ListExternalClusterNodes request
+	ListExternalClusterNodes(ctx context.Context, clusterId string) (*http.Response, error)
+
+	// AddExternalClusterNode request  with any body
+	AddExternalClusterNodeWithBody(ctx context.Context, clusterId string, contentType string, body io.Reader) (*http.Response, error)
+
+	AddExternalClusterNode(ctx context.Context, clusterId string, body AddExternalClusterNodeJSONRequestBody) (*http.Response, error)
+
+	// DeleteExternalClusterNode request
+	DeleteExternalClusterNode(ctx context.Context, clusterId string, nodeId string) (*http.Response, error)
+
 	// GetOperation request
 	GetOperation(ctx context.Context, id string) (*http.Response, error)
 
@@ -273,6 +298,9 @@ type ClientInterface interface {
 	UpdateCurrentUserProfileWithBody(ctx context.Context, contentType string, body io.Reader) (*http.Response, error)
 
 	UpdateCurrentUserProfile(ctx context.Context, body UpdateCurrentUserProfileJSONRequestBody) (*http.Response, error)
+
+	// GetExternalClustersToken request
+	GetExternalClustersToken(ctx context.Context) (*http.Response, error)
 
 	// ListRegions request
 	ListRegions(ctx context.Context) (*http.Response, error)
@@ -461,8 +489,38 @@ func (c *Client) UpdateAuthToken(ctx context.Context, authTokenId AuthTokenId, b
 	return c.Client.Do(req)
 }
 
-func (c *Client) ChargebeeSso(ctx context.Context, params *ChargebeeSsoParams) (*http.Response, error) {
-	req, err := NewChargebeeSsoRequest(c.Server, params)
+func (c *Client) BillingSso(ctx context.Context, params *BillingSsoParams) (*http.Response, error) {
+	req, err := NewBillingSsoRequest(c.Server, params)
+	if err != nil {
+		return nil, err
+	}
+	req = req.WithContext(ctx)
+	if c.RequestEditor != nil {
+		err = c.RequestEditor(ctx, req)
+		if err != nil {
+			return nil, err
+		}
+	}
+	return c.Client.Do(req)
+}
+
+func (c *Client) Subscription(ctx context.Context) (*http.Response, error) {
+	req, err := NewSubscriptionRequest(c.Server)
+	if err != nil {
+		return nil, err
+	}
+	req = req.WithContext(ctx)
+	if c.RequestEditor != nil {
+		err = c.RequestEditor(ctx, req)
+		if err != nil {
+			return nil, err
+		}
+	}
+	return c.Client.Do(req)
+}
+
+func (c *Client) SubscriptionCheckout(ctx context.Context) (*http.Response, error) {
+	req, err := NewSubscriptionCheckoutRequest(c.Server)
 	if err != nil {
 		return nil, err
 	}
@@ -1226,6 +1284,111 @@ func (c *Client) RegisterExternalCluster(ctx context.Context, body RegisterExter
 	return c.Client.Do(req)
 }
 
+func (c *Client) GetExternalCluster(ctx context.Context, clusterId string) (*http.Response, error) {
+	req, err := NewGetExternalClusterRequest(c.Server, clusterId)
+	if err != nil {
+		return nil, err
+	}
+	req = req.WithContext(ctx)
+	if c.RequestEditor != nil {
+		err = c.RequestEditor(ctx, req)
+		if err != nil {
+			return nil, err
+		}
+	}
+	return c.Client.Do(req)
+}
+
+func (c *Client) UpdateExternalClusterWithBody(ctx context.Context, clusterId string, contentType string, body io.Reader) (*http.Response, error) {
+	req, err := NewUpdateExternalClusterRequestWithBody(c.Server, clusterId, contentType, body)
+	if err != nil {
+		return nil, err
+	}
+	req = req.WithContext(ctx)
+	if c.RequestEditor != nil {
+		err = c.RequestEditor(ctx, req)
+		if err != nil {
+			return nil, err
+		}
+	}
+	return c.Client.Do(req)
+}
+
+func (c *Client) UpdateExternalCluster(ctx context.Context, clusterId string, body UpdateExternalClusterJSONRequestBody) (*http.Response, error) {
+	req, err := NewUpdateExternalClusterRequest(c.Server, clusterId, body)
+	if err != nil {
+		return nil, err
+	}
+	req = req.WithContext(ctx)
+	if c.RequestEditor != nil {
+		err = c.RequestEditor(ctx, req)
+		if err != nil {
+			return nil, err
+		}
+	}
+	return c.Client.Do(req)
+}
+
+func (c *Client) ListExternalClusterNodes(ctx context.Context, clusterId string) (*http.Response, error) {
+	req, err := NewListExternalClusterNodesRequest(c.Server, clusterId)
+	if err != nil {
+		return nil, err
+	}
+	req = req.WithContext(ctx)
+	if c.RequestEditor != nil {
+		err = c.RequestEditor(ctx, req)
+		if err != nil {
+			return nil, err
+		}
+	}
+	return c.Client.Do(req)
+}
+
+func (c *Client) AddExternalClusterNodeWithBody(ctx context.Context, clusterId string, contentType string, body io.Reader) (*http.Response, error) {
+	req, err := NewAddExternalClusterNodeRequestWithBody(c.Server, clusterId, contentType, body)
+	if err != nil {
+		return nil, err
+	}
+	req = req.WithContext(ctx)
+	if c.RequestEditor != nil {
+		err = c.RequestEditor(ctx, req)
+		if err != nil {
+			return nil, err
+		}
+	}
+	return c.Client.Do(req)
+}
+
+func (c *Client) AddExternalClusterNode(ctx context.Context, clusterId string, body AddExternalClusterNodeJSONRequestBody) (*http.Response, error) {
+	req, err := NewAddExternalClusterNodeRequest(c.Server, clusterId, body)
+	if err != nil {
+		return nil, err
+	}
+	req = req.WithContext(ctx)
+	if c.RequestEditor != nil {
+		err = c.RequestEditor(ctx, req)
+		if err != nil {
+			return nil, err
+		}
+	}
+	return c.Client.Do(req)
+}
+
+func (c *Client) DeleteExternalClusterNode(ctx context.Context, clusterId string, nodeId string) (*http.Response, error) {
+	req, err := NewDeleteExternalClusterNodeRequest(c.Server, clusterId, nodeId)
+	if err != nil {
+		return nil, err
+	}
+	req = req.WithContext(ctx)
+	if c.RequestEditor != nil {
+		err = c.RequestEditor(ctx, req)
+		if err != nil {
+			return nil, err
+		}
+	}
+	return c.Client.Do(req)
+}
+
 func (c *Client) GetOperation(ctx context.Context, id string) (*http.Response, error) {
 	req, err := NewGetOperationRequest(c.Server, id)
 	if err != nil {
@@ -1273,6 +1436,21 @@ func (c *Client) UpdateCurrentUserProfileWithBody(ctx context.Context, contentTy
 
 func (c *Client) UpdateCurrentUserProfile(ctx context.Context, body UpdateCurrentUserProfileJSONRequestBody) (*http.Response, error) {
 	req, err := NewUpdateCurrentUserProfileRequest(c.Server, body)
+	if err != nil {
+		return nil, err
+	}
+	req = req.WithContext(ctx)
+	if c.RequestEditor != nil {
+		err = c.RequestEditor(ctx, req)
+		if err != nil {
+			return nil, err
+		}
+	}
+	return c.Client.Do(req)
+}
+
+func (c *Client) GetExternalClustersToken(ctx context.Context) (*http.Response, error) {
+	req, err := NewGetExternalClustersTokenRequest(c.Server)
 	if err != nil {
 		return nil, err
 	}
@@ -1787,8 +1965,8 @@ func NewUpdateAuthTokenRequestWithBody(server string, authTokenId AuthTokenId, c
 	return req, nil
 }
 
-// NewChargebeeSsoRequest generates requests for ChargebeeSso
-func NewChargebeeSsoRequest(server string, params *ChargebeeSsoParams) (*http.Request, error) {
+// NewBillingSsoRequest generates requests for BillingSso
+func NewBillingSsoRequest(server string, params *BillingSsoParams) (*http.Request, error) {
 	var err error
 
 	queryUrl, err := url.Parse(server)
@@ -1796,7 +1974,7 @@ func NewChargebeeSsoRequest(server string, params *ChargebeeSsoParams) (*http.Re
 		return nil, err
 	}
 
-	basePath := fmt.Sprintf("/chargebee/sso")
+	basePath := fmt.Sprintf("/billing/sso")
 	if basePath[0] == '/' {
 		basePath = basePath[1:]
 	}
@@ -1825,6 +2003,60 @@ func NewChargebeeSsoRequest(server string, params *ChargebeeSsoParams) (*http.Re
 	}
 
 	queryUrl.RawQuery = queryValues.Encode()
+
+	req, err := http.NewRequest("GET", queryUrl.String(), nil)
+	if err != nil {
+		return nil, err
+	}
+
+	return req, nil
+}
+
+// NewSubscriptionRequest generates requests for Subscription
+func NewSubscriptionRequest(server string) (*http.Request, error) {
+	var err error
+
+	queryUrl, err := url.Parse(server)
+	if err != nil {
+		return nil, err
+	}
+
+	basePath := fmt.Sprintf("/billing/subscription")
+	if basePath[0] == '/' {
+		basePath = basePath[1:]
+	}
+
+	queryUrl, err = queryUrl.Parse(basePath)
+	if err != nil {
+		return nil, err
+	}
+
+	req, err := http.NewRequest("GET", queryUrl.String(), nil)
+	if err != nil {
+		return nil, err
+	}
+
+	return req, nil
+}
+
+// NewSubscriptionCheckoutRequest generates requests for SubscriptionCheckout
+func NewSubscriptionCheckoutRequest(server string) (*http.Request, error) {
+	var err error
+
+	queryUrl, err := url.Parse(server)
+	if err != nil {
+		return nil, err
+	}
+
+	basePath := fmt.Sprintf("/billing/subscription/checkout")
+	if basePath[0] == '/' {
+		basePath = basePath[1:]
+	}
+
+	queryUrl, err = queryUrl.Parse(basePath)
+	if err != nil {
+		return nil, err
+	}
 
 	req, err := http.NewRequest("GET", queryUrl.String(), nil)
 	if err != nil {
@@ -3327,6 +3559,207 @@ func NewRegisterExternalClusterRequestWithBody(server string, contentType string
 	return req, nil
 }
 
+// NewGetExternalClusterRequest generates requests for GetExternalCluster
+func NewGetExternalClusterRequest(server string, clusterId string) (*http.Request, error) {
+	var err error
+
+	var pathParam0 string
+
+	pathParam0, err = runtime.StyleParam("simple", false, "clusterId", clusterId)
+	if err != nil {
+		return nil, err
+	}
+
+	queryUrl, err := url.Parse(server)
+	if err != nil {
+		return nil, err
+	}
+
+	basePath := fmt.Sprintf("/kubernetes/external-clusters/%s", pathParam0)
+	if basePath[0] == '/' {
+		basePath = basePath[1:]
+	}
+
+	queryUrl, err = queryUrl.Parse(basePath)
+	if err != nil {
+		return nil, err
+	}
+
+	req, err := http.NewRequest("GET", queryUrl.String(), nil)
+	if err != nil {
+		return nil, err
+	}
+
+	return req, nil
+}
+
+// NewUpdateExternalClusterRequest calls the generic UpdateExternalCluster builder with application/json body
+func NewUpdateExternalClusterRequest(server string, clusterId string, body UpdateExternalClusterJSONRequestBody) (*http.Request, error) {
+	var bodyReader io.Reader
+	buf, err := json.Marshal(body)
+	if err != nil {
+		return nil, err
+	}
+	bodyReader = bytes.NewReader(buf)
+	return NewUpdateExternalClusterRequestWithBody(server, clusterId, "application/json", bodyReader)
+}
+
+// NewUpdateExternalClusterRequestWithBody generates requests for UpdateExternalCluster with any type of body
+func NewUpdateExternalClusterRequestWithBody(server string, clusterId string, contentType string, body io.Reader) (*http.Request, error) {
+	var err error
+
+	var pathParam0 string
+
+	pathParam0, err = runtime.StyleParam("simple", false, "clusterId", clusterId)
+	if err != nil {
+		return nil, err
+	}
+
+	queryUrl, err := url.Parse(server)
+	if err != nil {
+		return nil, err
+	}
+
+	basePath := fmt.Sprintf("/kubernetes/external-clusters/%s", pathParam0)
+	if basePath[0] == '/' {
+		basePath = basePath[1:]
+	}
+
+	queryUrl, err = queryUrl.Parse(basePath)
+	if err != nil {
+		return nil, err
+	}
+
+	req, err := http.NewRequest("POST", queryUrl.String(), body)
+	if err != nil {
+		return nil, err
+	}
+
+	req.Header.Add("Content-Type", contentType)
+	return req, nil
+}
+
+// NewListExternalClusterNodesRequest generates requests for ListExternalClusterNodes
+func NewListExternalClusterNodesRequest(server string, clusterId string) (*http.Request, error) {
+	var err error
+
+	var pathParam0 string
+
+	pathParam0, err = runtime.StyleParam("simple", false, "clusterId", clusterId)
+	if err != nil {
+		return nil, err
+	}
+
+	queryUrl, err := url.Parse(server)
+	if err != nil {
+		return nil, err
+	}
+
+	basePath := fmt.Sprintf("/kubernetes/external-clusters/%s/nodes", pathParam0)
+	if basePath[0] == '/' {
+		basePath = basePath[1:]
+	}
+
+	queryUrl, err = queryUrl.Parse(basePath)
+	if err != nil {
+		return nil, err
+	}
+
+	req, err := http.NewRequest("GET", queryUrl.String(), nil)
+	if err != nil {
+		return nil, err
+	}
+
+	return req, nil
+}
+
+// NewAddExternalClusterNodeRequest calls the generic AddExternalClusterNode builder with application/json body
+func NewAddExternalClusterNodeRequest(server string, clusterId string, body AddExternalClusterNodeJSONRequestBody) (*http.Request, error) {
+	var bodyReader io.Reader
+	buf, err := json.Marshal(body)
+	if err != nil {
+		return nil, err
+	}
+	bodyReader = bytes.NewReader(buf)
+	return NewAddExternalClusterNodeRequestWithBody(server, clusterId, "application/json", bodyReader)
+}
+
+// NewAddExternalClusterNodeRequestWithBody generates requests for AddExternalClusterNode with any type of body
+func NewAddExternalClusterNodeRequestWithBody(server string, clusterId string, contentType string, body io.Reader) (*http.Request, error) {
+	var err error
+
+	var pathParam0 string
+
+	pathParam0, err = runtime.StyleParam("simple", false, "clusterId", clusterId)
+	if err != nil {
+		return nil, err
+	}
+
+	queryUrl, err := url.Parse(server)
+	if err != nil {
+		return nil, err
+	}
+
+	basePath := fmt.Sprintf("/kubernetes/external-clusters/%s/nodes", pathParam0)
+	if basePath[0] == '/' {
+		basePath = basePath[1:]
+	}
+
+	queryUrl, err = queryUrl.Parse(basePath)
+	if err != nil {
+		return nil, err
+	}
+
+	req, err := http.NewRequest("POST", queryUrl.String(), body)
+	if err != nil {
+		return nil, err
+	}
+
+	req.Header.Add("Content-Type", contentType)
+	return req, nil
+}
+
+// NewDeleteExternalClusterNodeRequest generates requests for DeleteExternalClusterNode
+func NewDeleteExternalClusterNodeRequest(server string, clusterId string, nodeId string) (*http.Request, error) {
+	var err error
+
+	var pathParam0 string
+
+	pathParam0, err = runtime.StyleParam("simple", false, "clusterId", clusterId)
+	if err != nil {
+		return nil, err
+	}
+
+	var pathParam1 string
+
+	pathParam1, err = runtime.StyleParam("simple", false, "nodeId", nodeId)
+	if err != nil {
+		return nil, err
+	}
+
+	queryUrl, err := url.Parse(server)
+	if err != nil {
+		return nil, err
+	}
+
+	basePath := fmt.Sprintf("/kubernetes/external-clusters/%s/nodes/%s", pathParam0, pathParam1)
+	if basePath[0] == '/' {
+		basePath = basePath[1:]
+	}
+
+	queryUrl, err = queryUrl.Parse(basePath)
+	if err != nil {
+		return nil, err
+	}
+
+	req, err := http.NewRequest("DELETE", queryUrl.String(), nil)
+	if err != nil {
+		return nil, err
+	}
+
+	return req, nil
+}
+
 // NewGetOperationRequest generates requests for GetOperation
 func NewGetOperationRequest(server string, id string) (*http.Request, error) {
 	var err error
@@ -3424,6 +3857,33 @@ func NewUpdateCurrentUserProfileRequestWithBody(server string, contentType strin
 	}
 
 	req.Header.Add("Content-Type", contentType)
+	return req, nil
+}
+
+// NewGetExternalClustersTokenRequest generates requests for GetExternalClustersToken
+func NewGetExternalClustersTokenRequest(server string) (*http.Request, error) {
+	var err error
+
+	queryUrl, err := url.Parse(server)
+	if err != nil {
+		return nil, err
+	}
+
+	basePath := fmt.Sprintf("/me/external-clusters-token")
+	if basePath[0] == '/' {
+		basePath = basePath[1:]
+	}
+
+	queryUrl, err = queryUrl.Parse(basePath)
+	if err != nil {
+		return nil, err
+	}
+
+	req, err := http.NewRequest("GET", queryUrl.String(), nil)
+	if err != nil {
+		return nil, err
+	}
+
 	return req, nil
 }
 
@@ -3596,8 +4056,14 @@ type ClientWithResponsesInterface interface {
 
 	UpdateAuthTokenWithResponse(ctx context.Context, authTokenId AuthTokenId, body UpdateAuthTokenJSONRequestBody) (*UpdateAuthTokenResponse, error)
 
-	// ChargebeeSso request
-	ChargebeeSsoWithResponse(ctx context.Context, params *ChargebeeSsoParams) (*ChargebeeSsoResponse, error)
+	// BillingSso request
+	BillingSsoWithResponse(ctx context.Context, params *BillingSsoParams) (*BillingSsoResponse, error)
+
+	// Subscription request
+	SubscriptionWithResponse(ctx context.Context) (*SubscriptionResponse, error)
+
+	// SubscriptionCheckout request
+	SubscriptionCheckoutWithResponse(ctx context.Context) (*SubscriptionCheckoutResponse, error)
 
 	// PlanClusterPrice request  with any body
 	PlanClusterPriceWithBodyWithResponse(ctx context.Context, contentType string, body io.Reader) (*PlanClusterPriceResponse, error)
@@ -3737,6 +4203,25 @@ type ClientWithResponsesInterface interface {
 
 	RegisterExternalClusterWithResponse(ctx context.Context, body RegisterExternalClusterJSONRequestBody) (*RegisterExternalClusterResponse, error)
 
+	// GetExternalCluster request
+	GetExternalClusterWithResponse(ctx context.Context, clusterId string) (*GetExternalClusterResponse, error)
+
+	// UpdateExternalCluster request  with any body
+	UpdateExternalClusterWithBodyWithResponse(ctx context.Context, clusterId string, contentType string, body io.Reader) (*UpdateExternalClusterResponse, error)
+
+	UpdateExternalClusterWithResponse(ctx context.Context, clusterId string, body UpdateExternalClusterJSONRequestBody) (*UpdateExternalClusterResponse, error)
+
+	// ListExternalClusterNodes request
+	ListExternalClusterNodesWithResponse(ctx context.Context, clusterId string) (*ListExternalClusterNodesResponse, error)
+
+	// AddExternalClusterNode request  with any body
+	AddExternalClusterNodeWithBodyWithResponse(ctx context.Context, clusterId string, contentType string, body io.Reader) (*AddExternalClusterNodeResponse, error)
+
+	AddExternalClusterNodeWithResponse(ctx context.Context, clusterId string, body AddExternalClusterNodeJSONRequestBody) (*AddExternalClusterNodeResponse, error)
+
+	// DeleteExternalClusterNode request
+	DeleteExternalClusterNodeWithResponse(ctx context.Context, clusterId string, nodeId string) (*DeleteExternalClusterNodeResponse, error)
+
 	// GetOperation request
 	GetOperationWithResponse(ctx context.Context, id string) (*GetOperationResponse, error)
 
@@ -3747,6 +4232,9 @@ type ClientWithResponsesInterface interface {
 	UpdateCurrentUserProfileWithBodyWithResponse(ctx context.Context, contentType string, body io.Reader) (*UpdateCurrentUserProfileResponse, error)
 
 	UpdateCurrentUserProfileWithResponse(ctx context.Context, body UpdateCurrentUserProfileJSONRequestBody) (*UpdateCurrentUserProfileResponse, error)
+
+	// GetExternalClustersToken request
+	GetExternalClustersTokenWithResponse(ctx context.Context) (*GetExternalClustersTokenResponse, error)
 
 	// ListRegions request
 	ListRegionsWithResponse(ctx context.Context) (*ListRegionsResponse, error)
@@ -4060,13 +4548,13 @@ func (r UpdateAuthTokenResponse) GetBody() []byte {
 
 // TODO: </castai customization> to have common interface. https://github.com/deepmap/oapi-codegen/issues/240
 
-type ChargebeeSsoResponse struct {
+type BillingSsoResponse struct {
 	Body         []byte
 	HTTPResponse *http.Response
 }
 
 // Status returns HTTPResponse.Status
-func (r ChargebeeSsoResponse) Status() string {
+func (r BillingSsoResponse) Status() string {
 	if r.HTTPResponse != nil {
 		return r.HTTPResponse.Status
 	}
@@ -4074,7 +4562,7 @@ func (r ChargebeeSsoResponse) Status() string {
 }
 
 // StatusCode returns HTTPResponse.StatusCode
-func (r ChargebeeSsoResponse) StatusCode() int {
+func (r BillingSsoResponse) StatusCode() int {
 	if r.HTTPResponse != nil {
 		return r.HTTPResponse.StatusCode
 	}
@@ -4083,7 +4571,66 @@ func (r ChargebeeSsoResponse) StatusCode() int {
 
 // TODO: <castai customization> to have common interface. https://github.com/deepmap/oapi-codegen/issues/240
 // Body returns body of byte array
-func (r ChargebeeSsoResponse) GetBody() []byte {
+func (r BillingSsoResponse) GetBody() []byte {
+	return r.Body
+}
+
+// TODO: </castai customization> to have common interface. https://github.com/deepmap/oapi-codegen/issues/240
+
+type SubscriptionResponse struct {
+	Body         []byte
+	HTTPResponse *http.Response
+	JSON200      *Subscription
+}
+
+// Status returns HTTPResponse.Status
+func (r SubscriptionResponse) Status() string {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.Status
+	}
+	return http.StatusText(0)
+}
+
+// StatusCode returns HTTPResponse.StatusCode
+func (r SubscriptionResponse) StatusCode() int {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.StatusCode
+	}
+	return 0
+}
+
+// TODO: <castai customization> to have common interface. https://github.com/deepmap/oapi-codegen/issues/240
+// Body returns body of byte array
+func (r SubscriptionResponse) GetBody() []byte {
+	return r.Body
+}
+
+// TODO: </castai customization> to have common interface. https://github.com/deepmap/oapi-codegen/issues/240
+
+type SubscriptionCheckoutResponse struct {
+	Body         []byte
+	HTTPResponse *http.Response
+}
+
+// Status returns HTTPResponse.Status
+func (r SubscriptionCheckoutResponse) Status() string {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.Status
+	}
+	return http.StatusText(0)
+}
+
+// StatusCode returns HTTPResponse.StatusCode
+func (r SubscriptionCheckoutResponse) StatusCode() int {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.StatusCode
+	}
+	return 0
+}
+
+// TODO: <castai customization> to have common interface. https://github.com/deepmap/oapi-codegen/issues/240
+// Body returns body of byte array
+func (r SubscriptionCheckoutResponse) GetBody() []byte {
 	return r.Body
 }
 
@@ -5224,6 +5771,155 @@ func (r RegisterExternalClusterResponse) GetBody() []byte {
 
 // TODO: </castai customization> to have common interface. https://github.com/deepmap/oapi-codegen/issues/240
 
+type GetExternalClusterResponse struct {
+	Body         []byte
+	HTTPResponse *http.Response
+	JSON200      *ExternalCluster
+}
+
+// Status returns HTTPResponse.Status
+func (r GetExternalClusterResponse) Status() string {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.Status
+	}
+	return http.StatusText(0)
+}
+
+// StatusCode returns HTTPResponse.StatusCode
+func (r GetExternalClusterResponse) StatusCode() int {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.StatusCode
+	}
+	return 0
+}
+
+// TODO: <castai customization> to have common interface. https://github.com/deepmap/oapi-codegen/issues/240
+// Body returns body of byte array
+func (r GetExternalClusterResponse) GetBody() []byte {
+	return r.Body
+}
+
+// TODO: </castai customization> to have common interface. https://github.com/deepmap/oapi-codegen/issues/240
+
+type UpdateExternalClusterResponse struct {
+	Body         []byte
+	HTTPResponse *http.Response
+	JSON200      *ExternalCluster
+}
+
+// Status returns HTTPResponse.Status
+func (r UpdateExternalClusterResponse) Status() string {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.Status
+	}
+	return http.StatusText(0)
+}
+
+// StatusCode returns HTTPResponse.StatusCode
+func (r UpdateExternalClusterResponse) StatusCode() int {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.StatusCode
+	}
+	return 0
+}
+
+// TODO: <castai customization> to have common interface. https://github.com/deepmap/oapi-codegen/issues/240
+// Body returns body of byte array
+func (r UpdateExternalClusterResponse) GetBody() []byte {
+	return r.Body
+}
+
+// TODO: </castai customization> to have common interface. https://github.com/deepmap/oapi-codegen/issues/240
+
+type ListExternalClusterNodesResponse struct {
+	Body         []byte
+	HTTPResponse *http.Response
+	JSON200      *ExternalClusterNodes
+}
+
+// Status returns HTTPResponse.Status
+func (r ListExternalClusterNodesResponse) Status() string {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.Status
+	}
+	return http.StatusText(0)
+}
+
+// StatusCode returns HTTPResponse.StatusCode
+func (r ListExternalClusterNodesResponse) StatusCode() int {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.StatusCode
+	}
+	return 0
+}
+
+// TODO: <castai customization> to have common interface. https://github.com/deepmap/oapi-codegen/issues/240
+// Body returns body of byte array
+func (r ListExternalClusterNodesResponse) GetBody() []byte {
+	return r.Body
+}
+
+// TODO: </castai customization> to have common interface. https://github.com/deepmap/oapi-codegen/issues/240
+
+type AddExternalClusterNodeResponse struct {
+	Body         []byte
+	HTTPResponse *http.Response
+	JSON200      *ExternalClusterNode
+}
+
+// Status returns HTTPResponse.Status
+func (r AddExternalClusterNodeResponse) Status() string {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.Status
+	}
+	return http.StatusText(0)
+}
+
+// StatusCode returns HTTPResponse.StatusCode
+func (r AddExternalClusterNodeResponse) StatusCode() int {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.StatusCode
+	}
+	return 0
+}
+
+// TODO: <castai customization> to have common interface. https://github.com/deepmap/oapi-codegen/issues/240
+// Body returns body of byte array
+func (r AddExternalClusterNodeResponse) GetBody() []byte {
+	return r.Body
+}
+
+// TODO: </castai customization> to have common interface. https://github.com/deepmap/oapi-codegen/issues/240
+
+type DeleteExternalClusterNodeResponse struct {
+	Body         []byte
+	HTTPResponse *http.Response
+}
+
+// Status returns HTTPResponse.Status
+func (r DeleteExternalClusterNodeResponse) Status() string {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.Status
+	}
+	return http.StatusText(0)
+}
+
+// StatusCode returns HTTPResponse.StatusCode
+func (r DeleteExternalClusterNodeResponse) StatusCode() int {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.StatusCode
+	}
+	return 0
+}
+
+// TODO: <castai customization> to have common interface. https://github.com/deepmap/oapi-codegen/issues/240
+// Body returns body of byte array
+func (r DeleteExternalClusterNodeResponse) GetBody() []byte {
+	return r.Body
+}
+
+// TODO: </castai customization> to have common interface. https://github.com/deepmap/oapi-codegen/issues/240
+
 type GetOperationResponse struct {
 	Body         []byte
 	HTTPResponse *http.Response
@@ -5309,6 +6005,36 @@ func (r UpdateCurrentUserProfileResponse) StatusCode() int {
 // TODO: <castai customization> to have common interface. https://github.com/deepmap/oapi-codegen/issues/240
 // Body returns body of byte array
 func (r UpdateCurrentUserProfileResponse) GetBody() []byte {
+	return r.Body
+}
+
+// TODO: </castai customization> to have common interface. https://github.com/deepmap/oapi-codegen/issues/240
+
+type GetExternalClustersTokenResponse struct {
+	Body         []byte
+	HTTPResponse *http.Response
+	JSON200      *ExternalClusterRegistrationToken
+}
+
+// Status returns HTTPResponse.Status
+func (r GetExternalClustersTokenResponse) Status() string {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.Status
+	}
+	return http.StatusText(0)
+}
+
+// StatusCode returns HTTPResponse.StatusCode
+func (r GetExternalClustersTokenResponse) StatusCode() int {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.StatusCode
+	}
+	return 0
+}
+
+// TODO: <castai customization> to have common interface. https://github.com/deepmap/oapi-codegen/issues/240
+// Body returns body of byte array
+func (r GetExternalClustersTokenResponse) GetBody() []byte {
 	return r.Body
 }
 
@@ -5480,13 +6206,31 @@ func (c *ClientWithResponses) UpdateAuthTokenWithResponse(ctx context.Context, a
 	return ParseUpdateAuthTokenResponse(rsp)
 }
 
-// ChargebeeSsoWithResponse request returning *ChargebeeSsoResponse
-func (c *ClientWithResponses) ChargebeeSsoWithResponse(ctx context.Context, params *ChargebeeSsoParams) (*ChargebeeSsoResponse, error) {
-	rsp, err := c.ChargebeeSso(ctx, params)
+// BillingSsoWithResponse request returning *BillingSsoResponse
+func (c *ClientWithResponses) BillingSsoWithResponse(ctx context.Context, params *BillingSsoParams) (*BillingSsoResponse, error) {
+	rsp, err := c.BillingSso(ctx, params)
 	if err != nil {
 		return nil, err
 	}
-	return ParseChargebeeSsoResponse(rsp)
+	return ParseBillingSsoResponse(rsp)
+}
+
+// SubscriptionWithResponse request returning *SubscriptionResponse
+func (c *ClientWithResponses) SubscriptionWithResponse(ctx context.Context) (*SubscriptionResponse, error) {
+	rsp, err := c.Subscription(ctx)
+	if err != nil {
+		return nil, err
+	}
+	return ParseSubscriptionResponse(rsp)
+}
+
+// SubscriptionCheckoutWithResponse request returning *SubscriptionCheckoutResponse
+func (c *ClientWithResponses) SubscriptionCheckoutWithResponse(ctx context.Context) (*SubscriptionCheckoutResponse, error) {
+	rsp, err := c.SubscriptionCheckout(ctx)
+	if err != nil {
+		return nil, err
+	}
+	return ParseSubscriptionCheckoutResponse(rsp)
 }
 
 // PlanClusterPriceWithBodyWithResponse request with arbitrary body returning *PlanClusterPriceResponse
@@ -5927,6 +6671,67 @@ func (c *ClientWithResponses) RegisterExternalClusterWithResponse(ctx context.Co
 	return ParseRegisterExternalClusterResponse(rsp)
 }
 
+// GetExternalClusterWithResponse request returning *GetExternalClusterResponse
+func (c *ClientWithResponses) GetExternalClusterWithResponse(ctx context.Context, clusterId string) (*GetExternalClusterResponse, error) {
+	rsp, err := c.GetExternalCluster(ctx, clusterId)
+	if err != nil {
+		return nil, err
+	}
+	return ParseGetExternalClusterResponse(rsp)
+}
+
+// UpdateExternalClusterWithBodyWithResponse request with arbitrary body returning *UpdateExternalClusterResponse
+func (c *ClientWithResponses) UpdateExternalClusterWithBodyWithResponse(ctx context.Context, clusterId string, contentType string, body io.Reader) (*UpdateExternalClusterResponse, error) {
+	rsp, err := c.UpdateExternalClusterWithBody(ctx, clusterId, contentType, body)
+	if err != nil {
+		return nil, err
+	}
+	return ParseUpdateExternalClusterResponse(rsp)
+}
+
+func (c *ClientWithResponses) UpdateExternalClusterWithResponse(ctx context.Context, clusterId string, body UpdateExternalClusterJSONRequestBody) (*UpdateExternalClusterResponse, error) {
+	rsp, err := c.UpdateExternalCluster(ctx, clusterId, body)
+	if err != nil {
+		return nil, err
+	}
+	return ParseUpdateExternalClusterResponse(rsp)
+}
+
+// ListExternalClusterNodesWithResponse request returning *ListExternalClusterNodesResponse
+func (c *ClientWithResponses) ListExternalClusterNodesWithResponse(ctx context.Context, clusterId string) (*ListExternalClusterNodesResponse, error) {
+	rsp, err := c.ListExternalClusterNodes(ctx, clusterId)
+	if err != nil {
+		return nil, err
+	}
+	return ParseListExternalClusterNodesResponse(rsp)
+}
+
+// AddExternalClusterNodeWithBodyWithResponse request with arbitrary body returning *AddExternalClusterNodeResponse
+func (c *ClientWithResponses) AddExternalClusterNodeWithBodyWithResponse(ctx context.Context, clusterId string, contentType string, body io.Reader) (*AddExternalClusterNodeResponse, error) {
+	rsp, err := c.AddExternalClusterNodeWithBody(ctx, clusterId, contentType, body)
+	if err != nil {
+		return nil, err
+	}
+	return ParseAddExternalClusterNodeResponse(rsp)
+}
+
+func (c *ClientWithResponses) AddExternalClusterNodeWithResponse(ctx context.Context, clusterId string, body AddExternalClusterNodeJSONRequestBody) (*AddExternalClusterNodeResponse, error) {
+	rsp, err := c.AddExternalClusterNode(ctx, clusterId, body)
+	if err != nil {
+		return nil, err
+	}
+	return ParseAddExternalClusterNodeResponse(rsp)
+}
+
+// DeleteExternalClusterNodeWithResponse request returning *DeleteExternalClusterNodeResponse
+func (c *ClientWithResponses) DeleteExternalClusterNodeWithResponse(ctx context.Context, clusterId string, nodeId string) (*DeleteExternalClusterNodeResponse, error) {
+	rsp, err := c.DeleteExternalClusterNode(ctx, clusterId, nodeId)
+	if err != nil {
+		return nil, err
+	}
+	return ParseDeleteExternalClusterNodeResponse(rsp)
+}
+
 // GetOperationWithResponse request returning *GetOperationResponse
 func (c *ClientWithResponses) GetOperationWithResponse(ctx context.Context, id string) (*GetOperationResponse, error) {
 	rsp, err := c.GetOperation(ctx, id)
@@ -5960,6 +6765,15 @@ func (c *ClientWithResponses) UpdateCurrentUserProfileWithResponse(ctx context.C
 		return nil, err
 	}
 	return ParseUpdateCurrentUserProfileResponse(rsp)
+}
+
+// GetExternalClustersTokenWithResponse request returning *GetExternalClustersTokenResponse
+func (c *ClientWithResponses) GetExternalClustersTokenWithResponse(ctx context.Context) (*GetExternalClustersTokenResponse, error) {
+	rsp, err := c.GetExternalClustersToken(ctx)
+	if err != nil {
+		return nil, err
+	}
+	return ParseGetExternalClustersTokenResponse(rsp)
 }
 
 // ListRegionsWithResponse request returning *ListRegionsResponse
@@ -6212,15 +7026,60 @@ func ParseUpdateAuthTokenResponse(rsp *http.Response) (*UpdateAuthTokenResponse,
 	return response, nil
 }
 
-// ParseChargebeeSsoResponse parses an HTTP response from a ChargebeeSsoWithResponse call
-func ParseChargebeeSsoResponse(rsp *http.Response) (*ChargebeeSsoResponse, error) {
+// ParseBillingSsoResponse parses an HTTP response from a BillingSsoWithResponse call
+func ParseBillingSsoResponse(rsp *http.Response) (*BillingSsoResponse, error) {
 	bodyBytes, err := ioutil.ReadAll(rsp.Body)
 	defer rsp.Body.Close()
 	if err != nil {
 		return nil, err
 	}
 
-	response := &ChargebeeSsoResponse{
+	response := &BillingSsoResponse{
+		Body:         bodyBytes,
+		HTTPResponse: rsp,
+	}
+
+	switch {
+	}
+
+	return response, nil
+}
+
+// ParseSubscriptionResponse parses an HTTP response from a SubscriptionWithResponse call
+func ParseSubscriptionResponse(rsp *http.Response) (*SubscriptionResponse, error) {
+	bodyBytes, err := ioutil.ReadAll(rsp.Body)
+	defer rsp.Body.Close()
+	if err != nil {
+		return nil, err
+	}
+
+	response := &SubscriptionResponse{
+		Body:         bodyBytes,
+		HTTPResponse: rsp,
+	}
+
+	switch {
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 200:
+		var dest Subscription
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON200 = &dest
+
+	}
+
+	return response, nil
+}
+
+// ParseSubscriptionCheckoutResponse parses an HTTP response from a SubscriptionCheckoutWithResponse call
+func ParseSubscriptionCheckoutResponse(rsp *http.Response) (*SubscriptionCheckoutResponse, error) {
+	bodyBytes, err := ioutil.ReadAll(rsp.Body)
+	defer rsp.Body.Close()
+	if err != nil {
+		return nil, err
+	}
+
+	response := &SubscriptionCheckoutResponse{
 		Body:         bodyBytes,
 		HTTPResponse: rsp,
 	}
@@ -7184,6 +8043,129 @@ func ParseRegisterExternalClusterResponse(rsp *http.Response) (*RegisterExternal
 	return response, nil
 }
 
+// ParseGetExternalClusterResponse parses an HTTP response from a GetExternalClusterWithResponse call
+func ParseGetExternalClusterResponse(rsp *http.Response) (*GetExternalClusterResponse, error) {
+	bodyBytes, err := ioutil.ReadAll(rsp.Body)
+	defer rsp.Body.Close()
+	if err != nil {
+		return nil, err
+	}
+
+	response := &GetExternalClusterResponse{
+		Body:         bodyBytes,
+		HTTPResponse: rsp,
+	}
+
+	switch {
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 200:
+		var dest ExternalCluster
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON200 = &dest
+
+	}
+
+	return response, nil
+}
+
+// ParseUpdateExternalClusterResponse parses an HTTP response from a UpdateExternalClusterWithResponse call
+func ParseUpdateExternalClusterResponse(rsp *http.Response) (*UpdateExternalClusterResponse, error) {
+	bodyBytes, err := ioutil.ReadAll(rsp.Body)
+	defer rsp.Body.Close()
+	if err != nil {
+		return nil, err
+	}
+
+	response := &UpdateExternalClusterResponse{
+		Body:         bodyBytes,
+		HTTPResponse: rsp,
+	}
+
+	switch {
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 200:
+		var dest ExternalCluster
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON200 = &dest
+
+	}
+
+	return response, nil
+}
+
+// ParseListExternalClusterNodesResponse parses an HTTP response from a ListExternalClusterNodesWithResponse call
+func ParseListExternalClusterNodesResponse(rsp *http.Response) (*ListExternalClusterNodesResponse, error) {
+	bodyBytes, err := ioutil.ReadAll(rsp.Body)
+	defer rsp.Body.Close()
+	if err != nil {
+		return nil, err
+	}
+
+	response := &ListExternalClusterNodesResponse{
+		Body:         bodyBytes,
+		HTTPResponse: rsp,
+	}
+
+	switch {
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 200:
+		var dest ExternalClusterNodes
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON200 = &dest
+
+	}
+
+	return response, nil
+}
+
+// ParseAddExternalClusterNodeResponse parses an HTTP response from a AddExternalClusterNodeWithResponse call
+func ParseAddExternalClusterNodeResponse(rsp *http.Response) (*AddExternalClusterNodeResponse, error) {
+	bodyBytes, err := ioutil.ReadAll(rsp.Body)
+	defer rsp.Body.Close()
+	if err != nil {
+		return nil, err
+	}
+
+	response := &AddExternalClusterNodeResponse{
+		Body:         bodyBytes,
+		HTTPResponse: rsp,
+	}
+
+	switch {
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 200:
+		var dest ExternalClusterNode
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON200 = &dest
+
+	}
+
+	return response, nil
+}
+
+// ParseDeleteExternalClusterNodeResponse parses an HTTP response from a DeleteExternalClusterNodeWithResponse call
+func ParseDeleteExternalClusterNodeResponse(rsp *http.Response) (*DeleteExternalClusterNodeResponse, error) {
+	bodyBytes, err := ioutil.ReadAll(rsp.Body)
+	defer rsp.Body.Close()
+	if err != nil {
+		return nil, err
+	}
+
+	response := &DeleteExternalClusterNodeResponse{
+		Body:         bodyBytes,
+		HTTPResponse: rsp,
+	}
+
+	switch {
+	}
+
+	return response, nil
+}
+
 // ParseGetOperationResponse parses an HTTP response from a GetOperationWithResponse call
 func ParseGetOperationResponse(rsp *http.Response) (*GetOperationResponse, error) {
 	bodyBytes, err := ioutil.ReadAll(rsp.Body)
@@ -7252,6 +8234,32 @@ func ParseUpdateCurrentUserProfileResponse(rsp *http.Response) (*UpdateCurrentUs
 	switch {
 	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 200:
 		var dest UserProfile
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON200 = &dest
+
+	}
+
+	return response, nil
+}
+
+// ParseGetExternalClustersTokenResponse parses an HTTP response from a GetExternalClustersTokenWithResponse call
+func ParseGetExternalClustersTokenResponse(rsp *http.Response) (*GetExternalClustersTokenResponse, error) {
+	bodyBytes, err := ioutil.ReadAll(rsp.Body)
+	defer rsp.Body.Close()
+	if err != nil {
+		return nil, err
+	}
+
+	response := &GetExternalClustersTokenResponse{
+		Body:         bodyBytes,
+		HTTPResponse: rsp,
+	}
+
+	switch {
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 200:
+		var dest ExternalClusterRegistrationToken
 		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
 			return nil, err
 		}
