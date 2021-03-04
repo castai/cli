@@ -22,10 +22,11 @@ import (
 
 	"github.com/castai/cli/pkg/client"
 	"github.com/castai/cli/pkg/config"
+	"github.com/castai/cli/pkg/ipify"
 	"github.com/castai/cli/pkg/ssh"
 )
 
-func NewRootCmd(log logrus.FieldLogger, cfg *config.Config, api client.Interface, terminal ssh.Terminal) *cobra.Command {
+func NewRootCmd(log logrus.FieldLogger, cfg *config.Config, api client.Interface, terminal ssh.Terminal, ipify ipify.Client) *cobra.Command {
 	rootCmd := &cobra.Command{
 		Use:   "cast",
 		Short: "CAST AI Command Line Interface",
@@ -48,7 +49,7 @@ func NewRootCmd(log logrus.FieldLogger, cfg *config.Config, api client.Interface
 	// Cluster nodes.
 	nodeCmd := newNodeCmd()
 	nodeCmd.AddCommand(newNodeListCmd(log, api))
-	nodeCmd.AddCommand(newNodeSSHCmd(log, api, terminal))
+	nodeCmd.AddCommand(newNodeSSHCmd(log, api, terminal, ipify))
 	rootCmd.AddCommand(nodeCmd)
 	// Completion.
 	rootCmd.AddCommand(newCompletionCmd())

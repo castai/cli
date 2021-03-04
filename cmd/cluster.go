@@ -91,6 +91,9 @@ func selectCluster(ctx context.Context, api client.Interface) (*sdk.KubernetesCl
 	if err != nil {
 		return nil, err
 	}
+	if len(items) == 0 {
+		return nil, errors.New("no clusters found")
+	}
 	selectList := make([]string, len(items))
 	for i, item := range items {
 		selectList[i] = item.Name

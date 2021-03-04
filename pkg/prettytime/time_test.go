@@ -31,8 +31,8 @@ func TestFormat(t *testing.T) {
 		{name: "Yesterday", t: time.Now().AddDate(0, 0, -1), want: "yesterday"},
 		{name: "Week", t: time.Now().AddDate(0, 0, 7), want: "1 week from now"},
 		{name: "WeekAgo", t: time.Now().AddDate(0, 0, -7), want: "1 week ago"},
-		{name: "Month", t: time.Now().AddDate(0, 1, 0), want: "4 weeks from now"},
-		{name: "MonthAgo", t: time.Now().AddDate(0, -1, 0), want: "1 month ago"},
+		{name: "Month", t: time.Now().AddDate(0, 1, 0), want: "1 month from now"},
+		{name: "MonthAgo", t: time.Now().AddDate(0, -1, 0), want: "4 weeks ago"},
 		{name: "Year", t: time.Now().AddDate(50, 0, 0), want: "50 years from now"},
 		{name: "YearAgo", t: time.Now().AddDate(-2, 0, 0), want: "2 years ago"},
 	}

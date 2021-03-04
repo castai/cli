@@ -20,7 +20,7 @@ import (
 func newTestRootCmd() *cobra.Command {
 	api := client.NewMock()
 	log := logrus.New()
-	return NewRootCmd(log, &config.Config{}, api, &mockTerminal{})
+	return NewRootCmd(log, &config.Config{}, api, &mockTerminal{}, &mockIpify{})
 }
 
 func TestCommands(t *testing.T) {
@@ -177,4 +177,11 @@ type mockTerminal struct {
 
 func (m *mockTerminal) Connect(ctx context.Context, cfg ssh.ConnectConfig) error {
 	return nil
+}
+
+type mockIpify struct {
+}
+
+func (m *mockIpify) GetPublicIP(ctx context.Context) (string, error) {
+	return "1.1.1.1", nil
 }
