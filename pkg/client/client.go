@@ -28,6 +28,8 @@ type Interface interface {
 	GetClusterKubeconfig(ctx context.Context, req sdk.ClusterId) ([]byte, error)
 	ListKubernetesClusters(ctx context.Context, req *sdk.ListKubernetesClustersParams) ([]sdk.KubernetesCluster, error)
 	ListClusterNodes(ctx context.Context, req sdk.ClusterId) ([]sdk.Node, error)
+	AddClusterNode(ctx context.Context, clusterID sdk.ClusterId, node sdk.Node) error
+	DeleteClusterNode(ctx context.Context, clusterID sdk.ClusterId, nodeID string) error
 	ListAuthTokens(ctx context.Context) ([]sdk.AuthToken, error)
 	FeedbackEvents(ctx context.Context, req sdk.ClusterId) ([]sdk.KubernetesClusterFeedbackEvent, error)
 	SetupNodeSSH(ctx context.Context, clusterID sdk.ClusterId, nodeID string, req sdk.SetupNodeSshJSONRequestBody) error
@@ -81,6 +83,28 @@ func (c *client) GetClusterNode(ctx context.Context, clusterID sdk.ClusterId, no
 		return nil, err
 	}
 	return resp.JSON200, nil
+}
+
+func (c *client) AddClusterNode(ctx context.Context, clusterID sdk.ClusterId, node sdk.Node) error {
+	resp, err := c.api.AddClusterNodeWithResponse(ctx, clusterID, sdk.AddClusterNodeJSONRequestBody(node))
+	if err != nil {
+		return err
+	}
+	if err := c.checkResponse(resp, err, http.StatusCreated); err != nil {
+		return err
+	}
+	return nil
+}
+
+func (c *client) DeleteClusterNode(ctx context.Context, clusterID sdk.ClusterId, nodeID string) error {
+	resp, err := c.api.DeleteClusterNodeWithResponse(ctx, clusterID, nodeID)
+	if err != nil {
+		return err
+	}
+	if err := c.checkResponse(resp, err, http.StatusCreated); err != nil {
+		return err
+	}
+	return nil
 }
 
 func (c *client) SetupNodeSSH(ctx context.Context, clusterID sdk.ClusterId, nodeID string, req sdk.SetupNodeSshJSONRequestBody) error {

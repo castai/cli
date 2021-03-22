@@ -102,6 +102,30 @@ cast cluster get-kubeconfig my-cluster-name
 kubectl get nodes
 ```
 
+#### Add nodes
+
+Interactive move
+```
+cast node add
+```
+
+Declarative move
+```
+cast -c=cluster-name node add --cloud=gcp --role=worker --shape=medium
+```
+
+#### Delete node
+
+Interactive move
+```
+cast node delete
+```
+
+Declarative move
+```
+cast node add
+```
+
 #### Connect to node via SSH
 
 Interactive move
@@ -109,10 +133,10 @@ Interactive move
 cast node ssh
 ```
 
-Declerative mode
+Declarative mode
 
 ```
-cast node ssh my-node-name-123 -c=my-cluster-name
+cast -c=cluster-name node ssh my-node-name-123
 ```
 
 
