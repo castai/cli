@@ -82,7 +82,7 @@ func selectNode(ctx context.Context, api client.Interface, clusterID string) (*s
 		if item.State != nil && item.State.Phase != nil {
 			phase = *item.State.Phase
 		}
-		return fmt.Sprintf("%s-45s %s %s %s", *item.Name, item.Role, phase, item.Cloud)
+		return fmt.Sprintf("%-20s %s %s %s %s", *item.Name, phase, item.Cloud, item.Role, item.Shape)
 	}
 	items, err := api.ListClusterNodes(ctx, sdk.ClusterId(clusterID))
 	if err != nil {

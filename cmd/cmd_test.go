@@ -120,6 +120,28 @@ func TestCommands(t *testing.T) {
 		fmt.Println(out)
 	})
 
+	t.Run("node add", func(t *testing.T) {
+		root := newTestRootCmd()
+
+		out, err := executeCommand(
+			root,
+			"node", "add", "--cloud", "aws", "--role", "worker", "--shape", "medium", "-c", "test-cluster-1",
+		)
+		require.NoError(t, err)
+		fmt.Println(out)
+	})
+
+	t.Run("node delete", func(t *testing.T) {
+		root := newTestRootCmd()
+
+		out, err := executeCommand(
+			root,
+			"node", "delete", "node1", "--yes", "-c", "test-cluster-1",
+		)
+		require.NoError(t, err)
+		fmt.Println(out)
+	})
+
 	t.Run("node ssh", func(t *testing.T) {
 		root := newTestRootCmd()
 

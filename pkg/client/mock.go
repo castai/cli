@@ -117,6 +117,24 @@ type mockClient struct {
 	feedbackEvents []sdk.KubernetesClusterFeedbackEvent
 }
 
+func (m *mockClient) AddClusterNode(ctx context.Context, clusterID sdk.ClusterId, node sdk.Node) error {
+	nodes, ok := m.nodes[string(clusterID)]
+	if !ok {
+		return fmt.Errorf("cluster not found, id=%s", clusterID)
+	}
+	nodes[uuid.New().String()] = node
+	return nil
+}
+
+func (m *mockClient) DeleteClusterNode(ctx context.Context, clusterID sdk.ClusterId, nodeID string) error {
+	nodes, ok := m.nodes[string(clusterID)]
+	if !ok {
+		return fmt.Errorf("cluster not found, id=%s", clusterID)
+	}
+	delete(nodes, nodeID)
+	return nil
+}
+
 func (m *mockClient) CloseNodeSSH(ctx context.Context, clusterID sdk.ClusterId, nodeID string) error {
 	return nil
 }

@@ -50,6 +50,8 @@ func NewRootCmd(log logrus.FieldLogger, cfg *config.Config, api client.Interface
 	nodeCmd := newNodeCmd()
 	nodeCmd.AddCommand(newNodeListCmd(log, api))
 	nodeCmd.AddCommand(newNodeSSHCmd(log, api, terminal, ipify))
+	nodeCmd.AddCommand(newNodeAddCmd(log, api))
+	nodeCmd.AddCommand(newNodeDeleteCmd(log, api))
 	rootCmd.AddCommand(nodeCmd)
 	// Completion.
 	rootCmd.AddCommand(newCompletionCmd())
