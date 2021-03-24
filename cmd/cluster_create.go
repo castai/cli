@@ -264,25 +264,26 @@ func parseInteractiveClusterForm(ctx context.Context, api client.Interface) (*sd
 			},
 			Validate: survey.Required,
 		},
-		{
-			Name: "vpn",
-			Prompt: &survey.Select{
-				Message: "Select virtual private network:",
-				Options: lists.vpns.displayNames(),
-			},
-			Validate: survey.Required,
-		},
-		{
-			Name: "progress",
-			Prompt: &survey.Confirm{
-				Message: "Wait for creation and show progress:",
-				Default: true,
-			},
-		},
 	}
 
 	err := survey.Ask(qs, &clusterCreateFlagsData)
 	if err != nil {
+		return nil, err
+	}
+
+	if len(clusterCreateFlagsData.Credentials) > 1 {
+		if err := survey.AskOne(&survey.Select{
+			Message: "Select virtual private network:",
+			Options: filterVPNOptions(lists, clusterCreateFlagsData.Credentials).displayNames(),
+		}, &clusterCreateFlagsData.VPN, survey.WithValidator(survey.Required)); err != nil {
+			return nil, err
+		}
+	}
+
+	if err := survey.AskOne(&survey.Confirm{
+		Message: "Wait for creation and show progress?",
+		Default: true,
+	}, &clusterCreateFlagsData.Progress); err != nil {
 		return nil, err
 	}
 
@@ -292,6 +293,28 @@ func parseInteractiveClusterForm(ctx context.Context, api client.Interface) (*sd
 	}
 
 	return req, nil
+}
+
+func filterVPNOptions(lists *clusterCreationSelectLists, selectedClouds []string) selectOptionList {
+	var containsDO bool
+	for _, cloudDisplayName := range selectedClouds {
+		if cloud, ok := lists.credentials.find(cloudDisplayName); ok && cloud.name == "do" {
+			containsDO = true
+			break
+		}
+	}
+
+	if !containsDO {
+		return lists.vpns
+	}
+
+	var res selectOptionList
+	for _, option := range lists.vpns {
+		if option.name != vpnTypeCloudProvider {
+			res = append(res, option)
+		}
+	}
+	return res
 }
 
 func toCreateClusterRequest(lists *clusterCreationSelectLists, flags clusterCreateFlags) (*sdk.CreateNewClusterJSONRequestBody, error) {
@@ -527,7 +550,7 @@ func (d *clusterCreationSelectLists) load(ctx context.Context, api client.Interf
 	d.credentials = make([]selectOption, len(credentials))
 	for i, item := range credentials {
 		d.credentials[i] = selectOption{
-			name:        item.Name,
+			name:        item.Cloud,
 			displayName: fmt.Sprintf("(%s) %s", item.Cloud, item.Name),
 			extra:       map[string]string{"cloud": item.Cloud, "id": item.Id},
 		}

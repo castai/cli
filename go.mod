@@ -4,7 +4,7 @@ go 1.16
 
 require (
 	github.com/AlecAivazis/survey/v2 v2.2.7
-	github.com/cenkalti/backoff/v4 v4.1.0 // indirect
+	github.com/cenkalti/backoff/v4 v4.1.0
 	github.com/cheggaaa/pb/v3 v3.0.5
 	github.com/deepmap/oapi-codegen v1.3.13
 	github.com/google/uuid v1.1.2
