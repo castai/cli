@@ -507,17 +507,8 @@ func toAPINodesFromConfiguration(cloudCredentials selectOptionList, clusterConfi
 }
 
 func defaultAddons() *sdk.AddonsConfig {
-	return &sdk.AddonsConfig{
-		CertManager: &sdk.CertManagerConfig{Enabled: true},
-		Dashboard:   &sdk.DashboardConfig{Enabled: true},
-		ElasticLogging: &sdk.ElasticLoggingConfig{
-			Config:  nil,
-			Enabled: false,
-		},
-		Grafana:      &sdk.GrafanaConfig{Enabled: true},
-		Keda:         &sdk.KedaConfig{Enabled: true},
-		NginxIngress: &sdk.NginxIngressConfig{Enabled: true},
-	}
+	// TODO (anjmao): Allow to pass only selected addons during cluster creation.
+	return &sdk.AddonsConfig{}
 }
 
 type clusterCreationSelectLists struct {
