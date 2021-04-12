@@ -117,6 +117,10 @@ type mockClient struct {
 	feedbackEvents []sdk.KubernetesClusterFeedbackEvent
 }
 
+func (m *mockClient) TriggerClusterReconcile(ctx context.Context, clusterID sdk.ClusterId) error {
+	return nil
+}
+
 func (m *mockClient) AddClusterNode(ctx context.Context, clusterID sdk.ClusterId, node sdk.Node) error {
 	nodes, ok := m.nodes[string(clusterID)]
 	if !ok {

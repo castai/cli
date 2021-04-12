@@ -30,16 +30,18 @@ type HttpRequestDoer interface {
 // Client which conforms to the OpenAPI3 specification for this service.
 type Client struct {
 	// The endpoint of the server conforming to this interface, with scheme,
-	// https://api.deepmap.com for example.
+	// https://api.deepmap.com for example. This can contain a path relative
+	// to the server, such as https://api.deepmap.com/dev-test, and all the
+	// paths in the swagger spec will be appended to the server.
 	Server string
 
 	// Doer for performing requests, typically a *http.Client with any
 	// customized settings, such as certificate chains.
 	Client HttpRequestDoer
 
-	// A callback for modifying requests which are generated before sending over
+	// A list of callbacks for modifying requests which are generated before sending over
 	// the network.
-	RequestEditor RequestEditorFn
+	RequestEditors []RequestEditorFn
 }
 
 // ClientOption allows setting custom parameters during construction
@@ -81,1417 +83,1250 @@ func WithHTTPClient(doer HttpRequestDoer) ClientOption {
 // called right before sending the request. This can be used to mutate the request.
 func WithRequestEditorFn(fn RequestEditorFn) ClientOption {
 	return func(c *Client) error {
-		c.RequestEditor = fn
+		c.RequestEditors = append(c.RequestEditors, fn)
 		return nil
 	}
 }
 
 // The interface specification for the client above.
 type ClientInterface interface {
+	// ListAddons request
+	ListAddons(ctx context.Context, params *ListAddonsParams, reqEditors ...RequestEditorFn) (*http.Response, error)
+
 	// ListAuditEvents request
-	ListAuditEvents(ctx context.Context, params *ListAuditEventsParams) (*http.Response, error)
-
-	// LoginCallback request
-	LoginCallback(ctx context.Context) (*http.Response, error)
-
-	// Login request
-	Login(ctx context.Context, params *LoginParams) (*http.Response, error)
-
-	// Logout request
-	Logout(ctx context.Context, params *LogoutParams) (*http.Response, error)
-
-	// GetSession request
-	GetSession(ctx context.Context) (*http.Response, error)
+	ListAuditEvents(ctx context.Context, params *ListAuditEventsParams, reqEditors ...RequestEditorFn) (*http.Response, error)
 
 	// ListAuthTokens request
-	ListAuthTokens(ctx context.Context) (*http.Response, error)
+	ListAuthTokens(ctx context.Context, reqEditors ...RequestEditorFn) (*http.Response, error)
 
 	// CreateAuthToken request  with any body
-	CreateAuthTokenWithBody(ctx context.Context, contentType string, body io.Reader) (*http.Response, error)
+	CreateAuthTokenWithBody(ctx context.Context, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*http.Response, error)
 
-	CreateAuthToken(ctx context.Context, body CreateAuthTokenJSONRequestBody) (*http.Response, error)
+	CreateAuthToken(ctx context.Context, body CreateAuthTokenJSONRequestBody, reqEditors ...RequestEditorFn) (*http.Response, error)
 
 	// DeleteAuthToken request
-	DeleteAuthToken(ctx context.Context, authTokenId AuthTokenId) (*http.Response, error)
+	DeleteAuthToken(ctx context.Context, authTokenId AuthTokenId, reqEditors ...RequestEditorFn) (*http.Response, error)
 
 	// GetAuthToken request
-	GetAuthToken(ctx context.Context, authTokenId AuthTokenId) (*http.Response, error)
+	GetAuthToken(ctx context.Context, authTokenId AuthTokenId, reqEditors ...RequestEditorFn) (*http.Response, error)
 
 	// UpdateAuthToken request  with any body
-	UpdateAuthTokenWithBody(ctx context.Context, authTokenId AuthTokenId, contentType string, body io.Reader) (*http.Response, error)
+	UpdateAuthTokenWithBody(ctx context.Context, authTokenId AuthTokenId, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*http.Response, error)
 
-	UpdateAuthToken(ctx context.Context, authTokenId AuthTokenId, body UpdateAuthTokenJSONRequestBody) (*http.Response, error)
-
-	// BillingSso request
-	BillingSso(ctx context.Context, params *BillingSsoParams) (*http.Response, error)
-
-	// Subscription request
-	Subscription(ctx context.Context) (*http.Response, error)
-
-	// SubscriptionCheckout request
-	SubscriptionCheckout(ctx context.Context) (*http.Response, error)
+	UpdateAuthToken(ctx context.Context, authTokenId AuthTokenId, body UpdateAuthTokenJSONRequestBody, reqEditors ...RequestEditorFn) (*http.Response, error)
 
 	// PlanClusterPrice request  with any body
-	PlanClusterPriceWithBody(ctx context.Context, contentType string, body io.Reader) (*http.Response, error)
+	PlanClusterPriceWithBody(ctx context.Context, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*http.Response, error)
 
-	PlanClusterPrice(ctx context.Context, body PlanClusterPriceJSONRequestBody) (*http.Response, error)
+	PlanClusterPrice(ctx context.Context, body PlanClusterPriceJSONRequestBody, reqEditors ...RequestEditorFn) (*http.Response, error)
 
 	// ListCloudCredentials request
-	ListCloudCredentials(ctx context.Context) (*http.Response, error)
+	ListCloudCredentials(ctx context.Context, reqEditors ...RequestEditorFn) (*http.Response, error)
 
 	// CreateCloudCredentials request  with any body
-	CreateCloudCredentialsWithBody(ctx context.Context, contentType string, body io.Reader) (*http.Response, error)
+	CreateCloudCredentialsWithBody(ctx context.Context, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*http.Response, error)
 
-	CreateCloudCredentials(ctx context.Context, body CreateCloudCredentialsJSONRequestBody) (*http.Response, error)
+	CreateCloudCredentials(ctx context.Context, body CreateCloudCredentialsJSONRequestBody, reqEditors ...RequestEditorFn) (*http.Response, error)
 
 	// DeleteCloudCredentials request
-	DeleteCloudCredentials(ctx context.Context, credentialsId CredentialsId) (*http.Response, error)
+	DeleteCloudCredentials(ctx context.Context, credentialsId CredentialsId, reqEditors ...RequestEditorFn) (*http.Response, error)
 
 	// GetCloudCredentials request
-	GetCloudCredentials(ctx context.Context, credentialsId CredentialsId) (*http.Response, error)
+	GetCloudCredentials(ctx context.Context, credentialsId CredentialsId, reqEditors ...RequestEditorFn) (*http.Response, error)
 
 	// DeleteGslb request  with any body
-	DeleteGslbWithBody(ctx context.Context, contentType string, body io.Reader) (*http.Response, error)
+	DeleteGslbWithBody(ctx context.Context, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*http.Response, error)
 
-	DeleteGslb(ctx context.Context, body DeleteGslbJSONRequestBody) (*http.Response, error)
+	DeleteGslb(ctx context.Context, body DeleteGslbJSONRequestBody, reqEditors ...RequestEditorFn) (*http.Response, error)
 
 	// CreateOrUpdateGslb request  with any body
-	CreateOrUpdateGslbWithBody(ctx context.Context, contentType string, body io.Reader) (*http.Response, error)
+	CreateOrUpdateGslbWithBody(ctx context.Context, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*http.Response, error)
 
-	CreateOrUpdateGslb(ctx context.Context, body CreateOrUpdateGslbJSONRequestBody) (*http.Response, error)
+	CreateOrUpdateGslb(ctx context.Context, body CreateOrUpdateGslbJSONRequestBody, reqEditors ...RequestEditorFn) (*http.Response, error)
 
 	// ListInstanceTypes request
-	ListInstanceTypes(ctx context.Context, params *ListInstanceTypesParams) (*http.Response, error)
+	ListInstanceTypes(ctx context.Context, params *ListInstanceTypesParams, reqEditors ...RequestEditorFn) (*http.Response, error)
 
 	// ListKubernetesClusters request
-	ListKubernetesClusters(ctx context.Context, params *ListKubernetesClustersParams) (*http.Response, error)
+	ListKubernetesClusters(ctx context.Context, params *ListKubernetesClustersParams, reqEditors ...RequestEditorFn) (*http.Response, error)
 
 	// CreateNewCluster request  with any body
-	CreateNewClusterWithBody(ctx context.Context, contentType string, body io.Reader) (*http.Response, error)
+	CreateNewClusterWithBody(ctx context.Context, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*http.Response, error)
 
-	CreateNewCluster(ctx context.Context, body CreateNewClusterJSONRequestBody) (*http.Response, error)
+	CreateNewCluster(ctx context.Context, body CreateNewClusterJSONRequestBody, reqEditors ...RequestEditorFn) (*http.Response, error)
 
 	// DeleteCluster request
-	DeleteCluster(ctx context.Context, clusterId ClusterId) (*http.Response, error)
+	DeleteCluster(ctx context.Context, clusterId ClusterId, reqEditors ...RequestEditorFn) (*http.Response, error)
 
 	// GetCluster request
-	GetCluster(ctx context.Context, clusterId ClusterId) (*http.Response, error)
+	GetCluster(ctx context.Context, clusterId ClusterId, reqEditors ...RequestEditorFn) (*http.Response, error)
+
+	// UpdateCluster request  with any body
+	UpdateClusterWithBody(ctx context.Context, clusterId ClusterId, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*http.Response, error)
+
+	UpdateCluster(ctx context.Context, clusterId ClusterId, body UpdateClusterJSONRequestBody, reqEditors ...RequestEditorFn) (*http.Response, error)
 
 	// GetClusterAddons request
-	GetClusterAddons(ctx context.Context, clusterId ClusterId) (*http.Response, error)
+	GetClusterAddons(ctx context.Context, clusterId string, reqEditors ...RequestEditorFn) (*http.Response, error)
 
-	// ConfigureClusterAddons request  with any body
-	ConfigureClusterAddonsWithBody(ctx context.Context, clusterId ClusterId, contentType string, body io.Reader) (*http.Response, error)
+	// InstallClusterAddon request
+	InstallClusterAddon(ctx context.Context, clusterId string, reqEditors ...RequestEditorFn) (*http.Response, error)
 
-	ConfigureClusterAddons(ctx context.Context, clusterId ClusterId, body ConfigureClusterAddonsJSONRequestBody) (*http.Response, error)
+	// DeleteClusterAddon request
+	DeleteClusterAddon(ctx context.Context, clusterId string, repository string, name string, reqEditors ...RequestEditorFn) (*http.Response, error)
+
+	// GetClusterAddon request
+	GetClusterAddon(ctx context.Context, clusterId string, repository string, name string, reqEditors ...RequestEditorFn) (*http.Response, error)
 
 	// ArchiveCluster request
-	ArchiveCluster(ctx context.Context, clusterId ClusterId) (*http.Response, error)
+	ArchiveCluster(ctx context.Context, clusterId ClusterId, reqEditors ...RequestEditorFn) (*http.Response, error)
 
 	// GetClusterAuditLog request
-	GetClusterAuditLog(ctx context.Context, clusterId ClusterId) (*http.Response, error)
+	GetClusterAuditLog(ctx context.Context, clusterId ClusterId, reqEditors ...RequestEditorFn) (*http.Response, error)
 
 	// GetClusterFeedbackEvents request
-	GetClusterFeedbackEvents(ctx context.Context, clusterId ClusterId) (*http.Response, error)
+	GetClusterFeedbackEvents(ctx context.Context, clusterId ClusterId, reqEditors ...RequestEditorFn) (*http.Response, error)
 
 	// GetClusterHealth request
-	GetClusterHealth(ctx context.Context, clusterId ClusterId) (*http.Response, error)
+	GetClusterHealth(ctx context.Context, clusterId ClusterId, reqEditors ...RequestEditorFn) (*http.Response, error)
 
 	// GetClusterIngressController request
-	GetClusterIngressController(ctx context.Context, clusterId ClusterId) (*http.Response, error)
+	GetClusterIngressController(ctx context.Context, clusterId ClusterId, reqEditors ...RequestEditorFn) (*http.Response, error)
 
 	// GetClusterKubeconfig request
-	GetClusterKubeconfig(ctx context.Context, clusterId ClusterId) (*http.Response, error)
+	GetClusterKubeconfig(ctx context.Context, clusterId ClusterId, reqEditors ...RequestEditorFn) (*http.Response, error)
+
+	// GetLegacyClusterAddons request
+	GetLegacyClusterAddons(ctx context.Context, clusterId ClusterId, reqEditors ...RequestEditorFn) (*http.Response, error)
+
+	// ConfigureClusterAddons request  with any body
+	ConfigureClusterAddonsWithBody(ctx context.Context, clusterId ClusterId, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*http.Response, error)
+
+	ConfigureClusterAddons(ctx context.Context, clusterId ClusterId, body ConfigureClusterAddonsJSONRequestBody, reqEditors ...RequestEditorFn) (*http.Response, error)
 
 	// GetClusterMetrics request
-	GetClusterMetrics(ctx context.Context, clusterId ClusterId, params *GetClusterMetricsParams) (*http.Response, error)
+	GetClusterMetrics(ctx context.Context, clusterId ClusterId, params *GetClusterMetricsParams, reqEditors ...RequestEditorFn) (*http.Response, error)
 
 	// GetClusterNodes request
-	GetClusterNodes(ctx context.Context, clusterId ClusterId) (*http.Response, error)
+	GetClusterNodes(ctx context.Context, clusterId ClusterId, reqEditors ...RequestEditorFn) (*http.Response, error)
 
 	// AddClusterNode request  with any body
-	AddClusterNodeWithBody(ctx context.Context, clusterId ClusterId, contentType string, body io.Reader) (*http.Response, error)
+	AddClusterNodeWithBody(ctx context.Context, clusterId ClusterId, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*http.Response, error)
 
-	AddClusterNode(ctx context.Context, clusterId ClusterId, body AddClusterNodeJSONRequestBody) (*http.Response, error)
+	AddClusterNode(ctx context.Context, clusterId ClusterId, body AddClusterNodeJSONRequestBody, reqEditors ...RequestEditorFn) (*http.Response, error)
 
 	// DeleteClusterNode request
-	DeleteClusterNode(ctx context.Context, clusterId ClusterId, nodeId string) (*http.Response, error)
+	DeleteClusterNode(ctx context.Context, clusterId ClusterId, nodeId string, reqEditors ...RequestEditorFn) (*http.Response, error)
 
 	// GetClusterNode request
-	GetClusterNode(ctx context.Context, clusterId ClusterId, nodeId string) (*http.Response, error)
+	GetClusterNode(ctx context.Context, clusterId ClusterId, nodeId string, reqEditors ...RequestEditorFn) (*http.Response, error)
 
 	// CloseNodeSsh request
-	CloseNodeSsh(ctx context.Context, clusterId ClusterId, nodeId string) (*http.Response, error)
+	CloseNodeSsh(ctx context.Context, clusterId ClusterId, nodeId string, reqEditors ...RequestEditorFn) (*http.Response, error)
 
 	// InterruptClusterNode request
-	InterruptClusterNode(ctx context.Context, clusterId ClusterId, nodeId string) (*http.Response, error)
+	InterruptClusterNode(ctx context.Context, clusterId ClusterId, nodeId string, reqEditors ...RequestEditorFn) (*http.Response, error)
 
 	// SetupNodeSsh request  with any body
-	SetupNodeSshWithBody(ctx context.Context, clusterId ClusterId, nodeId string, contentType string, body io.Reader) (*http.Response, error)
+	SetupNodeSshWithBody(ctx context.Context, clusterId ClusterId, nodeId string, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*http.Response, error)
 
-	SetupNodeSsh(ctx context.Context, clusterId ClusterId, nodeId string, body SetupNodeSshJSONRequestBody) (*http.Response, error)
+	SetupNodeSsh(ctx context.Context, clusterId ClusterId, nodeId string, body SetupNodeSshJSONRequestBody, reqEditors ...RequestEditorFn) (*http.Response, error)
 
 	// UpdateNodeList request  with any body
-	UpdateNodeListWithBody(ctx context.Context, clusterId ClusterId, contentType string, body io.Reader) (*http.Response, error)
+	UpdateNodeListWithBody(ctx context.Context, clusterId ClusterId, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*http.Response, error)
 
-	UpdateNodeList(ctx context.Context, clusterId ClusterId, body UpdateNodeListJSONRequestBody) (*http.Response, error)
+	UpdateNodeList(ctx context.Context, clusterId ClusterId, body UpdateNodeListJSONRequestBody, reqEditors ...RequestEditorFn) (*http.Response, error)
 
 	// PauseCluster request  with any body
-	PauseClusterWithBody(ctx context.Context, clusterId ClusterId, contentType string, body io.Reader) (*http.Response, error)
+	PauseClusterWithBody(ctx context.Context, clusterId ClusterId, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*http.Response, error)
 
-	PauseCluster(ctx context.Context, clusterId ClusterId, body PauseClusterJSONRequestBody) (*http.Response, error)
+	PauseCluster(ctx context.Context, clusterId ClusterId, body PauseClusterJSONRequestBody, reqEditors ...RequestEditorFn) (*http.Response, error)
 
 	// PauseClusterReconcile request
-	PauseClusterReconcile(ctx context.Context, clusterId ClusterId) (*http.Response, error)
+	PauseClusterReconcile(ctx context.Context, clusterId ClusterId, reqEditors ...RequestEditorFn) (*http.Response, error)
+
+	// DeleteClusterPauseSchedule request
+	DeleteClusterPauseSchedule(ctx context.Context, clusterId ClusterId, reqEditors ...RequestEditorFn) (*http.Response, error)
+
+	// GetClusterPauseSchedule request
+	GetClusterPauseSchedule(ctx context.Context, clusterId ClusterId, reqEditors ...RequestEditorFn) (*http.Response, error)
+
+	// SetClusterPauseSchedule request  with any body
+	SetClusterPauseScheduleWithBody(ctx context.Context, clusterId ClusterId, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*http.Response, error)
+
+	SetClusterPauseSchedule(ctx context.Context, clusterId ClusterId, body SetClusterPauseScheduleJSONRequestBody, reqEditors ...RequestEditorFn) (*http.Response, error)
 
 	// GetPolicies request
-	GetPolicies(ctx context.Context, clusterId ClusterId) (*http.Response, error)
+	GetPolicies(ctx context.Context, clusterId ClusterId, reqEditors ...RequestEditorFn) (*http.Response, error)
 
 	// UpsertPolicies request  with any body
-	UpsertPoliciesWithBody(ctx context.Context, clusterId ClusterId, contentType string, body io.Reader) (*http.Response, error)
+	UpsertPoliciesWithBody(ctx context.Context, clusterId ClusterId, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*http.Response, error)
 
-	UpsertPolicies(ctx context.Context, clusterId ClusterId, body UpsertPoliciesJSONRequestBody) (*http.Response, error)
+	UpsertPolicies(ctx context.Context, clusterId ClusterId, body UpsertPoliciesJSONRequestBody, reqEditors ...RequestEditorFn) (*http.Response, error)
 
 	// ResumeCluster request
-	ResumeCluster(ctx context.Context, clusterId ClusterId) (*http.Response, error)
+	ResumeCluster(ctx context.Context, clusterId ClusterId, reqEditors ...RequestEditorFn) (*http.Response, error)
 
 	// ResumeClusterReconcile request
-	ResumeClusterReconcile(ctx context.Context, clusterId ClusterId) (*http.Response, error)
+	ResumeClusterReconcile(ctx context.Context, clusterId ClusterId, reqEditors ...RequestEditorFn) (*http.Response, error)
 
 	// TriggerClusterReconcile request
-	TriggerClusterReconcile(ctx context.Context, clusterId ClusterId) (*http.Response, error)
+	TriggerClusterReconcile(ctx context.Context, clusterId ClusterId, reqEditors ...RequestEditorFn) (*http.Response, error)
 
 	// ListExternalClusters request
-	ListExternalClusters(ctx context.Context) (*http.Response, error)
+	ListExternalClusters(ctx context.Context, reqEditors ...RequestEditorFn) (*http.Response, error)
 
 	// RegisterExternalCluster request  with any body
-	RegisterExternalClusterWithBody(ctx context.Context, contentType string, body io.Reader) (*http.Response, error)
+	RegisterExternalClusterWithBody(ctx context.Context, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*http.Response, error)
 
-	RegisterExternalCluster(ctx context.Context, body RegisterExternalClusterJSONRequestBody) (*http.Response, error)
+	RegisterExternalCluster(ctx context.Context, body RegisterExternalClusterJSONRequestBody, reqEditors ...RequestEditorFn) (*http.Response, error)
 
 	// GetExternalCluster request
-	GetExternalCluster(ctx context.Context, clusterId string) (*http.Response, error)
+	GetExternalCluster(ctx context.Context, clusterId string, reqEditors ...RequestEditorFn) (*http.Response, error)
 
 	// UpdateExternalCluster request  with any body
-	UpdateExternalClusterWithBody(ctx context.Context, clusterId string, contentType string, body io.Reader) (*http.Response, error)
+	UpdateExternalClusterWithBody(ctx context.Context, clusterId string, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*http.Response, error)
 
-	UpdateExternalCluster(ctx context.Context, clusterId string, body UpdateExternalClusterJSONRequestBody) (*http.Response, error)
+	UpdateExternalCluster(ctx context.Context, clusterId string, body UpdateExternalClusterJSONRequestBody, reqEditors ...RequestEditorFn) (*http.Response, error)
 
 	// ListExternalClusterNodes request
-	ListExternalClusterNodes(ctx context.Context, clusterId string) (*http.Response, error)
+	ListExternalClusterNodes(ctx context.Context, clusterId string, reqEditors ...RequestEditorFn) (*http.Response, error)
 
 	// AddExternalClusterNode request  with any body
-	AddExternalClusterNodeWithBody(ctx context.Context, clusterId string, contentType string, body io.Reader) (*http.Response, error)
+	AddExternalClusterNodeWithBody(ctx context.Context, clusterId string, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*http.Response, error)
 
-	AddExternalClusterNode(ctx context.Context, clusterId string, body AddExternalClusterNodeJSONRequestBody) (*http.Response, error)
+	AddExternalClusterNode(ctx context.Context, clusterId string, body AddExternalClusterNodeJSONRequestBody, reqEditors ...RequestEditorFn) (*http.Response, error)
 
 	// DeleteExternalClusterNode request
-	DeleteExternalClusterNode(ctx context.Context, clusterId string, nodeId string) (*http.Response, error)
+	DeleteExternalClusterNode(ctx context.Context, clusterId string, nodeId string, reqEditors ...RequestEditorFn) (*http.Response, error)
 
 	// GetOperation request
-	GetOperation(ctx context.Context, id string) (*http.Response, error)
+	GetOperation(ctx context.Context, id string, reqEditors ...RequestEditorFn) (*http.Response, error)
 
 	// CurrentUserProfile request
-	CurrentUserProfile(ctx context.Context) (*http.Response, error)
+	CurrentUserProfile(ctx context.Context, reqEditors ...RequestEditorFn) (*http.Response, error)
 
 	// UpdateCurrentUserProfile request  with any body
-	UpdateCurrentUserProfileWithBody(ctx context.Context, contentType string, body io.Reader) (*http.Response, error)
+	UpdateCurrentUserProfileWithBody(ctx context.Context, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*http.Response, error)
 
-	UpdateCurrentUserProfile(ctx context.Context, body UpdateCurrentUserProfileJSONRequestBody) (*http.Response, error)
+	UpdateCurrentUserProfile(ctx context.Context, body UpdateCurrentUserProfileJSONRequestBody, reqEditors ...RequestEditorFn) (*http.Response, error)
 
 	// GetExternalClustersToken request
-	GetExternalClustersToken(ctx context.Context) (*http.Response, error)
+	GetExternalClustersToken(ctx context.Context, reqEditors ...RequestEditorFn) (*http.Response, error)
 
 	// ListRegions request
-	ListRegions(ctx context.Context) (*http.Response, error)
+	ListRegions(ctx context.Context, reqEditors ...RequestEditorFn) (*http.Response, error)
 
 	// GetUsageReport request
-	GetUsageReport(ctx context.Context, params *GetUsageReportParams) (*http.Response, error)
+	GetUsageReport(ctx context.Context, params *GetUsageReportParams, reqEditors ...RequestEditorFn) (*http.Response, error)
 }
 
-func (c *Client) ListAuditEvents(ctx context.Context, params *ListAuditEventsParams) (*http.Response, error) {
+func (c *Client) ListAddons(ctx context.Context, params *ListAddonsParams, reqEditors ...RequestEditorFn) (*http.Response, error) {
+	req, err := NewListAddonsRequest(c.Server, params)
+	if err != nil {
+		return nil, err
+	}
+	if err := c.applyEditors(ctx, req, reqEditors); err != nil {
+		return nil, err
+	}
+	return c.Client.Do(req)
+}
+
+func (c *Client) ListAuditEvents(ctx context.Context, params *ListAuditEventsParams, reqEditors ...RequestEditorFn) (*http.Response, error) {
 	req, err := NewListAuditEventsRequest(c.Server, params)
 	if err != nil {
 		return nil, err
 	}
-	req = req.WithContext(ctx)
-	if c.RequestEditor != nil {
-		err = c.RequestEditor(ctx, req)
-		if err != nil {
-			return nil, err
-		}
-	}
-	return c.Client.Do(req)
-}
-
-func (c *Client) LoginCallback(ctx context.Context) (*http.Response, error) {
-	req, err := NewLoginCallbackRequest(c.Server)
-	if err != nil {
+	if err := c.applyEditors(ctx, req, reqEditors); err != nil {
 		return nil, err
 	}
-	req = req.WithContext(ctx)
-	if c.RequestEditor != nil {
-		err = c.RequestEditor(ctx, req)
-		if err != nil {
-			return nil, err
-		}
-	}
 	return c.Client.Do(req)
 }
 
-func (c *Client) Login(ctx context.Context, params *LoginParams) (*http.Response, error) {
-	req, err := NewLoginRequest(c.Server, params)
-	if err != nil {
-		return nil, err
-	}
-	req = req.WithContext(ctx)
-	if c.RequestEditor != nil {
-		err = c.RequestEditor(ctx, req)
-		if err != nil {
-			return nil, err
-		}
-	}
-	return c.Client.Do(req)
-}
-
-func (c *Client) Logout(ctx context.Context, params *LogoutParams) (*http.Response, error) {
-	req, err := NewLogoutRequest(c.Server, params)
-	if err != nil {
-		return nil, err
-	}
-	req = req.WithContext(ctx)
-	if c.RequestEditor != nil {
-		err = c.RequestEditor(ctx, req)
-		if err != nil {
-			return nil, err
-		}
-	}
-	return c.Client.Do(req)
-}
-
-func (c *Client) GetSession(ctx context.Context) (*http.Response, error) {
-	req, err := NewGetSessionRequest(c.Server)
-	if err != nil {
-		return nil, err
-	}
-	req = req.WithContext(ctx)
-	if c.RequestEditor != nil {
-		err = c.RequestEditor(ctx, req)
-		if err != nil {
-			return nil, err
-		}
-	}
-	return c.Client.Do(req)
-}
-
-func (c *Client) ListAuthTokens(ctx context.Context) (*http.Response, error) {
+func (c *Client) ListAuthTokens(ctx context.Context, reqEditors ...RequestEditorFn) (*http.Response, error) {
 	req, err := NewListAuthTokensRequest(c.Server)
 	if err != nil {
 		return nil, err
 	}
-	req = req.WithContext(ctx)
-	if c.RequestEditor != nil {
-		err = c.RequestEditor(ctx, req)
-		if err != nil {
-			return nil, err
-		}
+	if err := c.applyEditors(ctx, req, reqEditors); err != nil {
+		return nil, err
 	}
 	return c.Client.Do(req)
 }
 
-func (c *Client) CreateAuthTokenWithBody(ctx context.Context, contentType string, body io.Reader) (*http.Response, error) {
+func (c *Client) CreateAuthTokenWithBody(ctx context.Context, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*http.Response, error) {
 	req, err := NewCreateAuthTokenRequestWithBody(c.Server, contentType, body)
 	if err != nil {
 		return nil, err
 	}
-	req = req.WithContext(ctx)
-	if c.RequestEditor != nil {
-		err = c.RequestEditor(ctx, req)
-		if err != nil {
-			return nil, err
-		}
+	if err := c.applyEditors(ctx, req, reqEditors); err != nil {
+		return nil, err
 	}
 	return c.Client.Do(req)
 }
 
-func (c *Client) CreateAuthToken(ctx context.Context, body CreateAuthTokenJSONRequestBody) (*http.Response, error) {
+func (c *Client) CreateAuthToken(ctx context.Context, body CreateAuthTokenJSONRequestBody, reqEditors ...RequestEditorFn) (*http.Response, error) {
 	req, err := NewCreateAuthTokenRequest(c.Server, body)
 	if err != nil {
 		return nil, err
 	}
-	req = req.WithContext(ctx)
-	if c.RequestEditor != nil {
-		err = c.RequestEditor(ctx, req)
-		if err != nil {
-			return nil, err
-		}
+	if err := c.applyEditors(ctx, req, reqEditors); err != nil {
+		return nil, err
 	}
 	return c.Client.Do(req)
 }
 
-func (c *Client) DeleteAuthToken(ctx context.Context, authTokenId AuthTokenId) (*http.Response, error) {
+func (c *Client) DeleteAuthToken(ctx context.Context, authTokenId AuthTokenId, reqEditors ...RequestEditorFn) (*http.Response, error) {
 	req, err := NewDeleteAuthTokenRequest(c.Server, authTokenId)
 	if err != nil {
 		return nil, err
 	}
-	req = req.WithContext(ctx)
-	if c.RequestEditor != nil {
-		err = c.RequestEditor(ctx, req)
-		if err != nil {
-			return nil, err
-		}
+	if err := c.applyEditors(ctx, req, reqEditors); err != nil {
+		return nil, err
 	}
 	return c.Client.Do(req)
 }
 
-func (c *Client) GetAuthToken(ctx context.Context, authTokenId AuthTokenId) (*http.Response, error) {
+func (c *Client) GetAuthToken(ctx context.Context, authTokenId AuthTokenId, reqEditors ...RequestEditorFn) (*http.Response, error) {
 	req, err := NewGetAuthTokenRequest(c.Server, authTokenId)
 	if err != nil {
 		return nil, err
 	}
-	req = req.WithContext(ctx)
-	if c.RequestEditor != nil {
-		err = c.RequestEditor(ctx, req)
-		if err != nil {
-			return nil, err
-		}
+	if err := c.applyEditors(ctx, req, reqEditors); err != nil {
+		return nil, err
 	}
 	return c.Client.Do(req)
 }
 
-func (c *Client) UpdateAuthTokenWithBody(ctx context.Context, authTokenId AuthTokenId, contentType string, body io.Reader) (*http.Response, error) {
+func (c *Client) UpdateAuthTokenWithBody(ctx context.Context, authTokenId AuthTokenId, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*http.Response, error) {
 	req, err := NewUpdateAuthTokenRequestWithBody(c.Server, authTokenId, contentType, body)
 	if err != nil {
 		return nil, err
 	}
-	req = req.WithContext(ctx)
-	if c.RequestEditor != nil {
-		err = c.RequestEditor(ctx, req)
-		if err != nil {
-			return nil, err
-		}
+	if err := c.applyEditors(ctx, req, reqEditors); err != nil {
+		return nil, err
 	}
 	return c.Client.Do(req)
 }
 
-func (c *Client) UpdateAuthToken(ctx context.Context, authTokenId AuthTokenId, body UpdateAuthTokenJSONRequestBody) (*http.Response, error) {
+func (c *Client) UpdateAuthToken(ctx context.Context, authTokenId AuthTokenId, body UpdateAuthTokenJSONRequestBody, reqEditors ...RequestEditorFn) (*http.Response, error) {
 	req, err := NewUpdateAuthTokenRequest(c.Server, authTokenId, body)
 	if err != nil {
 		return nil, err
 	}
-	req = req.WithContext(ctx)
-	if c.RequestEditor != nil {
-		err = c.RequestEditor(ctx, req)
-		if err != nil {
-			return nil, err
-		}
-	}
-	return c.Client.Do(req)
-}
-
-func (c *Client) BillingSso(ctx context.Context, params *BillingSsoParams) (*http.Response, error) {
-	req, err := NewBillingSsoRequest(c.Server, params)
-	if err != nil {
+	if err := c.applyEditors(ctx, req, reqEditors); err != nil {
 		return nil, err
 	}
-	req = req.WithContext(ctx)
-	if c.RequestEditor != nil {
-		err = c.RequestEditor(ctx, req)
-		if err != nil {
-			return nil, err
-		}
-	}
 	return c.Client.Do(req)
 }
 
-func (c *Client) Subscription(ctx context.Context) (*http.Response, error) {
-	req, err := NewSubscriptionRequest(c.Server)
-	if err != nil {
-		return nil, err
-	}
-	req = req.WithContext(ctx)
-	if c.RequestEditor != nil {
-		err = c.RequestEditor(ctx, req)
-		if err != nil {
-			return nil, err
-		}
-	}
-	return c.Client.Do(req)
-}
-
-func (c *Client) SubscriptionCheckout(ctx context.Context) (*http.Response, error) {
-	req, err := NewSubscriptionCheckoutRequest(c.Server)
-	if err != nil {
-		return nil, err
-	}
-	req = req.WithContext(ctx)
-	if c.RequestEditor != nil {
-		err = c.RequestEditor(ctx, req)
-		if err != nil {
-			return nil, err
-		}
-	}
-	return c.Client.Do(req)
-}
-
-func (c *Client) PlanClusterPriceWithBody(ctx context.Context, contentType string, body io.Reader) (*http.Response, error) {
+func (c *Client) PlanClusterPriceWithBody(ctx context.Context, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*http.Response, error) {
 	req, err := NewPlanClusterPriceRequestWithBody(c.Server, contentType, body)
 	if err != nil {
 		return nil, err
 	}
-	req = req.WithContext(ctx)
-	if c.RequestEditor != nil {
-		err = c.RequestEditor(ctx, req)
-		if err != nil {
-			return nil, err
-		}
+	if err := c.applyEditors(ctx, req, reqEditors); err != nil {
+		return nil, err
 	}
 	return c.Client.Do(req)
 }
 
-func (c *Client) PlanClusterPrice(ctx context.Context, body PlanClusterPriceJSONRequestBody) (*http.Response, error) {
+func (c *Client) PlanClusterPrice(ctx context.Context, body PlanClusterPriceJSONRequestBody, reqEditors ...RequestEditorFn) (*http.Response, error) {
 	req, err := NewPlanClusterPriceRequest(c.Server, body)
 	if err != nil {
 		return nil, err
 	}
-	req = req.WithContext(ctx)
-	if c.RequestEditor != nil {
-		err = c.RequestEditor(ctx, req)
-		if err != nil {
-			return nil, err
-		}
+	if err := c.applyEditors(ctx, req, reqEditors); err != nil {
+		return nil, err
 	}
 	return c.Client.Do(req)
 }
 
-func (c *Client) ListCloudCredentials(ctx context.Context) (*http.Response, error) {
+func (c *Client) ListCloudCredentials(ctx context.Context, reqEditors ...RequestEditorFn) (*http.Response, error) {
 	req, err := NewListCloudCredentialsRequest(c.Server)
 	if err != nil {
 		return nil, err
 	}
-	req = req.WithContext(ctx)
-	if c.RequestEditor != nil {
-		err = c.RequestEditor(ctx, req)
-		if err != nil {
-			return nil, err
-		}
+	if err := c.applyEditors(ctx, req, reqEditors); err != nil {
+		return nil, err
 	}
 	return c.Client.Do(req)
 }
 
-func (c *Client) CreateCloudCredentialsWithBody(ctx context.Context, contentType string, body io.Reader) (*http.Response, error) {
+func (c *Client) CreateCloudCredentialsWithBody(ctx context.Context, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*http.Response, error) {
 	req, err := NewCreateCloudCredentialsRequestWithBody(c.Server, contentType, body)
 	if err != nil {
 		return nil, err
 	}
-	req = req.WithContext(ctx)
-	if c.RequestEditor != nil {
-		err = c.RequestEditor(ctx, req)
-		if err != nil {
-			return nil, err
-		}
+	if err := c.applyEditors(ctx, req, reqEditors); err != nil {
+		return nil, err
 	}
 	return c.Client.Do(req)
 }
 
-func (c *Client) CreateCloudCredentials(ctx context.Context, body CreateCloudCredentialsJSONRequestBody) (*http.Response, error) {
+func (c *Client) CreateCloudCredentials(ctx context.Context, body CreateCloudCredentialsJSONRequestBody, reqEditors ...RequestEditorFn) (*http.Response, error) {
 	req, err := NewCreateCloudCredentialsRequest(c.Server, body)
 	if err != nil {
 		return nil, err
 	}
-	req = req.WithContext(ctx)
-	if c.RequestEditor != nil {
-		err = c.RequestEditor(ctx, req)
-		if err != nil {
-			return nil, err
-		}
+	if err := c.applyEditors(ctx, req, reqEditors); err != nil {
+		return nil, err
 	}
 	return c.Client.Do(req)
 }
 
-func (c *Client) DeleteCloudCredentials(ctx context.Context, credentialsId CredentialsId) (*http.Response, error) {
+func (c *Client) DeleteCloudCredentials(ctx context.Context, credentialsId CredentialsId, reqEditors ...RequestEditorFn) (*http.Response, error) {
 	req, err := NewDeleteCloudCredentialsRequest(c.Server, credentialsId)
 	if err != nil {
 		return nil, err
 	}
-	req = req.WithContext(ctx)
-	if c.RequestEditor != nil {
-		err = c.RequestEditor(ctx, req)
-		if err != nil {
-			return nil, err
-		}
+	if err := c.applyEditors(ctx, req, reqEditors); err != nil {
+		return nil, err
 	}
 	return c.Client.Do(req)
 }
 
-func (c *Client) GetCloudCredentials(ctx context.Context, credentialsId CredentialsId) (*http.Response, error) {
+func (c *Client) GetCloudCredentials(ctx context.Context, credentialsId CredentialsId, reqEditors ...RequestEditorFn) (*http.Response, error) {
 	req, err := NewGetCloudCredentialsRequest(c.Server, credentialsId)
 	if err != nil {
 		return nil, err
 	}
-	req = req.WithContext(ctx)
-	if c.RequestEditor != nil {
-		err = c.RequestEditor(ctx, req)
-		if err != nil {
-			return nil, err
-		}
+	if err := c.applyEditors(ctx, req, reqEditors); err != nil {
+		return nil, err
 	}
 	return c.Client.Do(req)
 }
 
-func (c *Client) DeleteGslbWithBody(ctx context.Context, contentType string, body io.Reader) (*http.Response, error) {
+func (c *Client) DeleteGslbWithBody(ctx context.Context, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*http.Response, error) {
 	req, err := NewDeleteGslbRequestWithBody(c.Server, contentType, body)
 	if err != nil {
 		return nil, err
 	}
-	req = req.WithContext(ctx)
-	if c.RequestEditor != nil {
-		err = c.RequestEditor(ctx, req)
-		if err != nil {
-			return nil, err
-		}
+	if err := c.applyEditors(ctx, req, reqEditors); err != nil {
+		return nil, err
 	}
 	return c.Client.Do(req)
 }
 
-func (c *Client) DeleteGslb(ctx context.Context, body DeleteGslbJSONRequestBody) (*http.Response, error) {
+func (c *Client) DeleteGslb(ctx context.Context, body DeleteGslbJSONRequestBody, reqEditors ...RequestEditorFn) (*http.Response, error) {
 	req, err := NewDeleteGslbRequest(c.Server, body)
 	if err != nil {
 		return nil, err
 	}
-	req = req.WithContext(ctx)
-	if c.RequestEditor != nil {
-		err = c.RequestEditor(ctx, req)
-		if err != nil {
-			return nil, err
-		}
+	if err := c.applyEditors(ctx, req, reqEditors); err != nil {
+		return nil, err
 	}
 	return c.Client.Do(req)
 }
 
-func (c *Client) CreateOrUpdateGslbWithBody(ctx context.Context, contentType string, body io.Reader) (*http.Response, error) {
+func (c *Client) CreateOrUpdateGslbWithBody(ctx context.Context, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*http.Response, error) {
 	req, err := NewCreateOrUpdateGslbRequestWithBody(c.Server, contentType, body)
 	if err != nil {
 		return nil, err
 	}
-	req = req.WithContext(ctx)
-	if c.RequestEditor != nil {
-		err = c.RequestEditor(ctx, req)
-		if err != nil {
-			return nil, err
-		}
+	if err := c.applyEditors(ctx, req, reqEditors); err != nil {
+		return nil, err
 	}
 	return c.Client.Do(req)
 }
 
-func (c *Client) CreateOrUpdateGslb(ctx context.Context, body CreateOrUpdateGslbJSONRequestBody) (*http.Response, error) {
+func (c *Client) CreateOrUpdateGslb(ctx context.Context, body CreateOrUpdateGslbJSONRequestBody, reqEditors ...RequestEditorFn) (*http.Response, error) {
 	req, err := NewCreateOrUpdateGslbRequest(c.Server, body)
 	if err != nil {
 		return nil, err
 	}
-	req = req.WithContext(ctx)
-	if c.RequestEditor != nil {
-		err = c.RequestEditor(ctx, req)
-		if err != nil {
-			return nil, err
-		}
+	if err := c.applyEditors(ctx, req, reqEditors); err != nil {
+		return nil, err
 	}
 	return c.Client.Do(req)
 }
 
-func (c *Client) ListInstanceTypes(ctx context.Context, params *ListInstanceTypesParams) (*http.Response, error) {
+func (c *Client) ListInstanceTypes(ctx context.Context, params *ListInstanceTypesParams, reqEditors ...RequestEditorFn) (*http.Response, error) {
 	req, err := NewListInstanceTypesRequest(c.Server, params)
 	if err != nil {
 		return nil, err
 	}
-	req = req.WithContext(ctx)
-	if c.RequestEditor != nil {
-		err = c.RequestEditor(ctx, req)
-		if err != nil {
-			return nil, err
-		}
+	if err := c.applyEditors(ctx, req, reqEditors); err != nil {
+		return nil, err
 	}
 	return c.Client.Do(req)
 }
 
-func (c *Client) ListKubernetesClusters(ctx context.Context, params *ListKubernetesClustersParams) (*http.Response, error) {
+func (c *Client) ListKubernetesClusters(ctx context.Context, params *ListKubernetesClustersParams, reqEditors ...RequestEditorFn) (*http.Response, error) {
 	req, err := NewListKubernetesClustersRequest(c.Server, params)
 	if err != nil {
 		return nil, err
 	}
-	req = req.WithContext(ctx)
-	if c.RequestEditor != nil {
-		err = c.RequestEditor(ctx, req)
-		if err != nil {
-			return nil, err
-		}
+	if err := c.applyEditors(ctx, req, reqEditors); err != nil {
+		return nil, err
 	}
 	return c.Client.Do(req)
 }
 
-func (c *Client) CreateNewClusterWithBody(ctx context.Context, contentType string, body io.Reader) (*http.Response, error) {
+func (c *Client) CreateNewClusterWithBody(ctx context.Context, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*http.Response, error) {
 	req, err := NewCreateNewClusterRequestWithBody(c.Server, contentType, body)
 	if err != nil {
 		return nil, err
 	}
-	req = req.WithContext(ctx)
-	if c.RequestEditor != nil {
-		err = c.RequestEditor(ctx, req)
-		if err != nil {
-			return nil, err
-		}
+	if err := c.applyEditors(ctx, req, reqEditors); err != nil {
+		return nil, err
 	}
 	return c.Client.Do(req)
 }
 
-func (c *Client) CreateNewCluster(ctx context.Context, body CreateNewClusterJSONRequestBody) (*http.Response, error) {
+func (c *Client) CreateNewCluster(ctx context.Context, body CreateNewClusterJSONRequestBody, reqEditors ...RequestEditorFn) (*http.Response, error) {
 	req, err := NewCreateNewClusterRequest(c.Server, body)
 	if err != nil {
 		return nil, err
 	}
-	req = req.WithContext(ctx)
-	if c.RequestEditor != nil {
-		err = c.RequestEditor(ctx, req)
-		if err != nil {
-			return nil, err
-		}
+	if err := c.applyEditors(ctx, req, reqEditors); err != nil {
+		return nil, err
 	}
 	return c.Client.Do(req)
 }
 
-func (c *Client) DeleteCluster(ctx context.Context, clusterId ClusterId) (*http.Response, error) {
+func (c *Client) DeleteCluster(ctx context.Context, clusterId ClusterId, reqEditors ...RequestEditorFn) (*http.Response, error) {
 	req, err := NewDeleteClusterRequest(c.Server, clusterId)
 	if err != nil {
 		return nil, err
 	}
-	req = req.WithContext(ctx)
-	if c.RequestEditor != nil {
-		err = c.RequestEditor(ctx, req)
-		if err != nil {
-			return nil, err
-		}
+	if err := c.applyEditors(ctx, req, reqEditors); err != nil {
+		return nil, err
 	}
 	return c.Client.Do(req)
 }
 
-func (c *Client) GetCluster(ctx context.Context, clusterId ClusterId) (*http.Response, error) {
+func (c *Client) GetCluster(ctx context.Context, clusterId ClusterId, reqEditors ...RequestEditorFn) (*http.Response, error) {
 	req, err := NewGetClusterRequest(c.Server, clusterId)
 	if err != nil {
 		return nil, err
 	}
-	req = req.WithContext(ctx)
-	if c.RequestEditor != nil {
-		err = c.RequestEditor(ctx, req)
-		if err != nil {
-			return nil, err
-		}
+	if err := c.applyEditors(ctx, req, reqEditors); err != nil {
+		return nil, err
 	}
 	return c.Client.Do(req)
 }
 
-func (c *Client) GetClusterAddons(ctx context.Context, clusterId ClusterId) (*http.Response, error) {
+func (c *Client) UpdateClusterWithBody(ctx context.Context, clusterId ClusterId, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*http.Response, error) {
+	req, err := NewUpdateClusterRequestWithBody(c.Server, clusterId, contentType, body)
+	if err != nil {
+		return nil, err
+	}
+	if err := c.applyEditors(ctx, req, reqEditors); err != nil {
+		return nil, err
+	}
+	return c.Client.Do(req)
+}
+
+func (c *Client) UpdateCluster(ctx context.Context, clusterId ClusterId, body UpdateClusterJSONRequestBody, reqEditors ...RequestEditorFn) (*http.Response, error) {
+	req, err := NewUpdateClusterRequest(c.Server, clusterId, body)
+	if err != nil {
+		return nil, err
+	}
+	if err := c.applyEditors(ctx, req, reqEditors); err != nil {
+		return nil, err
+	}
+	return c.Client.Do(req)
+}
+
+func (c *Client) GetClusterAddons(ctx context.Context, clusterId string, reqEditors ...RequestEditorFn) (*http.Response, error) {
 	req, err := NewGetClusterAddonsRequest(c.Server, clusterId)
 	if err != nil {
 		return nil, err
 	}
-	req = req.WithContext(ctx)
-	if c.RequestEditor != nil {
-		err = c.RequestEditor(ctx, req)
-		if err != nil {
-			return nil, err
-		}
+	if err := c.applyEditors(ctx, req, reqEditors); err != nil {
+		return nil, err
 	}
 	return c.Client.Do(req)
 }
 
-func (c *Client) ConfigureClusterAddonsWithBody(ctx context.Context, clusterId ClusterId, contentType string, body io.Reader) (*http.Response, error) {
-	req, err := NewConfigureClusterAddonsRequestWithBody(c.Server, clusterId, contentType, body)
+func (c *Client) InstallClusterAddon(ctx context.Context, clusterId string, reqEditors ...RequestEditorFn) (*http.Response, error) {
+	req, err := NewInstallClusterAddonRequest(c.Server, clusterId)
 	if err != nil {
 		return nil, err
 	}
-	req = req.WithContext(ctx)
-	if c.RequestEditor != nil {
-		err = c.RequestEditor(ctx, req)
-		if err != nil {
-			return nil, err
-		}
+	if err := c.applyEditors(ctx, req, reqEditors); err != nil {
+		return nil, err
 	}
 	return c.Client.Do(req)
 }
 
-func (c *Client) ConfigureClusterAddons(ctx context.Context, clusterId ClusterId, body ConfigureClusterAddonsJSONRequestBody) (*http.Response, error) {
-	req, err := NewConfigureClusterAddonsRequest(c.Server, clusterId, body)
+func (c *Client) DeleteClusterAddon(ctx context.Context, clusterId string, repository string, name string, reqEditors ...RequestEditorFn) (*http.Response, error) {
+	req, err := NewDeleteClusterAddonRequest(c.Server, clusterId, repository, name)
 	if err != nil {
 		return nil, err
 	}
-	req = req.WithContext(ctx)
-	if c.RequestEditor != nil {
-		err = c.RequestEditor(ctx, req)
-		if err != nil {
-			return nil, err
-		}
+	if err := c.applyEditors(ctx, req, reqEditors); err != nil {
+		return nil, err
 	}
 	return c.Client.Do(req)
 }
 
-func (c *Client) ArchiveCluster(ctx context.Context, clusterId ClusterId) (*http.Response, error) {
+func (c *Client) GetClusterAddon(ctx context.Context, clusterId string, repository string, name string, reqEditors ...RequestEditorFn) (*http.Response, error) {
+	req, err := NewGetClusterAddonRequest(c.Server, clusterId, repository, name)
+	if err != nil {
+		return nil, err
+	}
+	if err := c.applyEditors(ctx, req, reqEditors); err != nil {
+		return nil, err
+	}
+	return c.Client.Do(req)
+}
+
+func (c *Client) ArchiveCluster(ctx context.Context, clusterId ClusterId, reqEditors ...RequestEditorFn) (*http.Response, error) {
 	req, err := NewArchiveClusterRequest(c.Server, clusterId)
 	if err != nil {
 		return nil, err
 	}
-	req = req.WithContext(ctx)
-	if c.RequestEditor != nil {
-		err = c.RequestEditor(ctx, req)
-		if err != nil {
-			return nil, err
-		}
+	if err := c.applyEditors(ctx, req, reqEditors); err != nil {
+		return nil, err
 	}
 	return c.Client.Do(req)
 }
 
-func (c *Client) GetClusterAuditLog(ctx context.Context, clusterId ClusterId) (*http.Response, error) {
+func (c *Client) GetClusterAuditLog(ctx context.Context, clusterId ClusterId, reqEditors ...RequestEditorFn) (*http.Response, error) {
 	req, err := NewGetClusterAuditLogRequest(c.Server, clusterId)
 	if err != nil {
 		return nil, err
 	}
-	req = req.WithContext(ctx)
-	if c.RequestEditor != nil {
-		err = c.RequestEditor(ctx, req)
-		if err != nil {
-			return nil, err
-		}
+	if err := c.applyEditors(ctx, req, reqEditors); err != nil {
+		return nil, err
 	}
 	return c.Client.Do(req)
 }
 
-func (c *Client) GetClusterFeedbackEvents(ctx context.Context, clusterId ClusterId) (*http.Response, error) {
+func (c *Client) GetClusterFeedbackEvents(ctx context.Context, clusterId ClusterId, reqEditors ...RequestEditorFn) (*http.Response, error) {
 	req, err := NewGetClusterFeedbackEventsRequest(c.Server, clusterId)
 	if err != nil {
 		return nil, err
 	}
-	req = req.WithContext(ctx)
-	if c.RequestEditor != nil {
-		err = c.RequestEditor(ctx, req)
-		if err != nil {
-			return nil, err
-		}
+	if err := c.applyEditors(ctx, req, reqEditors); err != nil {
+		return nil, err
 	}
 	return c.Client.Do(req)
 }
 
-func (c *Client) GetClusterHealth(ctx context.Context, clusterId ClusterId) (*http.Response, error) {
+func (c *Client) GetClusterHealth(ctx context.Context, clusterId ClusterId, reqEditors ...RequestEditorFn) (*http.Response, error) {
 	req, err := NewGetClusterHealthRequest(c.Server, clusterId)
 	if err != nil {
 		return nil, err
 	}
-	req = req.WithContext(ctx)
-	if c.RequestEditor != nil {
-		err = c.RequestEditor(ctx, req)
-		if err != nil {
-			return nil, err
-		}
+	if err := c.applyEditors(ctx, req, reqEditors); err != nil {
+		return nil, err
 	}
 	return c.Client.Do(req)
 }
 
-func (c *Client) GetClusterIngressController(ctx context.Context, clusterId ClusterId) (*http.Response, error) {
+func (c *Client) GetClusterIngressController(ctx context.Context, clusterId ClusterId, reqEditors ...RequestEditorFn) (*http.Response, error) {
 	req, err := NewGetClusterIngressControllerRequest(c.Server, clusterId)
 	if err != nil {
 		return nil, err
 	}
-	req = req.WithContext(ctx)
-	if c.RequestEditor != nil {
-		err = c.RequestEditor(ctx, req)
-		if err != nil {
-			return nil, err
-		}
+	if err := c.applyEditors(ctx, req, reqEditors); err != nil {
+		return nil, err
 	}
 	return c.Client.Do(req)
 }
 
-func (c *Client) GetClusterKubeconfig(ctx context.Context, clusterId ClusterId) (*http.Response, error) {
+func (c *Client) GetClusterKubeconfig(ctx context.Context, clusterId ClusterId, reqEditors ...RequestEditorFn) (*http.Response, error) {
 	req, err := NewGetClusterKubeconfigRequest(c.Server, clusterId)
 	if err != nil {
 		return nil, err
 	}
-	req = req.WithContext(ctx)
-	if c.RequestEditor != nil {
-		err = c.RequestEditor(ctx, req)
-		if err != nil {
-			return nil, err
-		}
+	if err := c.applyEditors(ctx, req, reqEditors); err != nil {
+		return nil, err
 	}
 	return c.Client.Do(req)
 }
 
-func (c *Client) GetClusterMetrics(ctx context.Context, clusterId ClusterId, params *GetClusterMetricsParams) (*http.Response, error) {
+func (c *Client) GetLegacyClusterAddons(ctx context.Context, clusterId ClusterId, reqEditors ...RequestEditorFn) (*http.Response, error) {
+	req, err := NewGetLegacyClusterAddonsRequest(c.Server, clusterId)
+	if err != nil {
+		return nil, err
+	}
+	if err := c.applyEditors(ctx, req, reqEditors); err != nil {
+		return nil, err
+	}
+	return c.Client.Do(req)
+}
+
+func (c *Client) ConfigureClusterAddonsWithBody(ctx context.Context, clusterId ClusterId, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*http.Response, error) {
+	req, err := NewConfigureClusterAddonsRequestWithBody(c.Server, clusterId, contentType, body)
+	if err != nil {
+		return nil, err
+	}
+	if err := c.applyEditors(ctx, req, reqEditors); err != nil {
+		return nil, err
+	}
+	return c.Client.Do(req)
+}
+
+func (c *Client) ConfigureClusterAddons(ctx context.Context, clusterId ClusterId, body ConfigureClusterAddonsJSONRequestBody, reqEditors ...RequestEditorFn) (*http.Response, error) {
+	req, err := NewConfigureClusterAddonsRequest(c.Server, clusterId, body)
+	if err != nil {
+		return nil, err
+	}
+	if err := c.applyEditors(ctx, req, reqEditors); err != nil {
+		return nil, err
+	}
+	return c.Client.Do(req)
+}
+
+func (c *Client) GetClusterMetrics(ctx context.Context, clusterId ClusterId, params *GetClusterMetricsParams, reqEditors ...RequestEditorFn) (*http.Response, error) {
 	req, err := NewGetClusterMetricsRequest(c.Server, clusterId, params)
 	if err != nil {
 		return nil, err
 	}
-	req = req.WithContext(ctx)
-	if c.RequestEditor != nil {
-		err = c.RequestEditor(ctx, req)
-		if err != nil {
-			return nil, err
-		}
+	if err := c.applyEditors(ctx, req, reqEditors); err != nil {
+		return nil, err
 	}
 	return c.Client.Do(req)
 }
 
-func (c *Client) GetClusterNodes(ctx context.Context, clusterId ClusterId) (*http.Response, error) {
+func (c *Client) GetClusterNodes(ctx context.Context, clusterId ClusterId, reqEditors ...RequestEditorFn) (*http.Response, error) {
 	req, err := NewGetClusterNodesRequest(c.Server, clusterId)
 	if err != nil {
 		return nil, err
 	}
-	req = req.WithContext(ctx)
-	if c.RequestEditor != nil {
-		err = c.RequestEditor(ctx, req)
-		if err != nil {
-			return nil, err
-		}
+	if err := c.applyEditors(ctx, req, reqEditors); err != nil {
+		return nil, err
 	}
 	return c.Client.Do(req)
 }
 
-func (c *Client) AddClusterNodeWithBody(ctx context.Context, clusterId ClusterId, contentType string, body io.Reader) (*http.Response, error) {
+func (c *Client) AddClusterNodeWithBody(ctx context.Context, clusterId ClusterId, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*http.Response, error) {
 	req, err := NewAddClusterNodeRequestWithBody(c.Server, clusterId, contentType, body)
 	if err != nil {
 		return nil, err
 	}
-	req = req.WithContext(ctx)
-	if c.RequestEditor != nil {
-		err = c.RequestEditor(ctx, req)
-		if err != nil {
-			return nil, err
-		}
+	if err := c.applyEditors(ctx, req, reqEditors); err != nil {
+		return nil, err
 	}
 	return c.Client.Do(req)
 }
 
-func (c *Client) AddClusterNode(ctx context.Context, clusterId ClusterId, body AddClusterNodeJSONRequestBody) (*http.Response, error) {
+func (c *Client) AddClusterNode(ctx context.Context, clusterId ClusterId, body AddClusterNodeJSONRequestBody, reqEditors ...RequestEditorFn) (*http.Response, error) {
 	req, err := NewAddClusterNodeRequest(c.Server, clusterId, body)
 	if err != nil {
 		return nil, err
 	}
-	req = req.WithContext(ctx)
-	if c.RequestEditor != nil {
-		err = c.RequestEditor(ctx, req)
-		if err != nil {
-			return nil, err
-		}
+	if err := c.applyEditors(ctx, req, reqEditors); err != nil {
+		return nil, err
 	}
 	return c.Client.Do(req)
 }
 
-func (c *Client) DeleteClusterNode(ctx context.Context, clusterId ClusterId, nodeId string) (*http.Response, error) {
+func (c *Client) DeleteClusterNode(ctx context.Context, clusterId ClusterId, nodeId string, reqEditors ...RequestEditorFn) (*http.Response, error) {
 	req, err := NewDeleteClusterNodeRequest(c.Server, clusterId, nodeId)
 	if err != nil {
 		return nil, err
 	}
-	req = req.WithContext(ctx)
-	if c.RequestEditor != nil {
-		err = c.RequestEditor(ctx, req)
-		if err != nil {
-			return nil, err
-		}
+	if err := c.applyEditors(ctx, req, reqEditors); err != nil {
+		return nil, err
 	}
 	return c.Client.Do(req)
 }
 
-func (c *Client) GetClusterNode(ctx context.Context, clusterId ClusterId, nodeId string) (*http.Response, error) {
+func (c *Client) GetClusterNode(ctx context.Context, clusterId ClusterId, nodeId string, reqEditors ...RequestEditorFn) (*http.Response, error) {
 	req, err := NewGetClusterNodeRequest(c.Server, clusterId, nodeId)
 	if err != nil {
 		return nil, err
 	}
-	req = req.WithContext(ctx)
-	if c.RequestEditor != nil {
-		err = c.RequestEditor(ctx, req)
-		if err != nil {
-			return nil, err
-		}
+	if err := c.applyEditors(ctx, req, reqEditors); err != nil {
+		return nil, err
 	}
 	return c.Client.Do(req)
 }
 
-func (c *Client) CloseNodeSsh(ctx context.Context, clusterId ClusterId, nodeId string) (*http.Response, error) {
+func (c *Client) CloseNodeSsh(ctx context.Context, clusterId ClusterId, nodeId string, reqEditors ...RequestEditorFn) (*http.Response, error) {
 	req, err := NewCloseNodeSshRequest(c.Server, clusterId, nodeId)
 	if err != nil {
 		return nil, err
 	}
-	req = req.WithContext(ctx)
-	if c.RequestEditor != nil {
-		err = c.RequestEditor(ctx, req)
-		if err != nil {
-			return nil, err
-		}
+	if err := c.applyEditors(ctx, req, reqEditors); err != nil {
+		return nil, err
 	}
 	return c.Client.Do(req)
 }
 
-func (c *Client) InterruptClusterNode(ctx context.Context, clusterId ClusterId, nodeId string) (*http.Response, error) {
+func (c *Client) InterruptClusterNode(ctx context.Context, clusterId ClusterId, nodeId string, reqEditors ...RequestEditorFn) (*http.Response, error) {
 	req, err := NewInterruptClusterNodeRequest(c.Server, clusterId, nodeId)
 	if err != nil {
 		return nil, err
 	}
-	req = req.WithContext(ctx)
-	if c.RequestEditor != nil {
-		err = c.RequestEditor(ctx, req)
-		if err != nil {
-			return nil, err
-		}
+	if err := c.applyEditors(ctx, req, reqEditors); err != nil {
+		return nil, err
 	}
 	return c.Client.Do(req)
 }
 
-func (c *Client) SetupNodeSshWithBody(ctx context.Context, clusterId ClusterId, nodeId string, contentType string, body io.Reader) (*http.Response, error) {
+func (c *Client) SetupNodeSshWithBody(ctx context.Context, clusterId ClusterId, nodeId string, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*http.Response, error) {
 	req, err := NewSetupNodeSshRequestWithBody(c.Server, clusterId, nodeId, contentType, body)
 	if err != nil {
 		return nil, err
 	}
-	req = req.WithContext(ctx)
-	if c.RequestEditor != nil {
-		err = c.RequestEditor(ctx, req)
-		if err != nil {
-			return nil, err
-		}
+	if err := c.applyEditors(ctx, req, reqEditors); err != nil {
+		return nil, err
 	}
 	return c.Client.Do(req)
 }
 
-func (c *Client) SetupNodeSsh(ctx context.Context, clusterId ClusterId, nodeId string, body SetupNodeSshJSONRequestBody) (*http.Response, error) {
+func (c *Client) SetupNodeSsh(ctx context.Context, clusterId ClusterId, nodeId string, body SetupNodeSshJSONRequestBody, reqEditors ...RequestEditorFn) (*http.Response, error) {
 	req, err := NewSetupNodeSshRequest(c.Server, clusterId, nodeId, body)
 	if err != nil {
 		return nil, err
 	}
-	req = req.WithContext(ctx)
-	if c.RequestEditor != nil {
-		err = c.RequestEditor(ctx, req)
-		if err != nil {
-			return nil, err
-		}
+	if err := c.applyEditors(ctx, req, reqEditors); err != nil {
+		return nil, err
 	}
 	return c.Client.Do(req)
 }
 
-func (c *Client) UpdateNodeListWithBody(ctx context.Context, clusterId ClusterId, contentType string, body io.Reader) (*http.Response, error) {
+func (c *Client) UpdateNodeListWithBody(ctx context.Context, clusterId ClusterId, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*http.Response, error) {
 	req, err := NewUpdateNodeListRequestWithBody(c.Server, clusterId, contentType, body)
 	if err != nil {
 		return nil, err
 	}
-	req = req.WithContext(ctx)
-	if c.RequestEditor != nil {
-		err = c.RequestEditor(ctx, req)
-		if err != nil {
-			return nil, err
-		}
+	if err := c.applyEditors(ctx, req, reqEditors); err != nil {
+		return nil, err
 	}
 	return c.Client.Do(req)
 }
 
-func (c *Client) UpdateNodeList(ctx context.Context, clusterId ClusterId, body UpdateNodeListJSONRequestBody) (*http.Response, error) {
+func (c *Client) UpdateNodeList(ctx context.Context, clusterId ClusterId, body UpdateNodeListJSONRequestBody, reqEditors ...RequestEditorFn) (*http.Response, error) {
 	req, err := NewUpdateNodeListRequest(c.Server, clusterId, body)
 	if err != nil {
 		return nil, err
 	}
-	req = req.WithContext(ctx)
-	if c.RequestEditor != nil {
-		err = c.RequestEditor(ctx, req)
-		if err != nil {
-			return nil, err
-		}
+	if err := c.applyEditors(ctx, req, reqEditors); err != nil {
+		return nil, err
 	}
 	return c.Client.Do(req)
 }
 
-func (c *Client) PauseClusterWithBody(ctx context.Context, clusterId ClusterId, contentType string, body io.Reader) (*http.Response, error) {
+func (c *Client) PauseClusterWithBody(ctx context.Context, clusterId ClusterId, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*http.Response, error) {
 	req, err := NewPauseClusterRequestWithBody(c.Server, clusterId, contentType, body)
 	if err != nil {
 		return nil, err
 	}
-	req = req.WithContext(ctx)
-	if c.RequestEditor != nil {
-		err = c.RequestEditor(ctx, req)
-		if err != nil {
-			return nil, err
-		}
+	if err := c.applyEditors(ctx, req, reqEditors); err != nil {
+		return nil, err
 	}
 	return c.Client.Do(req)
 }
 
-func (c *Client) PauseCluster(ctx context.Context, clusterId ClusterId, body PauseClusterJSONRequestBody) (*http.Response, error) {
+func (c *Client) PauseCluster(ctx context.Context, clusterId ClusterId, body PauseClusterJSONRequestBody, reqEditors ...RequestEditorFn) (*http.Response, error) {
 	req, err := NewPauseClusterRequest(c.Server, clusterId, body)
 	if err != nil {
 		return nil, err
 	}
-	req = req.WithContext(ctx)
-	if c.RequestEditor != nil {
-		err = c.RequestEditor(ctx, req)
-		if err != nil {
-			return nil, err
-		}
+	if err := c.applyEditors(ctx, req, reqEditors); err != nil {
+		return nil, err
 	}
 	return c.Client.Do(req)
 }
 
-func (c *Client) PauseClusterReconcile(ctx context.Context, clusterId ClusterId) (*http.Response, error) {
+func (c *Client) PauseClusterReconcile(ctx context.Context, clusterId ClusterId, reqEditors ...RequestEditorFn) (*http.Response, error) {
 	req, err := NewPauseClusterReconcileRequest(c.Server, clusterId)
 	if err != nil {
 		return nil, err
 	}
-	req = req.WithContext(ctx)
-	if c.RequestEditor != nil {
-		err = c.RequestEditor(ctx, req)
-		if err != nil {
-			return nil, err
-		}
+	if err := c.applyEditors(ctx, req, reqEditors); err != nil {
+		return nil, err
 	}
 	return c.Client.Do(req)
 }
 
-func (c *Client) GetPolicies(ctx context.Context, clusterId ClusterId) (*http.Response, error) {
+func (c *Client) DeleteClusterPauseSchedule(ctx context.Context, clusterId ClusterId, reqEditors ...RequestEditorFn) (*http.Response, error) {
+	req, err := NewDeleteClusterPauseScheduleRequest(c.Server, clusterId)
+	if err != nil {
+		return nil, err
+	}
+	if err := c.applyEditors(ctx, req, reqEditors); err != nil {
+		return nil, err
+	}
+	return c.Client.Do(req)
+}
+
+func (c *Client) GetClusterPauseSchedule(ctx context.Context, clusterId ClusterId, reqEditors ...RequestEditorFn) (*http.Response, error) {
+	req, err := NewGetClusterPauseScheduleRequest(c.Server, clusterId)
+	if err != nil {
+		return nil, err
+	}
+	if err := c.applyEditors(ctx, req, reqEditors); err != nil {
+		return nil, err
+	}
+	return c.Client.Do(req)
+}
+
+func (c *Client) SetClusterPauseScheduleWithBody(ctx context.Context, clusterId ClusterId, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*http.Response, error) {
+	req, err := NewSetClusterPauseScheduleRequestWithBody(c.Server, clusterId, contentType, body)
+	if err != nil {
+		return nil, err
+	}
+	if err := c.applyEditors(ctx, req, reqEditors); err != nil {
+		return nil, err
+	}
+	return c.Client.Do(req)
+}
+
+func (c *Client) SetClusterPauseSchedule(ctx context.Context, clusterId ClusterId, body SetClusterPauseScheduleJSONRequestBody, reqEditors ...RequestEditorFn) (*http.Response, error) {
+	req, err := NewSetClusterPauseScheduleRequest(c.Server, clusterId, body)
+	if err != nil {
+		return nil, err
+	}
+	if err := c.applyEditors(ctx, req, reqEditors); err != nil {
+		return nil, err
+	}
+	return c.Client.Do(req)
+}
+
+func (c *Client) GetPolicies(ctx context.Context, clusterId ClusterId, reqEditors ...RequestEditorFn) (*http.Response, error) {
 	req, err := NewGetPoliciesRequest(c.Server, clusterId)
 	if err != nil {
 		return nil, err
 	}
-	req = req.WithContext(ctx)
-	if c.RequestEditor != nil {
-		err = c.RequestEditor(ctx, req)
-		if err != nil {
-			return nil, err
-		}
+	if err := c.applyEditors(ctx, req, reqEditors); err != nil {
+		return nil, err
 	}
 	return c.Client.Do(req)
 }
 
-func (c *Client) UpsertPoliciesWithBody(ctx context.Context, clusterId ClusterId, contentType string, body io.Reader) (*http.Response, error) {
+func (c *Client) UpsertPoliciesWithBody(ctx context.Context, clusterId ClusterId, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*http.Response, error) {
 	req, err := NewUpsertPoliciesRequestWithBody(c.Server, clusterId, contentType, body)
 	if err != nil {
 		return nil, err
 	}
-	req = req.WithContext(ctx)
-	if c.RequestEditor != nil {
-		err = c.RequestEditor(ctx, req)
-		if err != nil {
-			return nil, err
-		}
+	if err := c.applyEditors(ctx, req, reqEditors); err != nil {
+		return nil, err
 	}
 	return c.Client.Do(req)
 }
 
-func (c *Client) UpsertPolicies(ctx context.Context, clusterId ClusterId, body UpsertPoliciesJSONRequestBody) (*http.Response, error) {
+func (c *Client) UpsertPolicies(ctx context.Context, clusterId ClusterId, body UpsertPoliciesJSONRequestBody, reqEditors ...RequestEditorFn) (*http.Response, error) {
 	req, err := NewUpsertPoliciesRequest(c.Server, clusterId, body)
 	if err != nil {
 		return nil, err
 	}
-	req = req.WithContext(ctx)
-	if c.RequestEditor != nil {
-		err = c.RequestEditor(ctx, req)
-		if err != nil {
-			return nil, err
-		}
+	if err := c.applyEditors(ctx, req, reqEditors); err != nil {
+		return nil, err
 	}
 	return c.Client.Do(req)
 }
 
-func (c *Client) ResumeCluster(ctx context.Context, clusterId ClusterId) (*http.Response, error) {
+func (c *Client) ResumeCluster(ctx context.Context, clusterId ClusterId, reqEditors ...RequestEditorFn) (*http.Response, error) {
 	req, err := NewResumeClusterRequest(c.Server, clusterId)
 	if err != nil {
 		return nil, err
 	}
-	req = req.WithContext(ctx)
-	if c.RequestEditor != nil {
-		err = c.RequestEditor(ctx, req)
-		if err != nil {
-			return nil, err
-		}
+	if err := c.applyEditors(ctx, req, reqEditors); err != nil {
+		return nil, err
 	}
 	return c.Client.Do(req)
 }
 
-func (c *Client) ResumeClusterReconcile(ctx context.Context, clusterId ClusterId) (*http.Response, error) {
+func (c *Client) ResumeClusterReconcile(ctx context.Context, clusterId ClusterId, reqEditors ...RequestEditorFn) (*http.Response, error) {
 	req, err := NewResumeClusterReconcileRequest(c.Server, clusterId)
 	if err != nil {
 		return nil, err
 	}
-	req = req.WithContext(ctx)
-	if c.RequestEditor != nil {
-		err = c.RequestEditor(ctx, req)
-		if err != nil {
-			return nil, err
-		}
+	if err := c.applyEditors(ctx, req, reqEditors); err != nil {
+		return nil, err
 	}
 	return c.Client.Do(req)
 }
 
-func (c *Client) TriggerClusterReconcile(ctx context.Context, clusterId ClusterId) (*http.Response, error) {
+func (c *Client) TriggerClusterReconcile(ctx context.Context, clusterId ClusterId, reqEditors ...RequestEditorFn) (*http.Response, error) {
 	req, err := NewTriggerClusterReconcileRequest(c.Server, clusterId)
 	if err != nil {
 		return nil, err
 	}
-	req = req.WithContext(ctx)
-	if c.RequestEditor != nil {
-		err = c.RequestEditor(ctx, req)
-		if err != nil {
-			return nil, err
-		}
+	if err := c.applyEditors(ctx, req, reqEditors); err != nil {
+		return nil, err
 	}
 	return c.Client.Do(req)
 }
 
-func (c *Client) ListExternalClusters(ctx context.Context) (*http.Response, error) {
+func (c *Client) ListExternalClusters(ctx context.Context, reqEditors ...RequestEditorFn) (*http.Response, error) {
 	req, err := NewListExternalClustersRequest(c.Server)
 	if err != nil {
 		return nil, err
 	}
-	req = req.WithContext(ctx)
-	if c.RequestEditor != nil {
-		err = c.RequestEditor(ctx, req)
-		if err != nil {
-			return nil, err
-		}
+	if err := c.applyEditors(ctx, req, reqEditors); err != nil {
+		return nil, err
 	}
 	return c.Client.Do(req)
 }
 
-func (c *Client) RegisterExternalClusterWithBody(ctx context.Context, contentType string, body io.Reader) (*http.Response, error) {
+func (c *Client) RegisterExternalClusterWithBody(ctx context.Context, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*http.Response, error) {
 	req, err := NewRegisterExternalClusterRequestWithBody(c.Server, contentType, body)
 	if err != nil {
 		return nil, err
 	}
-	req = req.WithContext(ctx)
-	if c.RequestEditor != nil {
-		err = c.RequestEditor(ctx, req)
-		if err != nil {
-			return nil, err
-		}
+	if err := c.applyEditors(ctx, req, reqEditors); err != nil {
+		return nil, err
 	}
 	return c.Client.Do(req)
 }
 
-func (c *Client) RegisterExternalCluster(ctx context.Context, body RegisterExternalClusterJSONRequestBody) (*http.Response, error) {
+func (c *Client) RegisterExternalCluster(ctx context.Context, body RegisterExternalClusterJSONRequestBody, reqEditors ...RequestEditorFn) (*http.Response, error) {
 	req, err := NewRegisterExternalClusterRequest(c.Server, body)
 	if err != nil {
 		return nil, err
 	}
-	req = req.WithContext(ctx)
-	if c.RequestEditor != nil {
-		err = c.RequestEditor(ctx, req)
-		if err != nil {
-			return nil, err
-		}
+	if err := c.applyEditors(ctx, req, reqEditors); err != nil {
+		return nil, err
 	}
 	return c.Client.Do(req)
 }
 
-func (c *Client) GetExternalCluster(ctx context.Context, clusterId string) (*http.Response, error) {
+func (c *Client) GetExternalCluster(ctx context.Context, clusterId string, reqEditors ...RequestEditorFn) (*http.Response, error) {
 	req, err := NewGetExternalClusterRequest(c.Server, clusterId)
 	if err != nil {
 		return nil, err
 	}
-	req = req.WithContext(ctx)
-	if c.RequestEditor != nil {
-		err = c.RequestEditor(ctx, req)
-		if err != nil {
-			return nil, err
-		}
+	if err := c.applyEditors(ctx, req, reqEditors); err != nil {
+		return nil, err
 	}
 	return c.Client.Do(req)
 }
 
-func (c *Client) UpdateExternalClusterWithBody(ctx context.Context, clusterId string, contentType string, body io.Reader) (*http.Response, error) {
+func (c *Client) UpdateExternalClusterWithBody(ctx context.Context, clusterId string, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*http.Response, error) {
 	req, err := NewUpdateExternalClusterRequestWithBody(c.Server, clusterId, contentType, body)
 	if err != nil {
 		return nil, err
 	}
-	req = req.WithContext(ctx)
-	if c.RequestEditor != nil {
-		err = c.RequestEditor(ctx, req)
-		if err != nil {
-			return nil, err
-		}
+	if err := c.applyEditors(ctx, req, reqEditors); err != nil {
+		return nil, err
 	}
 	return c.Client.Do(req)
 }
 
-func (c *Client) UpdateExternalCluster(ctx context.Context, clusterId string, body UpdateExternalClusterJSONRequestBody) (*http.Response, error) {
+func (c *Client) UpdateExternalCluster(ctx context.Context, clusterId string, body UpdateExternalClusterJSONRequestBody, reqEditors ...RequestEditorFn) (*http.Response, error) {
 	req, err := NewUpdateExternalClusterRequest(c.Server, clusterId, body)
 	if err != nil {
 		return nil, err
 	}
-	req = req.WithContext(ctx)
-	if c.RequestEditor != nil {
-		err = c.RequestEditor(ctx, req)
-		if err != nil {
-			return nil, err
-		}
+	if err := c.applyEditors(ctx, req, reqEditors); err != nil {
+		return nil, err
 	}
 	return c.Client.Do(req)
 }
 
-func (c *Client) ListExternalClusterNodes(ctx context.Context, clusterId string) (*http.Response, error) {
+func (c *Client) ListExternalClusterNodes(ctx context.Context, clusterId string, reqEditors ...RequestEditorFn) (*http.Response, error) {
 	req, err := NewListExternalClusterNodesRequest(c.Server, clusterId)
 	if err != nil {
 		return nil, err
 	}
-	req = req.WithContext(ctx)
-	if c.RequestEditor != nil {
-		err = c.RequestEditor(ctx, req)
-		if err != nil {
-			return nil, err
-		}
+	if err := c.applyEditors(ctx, req, reqEditors); err != nil {
+		return nil, err
 	}
 	return c.Client.Do(req)
 }
 
-func (c *Client) AddExternalClusterNodeWithBody(ctx context.Context, clusterId string, contentType string, body io.Reader) (*http.Response, error) {
+func (c *Client) AddExternalClusterNodeWithBody(ctx context.Context, clusterId string, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*http.Response, error) {
 	req, err := NewAddExternalClusterNodeRequestWithBody(c.Server, clusterId, contentType, body)
 	if err != nil {
 		return nil, err
 	}
-	req = req.WithContext(ctx)
-	if c.RequestEditor != nil {
-		err = c.RequestEditor(ctx, req)
-		if err != nil {
-			return nil, err
-		}
+	if err := c.applyEditors(ctx, req, reqEditors); err != nil {
+		return nil, err
 	}
 	return c.Client.Do(req)
 }
 
-func (c *Client) AddExternalClusterNode(ctx context.Context, clusterId string, body AddExternalClusterNodeJSONRequestBody) (*http.Response, error) {
+func (c *Client) AddExternalClusterNode(ctx context.Context, clusterId string, body AddExternalClusterNodeJSONRequestBody, reqEditors ...RequestEditorFn) (*http.Response, error) {
 	req, err := NewAddExternalClusterNodeRequest(c.Server, clusterId, body)
 	if err != nil {
 		return nil, err
 	}
-	req = req.WithContext(ctx)
-	if c.RequestEditor != nil {
-		err = c.RequestEditor(ctx, req)
-		if err != nil {
-			return nil, err
-		}
+	if err := c.applyEditors(ctx, req, reqEditors); err != nil {
+		return nil, err
 	}
 	return c.Client.Do(req)
 }
 
-func (c *Client) DeleteExternalClusterNode(ctx context.Context, clusterId string, nodeId string) (*http.Response, error) {
+func (c *Client) DeleteExternalClusterNode(ctx context.Context, clusterId string, nodeId string, reqEditors ...RequestEditorFn) (*http.Response, error) {
 	req, err := NewDeleteExternalClusterNodeRequest(c.Server, clusterId, nodeId)
 	if err != nil {
 		return nil, err
 	}
-	req = req.WithContext(ctx)
-	if c.RequestEditor != nil {
-		err = c.RequestEditor(ctx, req)
-		if err != nil {
-			return nil, err
-		}
+	if err := c.applyEditors(ctx, req, reqEditors); err != nil {
+		return nil, err
 	}
 	return c.Client.Do(req)
 }
 
-func (c *Client) GetOperation(ctx context.Context, id string) (*http.Response, error) {
+func (c *Client) GetOperation(ctx context.Context, id string, reqEditors ...RequestEditorFn) (*http.Response, error) {
 	req, err := NewGetOperationRequest(c.Server, id)
 	if err != nil {
 		return nil, err
 	}
-	req = req.WithContext(ctx)
-	if c.RequestEditor != nil {
-		err = c.RequestEditor(ctx, req)
-		if err != nil {
-			return nil, err
-		}
+	if err := c.applyEditors(ctx, req, reqEditors); err != nil {
+		return nil, err
 	}
 	return c.Client.Do(req)
 }
 
-func (c *Client) CurrentUserProfile(ctx context.Context) (*http.Response, error) {
+func (c *Client) CurrentUserProfile(ctx context.Context, reqEditors ...RequestEditorFn) (*http.Response, error) {
 	req, err := NewCurrentUserProfileRequest(c.Server)
 	if err != nil {
 		return nil, err
 	}
-	req = req.WithContext(ctx)
-	if c.RequestEditor != nil {
-		err = c.RequestEditor(ctx, req)
-		if err != nil {
-			return nil, err
-		}
+	if err := c.applyEditors(ctx, req, reqEditors); err != nil {
+		return nil, err
 	}
 	return c.Client.Do(req)
 }
 
-func (c *Client) UpdateCurrentUserProfileWithBody(ctx context.Context, contentType string, body io.Reader) (*http.Response, error) {
+func (c *Client) UpdateCurrentUserProfileWithBody(ctx context.Context, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*http.Response, error) {
 	req, err := NewUpdateCurrentUserProfileRequestWithBody(c.Server, contentType, body)
 	if err != nil {
 		return nil, err
 	}
-	req = req.WithContext(ctx)
-	if c.RequestEditor != nil {
-		err = c.RequestEditor(ctx, req)
-		if err != nil {
-			return nil, err
-		}
+	if err := c.applyEditors(ctx, req, reqEditors); err != nil {
+		return nil, err
 	}
 	return c.Client.Do(req)
 }
 
-func (c *Client) UpdateCurrentUserProfile(ctx context.Context, body UpdateCurrentUserProfileJSONRequestBody) (*http.Response, error) {
+func (c *Client) UpdateCurrentUserProfile(ctx context.Context, body UpdateCurrentUserProfileJSONRequestBody, reqEditors ...RequestEditorFn) (*http.Response, error) {
 	req, err := NewUpdateCurrentUserProfileRequest(c.Server, body)
 	if err != nil {
 		return nil, err
 	}
-	req = req.WithContext(ctx)
-	if c.RequestEditor != nil {
-		err = c.RequestEditor(ctx, req)
-		if err != nil {
-			return nil, err
-		}
+	if err := c.applyEditors(ctx, req, reqEditors); err != nil {
+		return nil, err
 	}
 	return c.Client.Do(req)
 }
 
-func (c *Client) GetExternalClustersToken(ctx context.Context) (*http.Response, error) {
+func (c *Client) GetExternalClustersToken(ctx context.Context, reqEditors ...RequestEditorFn) (*http.Response, error) {
 	req, err := NewGetExternalClustersTokenRequest(c.Server)
 	if err != nil {
 		return nil, err
 	}
-	req = req.WithContext(ctx)
-	if c.RequestEditor != nil {
-		err = c.RequestEditor(ctx, req)
-		if err != nil {
-			return nil, err
-		}
+	if err := c.applyEditors(ctx, req, reqEditors); err != nil {
+		return nil, err
 	}
 	return c.Client.Do(req)
 }
 
-func (c *Client) ListRegions(ctx context.Context) (*http.Response, error) {
+func (c *Client) ListRegions(ctx context.Context, reqEditors ...RequestEditorFn) (*http.Response, error) {
 	req, err := NewListRegionsRequest(c.Server)
 	if err != nil {
 		return nil, err
 	}
-	req = req.WithContext(ctx)
-	if c.RequestEditor != nil {
-		err = c.RequestEditor(ctx, req)
-		if err != nil {
-			return nil, err
-		}
+	if err := c.applyEditors(ctx, req, reqEditors); err != nil {
+		return nil, err
 	}
 	return c.Client.Do(req)
 }
 
-func (c *Client) GetUsageReport(ctx context.Context, params *GetUsageReportParams) (*http.Response, error) {
+func (c *Client) GetUsageReport(ctx context.Context, params *GetUsageReportParams, reqEditors ...RequestEditorFn) (*http.Response, error) {
 	req, err := NewGetUsageReportRequest(c.Server, params)
 	if err != nil {
 		return nil, err
 	}
-	req = req.WithContext(ctx)
-	if c.RequestEditor != nil {
-		err = c.RequestEditor(ctx, req)
-		if err != nil {
-			return nil, err
-		}
+	if err := c.applyEditors(ctx, req, reqEditors); err != nil {
+		return nil, err
 	}
 	return c.Client.Do(req)
+}
+
+// NewListAddonsRequest generates requests for ListAddons
+func NewListAddonsRequest(server string, params *ListAddonsParams) (*http.Request, error) {
+	var err error
+
+	queryUrl, err := url.Parse(server)
+	if err != nil {
+		return nil, err
+	}
+
+	basePath := fmt.Sprintf("/addons")
+	if basePath[0] == '/' {
+		basePath = basePath[1:]
+	}
+
+	queryUrl, err = queryUrl.Parse(basePath)
+	if err != nil {
+		return nil, err
+	}
+
+	queryValues := queryUrl.Query()
+
+	if params.Ids != nil {
+
+		if queryFrag, err := runtime.StyleParam("form", true, "ids", *params.Ids); err != nil {
+			return nil, err
+		} else if parsed, err := url.ParseQuery(queryFrag); err != nil {
+			return nil, err
+		} else {
+			for k, v := range parsed {
+				for _, v2 := range v {
+					queryValues.Add(k, v2)
+				}
+			}
+		}
+
+	}
+
+	if params.Names != nil {
+
+		if queryFrag, err := runtime.StyleParam("form", true, "names", *params.Names); err != nil {
+			return nil, err
+		} else if parsed, err := url.ParseQuery(queryFrag); err != nil {
+			return nil, err
+		} else {
+			for k, v := range parsed {
+				for _, v2 := range v {
+					queryValues.Add(k, v2)
+				}
+			}
+		}
+
+	}
+
+	if params.Versions != nil {
+
+		if queryFrag, err := runtime.StyleParam("form", true, "versions", *params.Versions); err != nil {
+			return nil, err
+		} else if parsed, err := url.ParseQuery(queryFrag); err != nil {
+			return nil, err
+		} else {
+			for k, v := range parsed {
+				for _, v2 := range v {
+					queryValues.Add(k, v2)
+				}
+			}
+		}
+
+	}
+
+	if params.Repositories != nil {
+
+		if queryFrag, err := runtime.StyleParam("form", true, "repositories", *params.Repositories); err != nil {
+			return nil, err
+		} else if parsed, err := url.ParseQuery(queryFrag); err != nil {
+			return nil, err
+		} else {
+			for k, v := range parsed {
+				for _, v2 := range v {
+					queryValues.Add(k, v2)
+				}
+			}
+		}
+
+	}
+
+	queryUrl.RawQuery = queryValues.Encode()
+
+	req, err := http.NewRequest("GET", queryUrl.String(), nil)
+	if err != nil {
+		return nil, err
+	}
+
+	return req, nil
 }
 
 // NewListAuditEventsRequest generates requests for ListAuditEvents
@@ -1605,186 +1440,6 @@ func NewListAuditEventsRequest(server string, params *ListAuditEventsParams) (*h
 	return req, nil
 }
 
-// NewLoginCallbackRequest generates requests for LoginCallback
-func NewLoginCallbackRequest(server string) (*http.Request, error) {
-	var err error
-
-	queryUrl, err := url.Parse(server)
-	if err != nil {
-		return nil, err
-	}
-
-	basePath := fmt.Sprintf("/auth")
-	if basePath[0] == '/' {
-		basePath = basePath[1:]
-	}
-
-	queryUrl, err = queryUrl.Parse(basePath)
-	if err != nil {
-		return nil, err
-	}
-
-	req, err := http.NewRequest("GET", queryUrl.String(), nil)
-	if err != nil {
-		return nil, err
-	}
-
-	return req, nil
-}
-
-// NewLoginRequest generates requests for Login
-func NewLoginRequest(server string, params *LoginParams) (*http.Request, error) {
-	var err error
-
-	queryUrl, err := url.Parse(server)
-	if err != nil {
-		return nil, err
-	}
-
-	basePath := fmt.Sprintf("/auth")
-	if basePath[0] == '/' {
-		basePath = basePath[1:]
-	}
-
-	queryUrl, err = queryUrl.Parse(basePath)
-	if err != nil {
-		return nil, err
-	}
-
-	queryValues := queryUrl.Query()
-
-	if params.ReturnTo != nil {
-
-		if queryFrag, err := runtime.StyleParam("form", true, "returnTo", *params.ReturnTo); err != nil {
-			return nil, err
-		} else if parsed, err := url.ParseQuery(queryFrag); err != nil {
-			return nil, err
-		} else {
-			for k, v := range parsed {
-				for _, v2 := range v {
-					queryValues.Add(k, v2)
-				}
-			}
-		}
-
-	}
-
-	if params.Auth0returnTo != nil {
-
-		if queryFrag, err := runtime.StyleParam("form", true, "auth0returnTo", *params.Auth0returnTo); err != nil {
-			return nil, err
-		} else if parsed, err := url.ParseQuery(queryFrag); err != nil {
-			return nil, err
-		} else {
-			for k, v := range parsed {
-				for _, v2 := range v {
-					queryValues.Add(k, v2)
-				}
-			}
-		}
-
-	}
-
-	if params.ScreenHint != nil {
-
-		if queryFrag, err := runtime.StyleParam("form", true, "screenHint", *params.ScreenHint); err != nil {
-			return nil, err
-		} else if parsed, err := url.ParseQuery(queryFrag); err != nil {
-			return nil, err
-		} else {
-			for k, v := range parsed {
-				for _, v2 := range v {
-					queryValues.Add(k, v2)
-				}
-			}
-		}
-
-	}
-
-	queryUrl.RawQuery = queryValues.Encode()
-
-	req, err := http.NewRequest("POST", queryUrl.String(), nil)
-	if err != nil {
-		return nil, err
-	}
-
-	return req, nil
-}
-
-// NewLogoutRequest generates requests for Logout
-func NewLogoutRequest(server string, params *LogoutParams) (*http.Request, error) {
-	var err error
-
-	queryUrl, err := url.Parse(server)
-	if err != nil {
-		return nil, err
-	}
-
-	basePath := fmt.Sprintf("/auth/logout")
-	if basePath[0] == '/' {
-		basePath = basePath[1:]
-	}
-
-	queryUrl, err = queryUrl.Parse(basePath)
-	if err != nil {
-		return nil, err
-	}
-
-	queryValues := queryUrl.Query()
-
-	if params.ReturnTo != nil {
-
-		if queryFrag, err := runtime.StyleParam("form", true, "returnTo", *params.ReturnTo); err != nil {
-			return nil, err
-		} else if parsed, err := url.ParseQuery(queryFrag); err != nil {
-			return nil, err
-		} else {
-			for k, v := range parsed {
-				for _, v2 := range v {
-					queryValues.Add(k, v2)
-				}
-			}
-		}
-
-	}
-
-	queryUrl.RawQuery = queryValues.Encode()
-
-	req, err := http.NewRequest("POST", queryUrl.String(), nil)
-	if err != nil {
-		return nil, err
-	}
-
-	return req, nil
-}
-
-// NewGetSessionRequest generates requests for GetSession
-func NewGetSessionRequest(server string) (*http.Request, error) {
-	var err error
-
-	queryUrl, err := url.Parse(server)
-	if err != nil {
-		return nil, err
-	}
-
-	basePath := fmt.Sprintf("/auth/session")
-	if basePath[0] == '/' {
-		basePath = basePath[1:]
-	}
-
-	queryUrl, err = queryUrl.Parse(basePath)
-	if err != nil {
-		return nil, err
-	}
-
-	req, err := http.NewRequest("GET", queryUrl.String(), nil)
-	if err != nil {
-		return nil, err
-	}
-
-	return req, nil
-}
-
 // NewListAuthTokensRequest generates requests for ListAuthTokens
 func NewListAuthTokensRequest(server string) (*http.Request, error) {
 	var err error
@@ -1848,6 +1503,7 @@ func NewCreateAuthTokenRequestWithBody(server string, contentType string, body i
 	}
 
 	req.Header.Add("Content-Type", contentType)
+
 	return req, nil
 }
 
@@ -1962,106 +1618,6 @@ func NewUpdateAuthTokenRequestWithBody(server string, authTokenId AuthTokenId, c
 	}
 
 	req.Header.Add("Content-Type", contentType)
-	return req, nil
-}
-
-// NewBillingSsoRequest generates requests for BillingSso
-func NewBillingSsoRequest(server string, params *BillingSsoParams) (*http.Request, error) {
-	var err error
-
-	queryUrl, err := url.Parse(server)
-	if err != nil {
-		return nil, err
-	}
-
-	basePath := fmt.Sprintf("/billing/sso")
-	if basePath[0] == '/' {
-		basePath = basePath[1:]
-	}
-
-	queryUrl, err = queryUrl.Parse(basePath)
-	if err != nil {
-		return nil, err
-	}
-
-	queryValues := queryUrl.Query()
-
-	if params.ForwardUrl != nil {
-
-		if queryFrag, err := runtime.StyleParam("form", true, "forwardUrl", *params.ForwardUrl); err != nil {
-			return nil, err
-		} else if parsed, err := url.ParseQuery(queryFrag); err != nil {
-			return nil, err
-		} else {
-			for k, v := range parsed {
-				for _, v2 := range v {
-					queryValues.Add(k, v2)
-				}
-			}
-		}
-
-	}
-
-	queryUrl.RawQuery = queryValues.Encode()
-
-	req, err := http.NewRequest("GET", queryUrl.String(), nil)
-	if err != nil {
-		return nil, err
-	}
-
-	return req, nil
-}
-
-// NewSubscriptionRequest generates requests for Subscription
-func NewSubscriptionRequest(server string) (*http.Request, error) {
-	var err error
-
-	queryUrl, err := url.Parse(server)
-	if err != nil {
-		return nil, err
-	}
-
-	basePath := fmt.Sprintf("/billing/subscription")
-	if basePath[0] == '/' {
-		basePath = basePath[1:]
-	}
-
-	queryUrl, err = queryUrl.Parse(basePath)
-	if err != nil {
-		return nil, err
-	}
-
-	req, err := http.NewRequest("GET", queryUrl.String(), nil)
-	if err != nil {
-		return nil, err
-	}
-
-	return req, nil
-}
-
-// NewSubscriptionCheckoutRequest generates requests for SubscriptionCheckout
-func NewSubscriptionCheckoutRequest(server string) (*http.Request, error) {
-	var err error
-
-	queryUrl, err := url.Parse(server)
-	if err != nil {
-		return nil, err
-	}
-
-	basePath := fmt.Sprintf("/billing/subscription/checkout")
-	if basePath[0] == '/' {
-		basePath = basePath[1:]
-	}
-
-	queryUrl, err = queryUrl.Parse(basePath)
-	if err != nil {
-		return nil, err
-	}
-
-	req, err := http.NewRequest("GET", queryUrl.String(), nil)
-	if err != nil {
-		return nil, err
-	}
 
 	return req, nil
 }
@@ -2102,6 +1658,7 @@ func NewPlanClusterPriceRequestWithBody(server string, contentType string, body 
 	}
 
 	req.Header.Add("Content-Type", contentType)
+
 	return req, nil
 }
 
@@ -2168,6 +1725,7 @@ func NewCreateCloudCredentialsRequestWithBody(server string, contentType string,
 	}
 
 	req.Header.Add("Content-Type", contentType)
+
 	return req, nil
 }
 
@@ -2275,6 +1833,7 @@ func NewDeleteGslbRequestWithBody(server string, contentType string, body io.Rea
 	}
 
 	req.Header.Add("Content-Type", contentType)
+
 	return req, nil
 }
 
@@ -2314,6 +1873,7 @@ func NewCreateOrUpdateGslbRequestWithBody(server string, contentType string, bod
 	}
 
 	req.Header.Add("Content-Type", contentType)
+
 	return req, nil
 }
 
@@ -2479,6 +2039,7 @@ func NewCreateNewClusterRequestWithBody(server string, contentType string, body 
 	}
 
 	req.Header.Add("Content-Type", contentType)
+
 	return req, nil
 }
 
@@ -2550,8 +2111,55 @@ func NewGetClusterRequest(server string, clusterId ClusterId) (*http.Request, er
 	return req, nil
 }
 
+// NewUpdateClusterRequest calls the generic UpdateCluster builder with application/json body
+func NewUpdateClusterRequest(server string, clusterId ClusterId, body UpdateClusterJSONRequestBody) (*http.Request, error) {
+	var bodyReader io.Reader
+	buf, err := json.Marshal(body)
+	if err != nil {
+		return nil, err
+	}
+	bodyReader = bytes.NewReader(buf)
+	return NewUpdateClusterRequestWithBody(server, clusterId, "application/json", bodyReader)
+}
+
+// NewUpdateClusterRequestWithBody generates requests for UpdateCluster with any type of body
+func NewUpdateClusterRequestWithBody(server string, clusterId ClusterId, contentType string, body io.Reader) (*http.Request, error) {
+	var err error
+
+	var pathParam0 string
+
+	pathParam0, err = runtime.StyleParam("simple", false, "clusterId", clusterId)
+	if err != nil {
+		return nil, err
+	}
+
+	queryUrl, err := url.Parse(server)
+	if err != nil {
+		return nil, err
+	}
+
+	basePath := fmt.Sprintf("/kubernetes/clusters/%s", pathParam0)
+	if basePath[0] == '/' {
+		basePath = basePath[1:]
+	}
+
+	queryUrl, err = queryUrl.Parse(basePath)
+	if err != nil {
+		return nil, err
+	}
+
+	req, err := http.NewRequest("PUT", queryUrl.String(), body)
+	if err != nil {
+		return nil, err
+	}
+
+	req.Header.Add("Content-Type", contentType)
+
+	return req, nil
+}
+
 // NewGetClusterAddonsRequest generates requests for GetClusterAddons
-func NewGetClusterAddonsRequest(server string, clusterId ClusterId) (*http.Request, error) {
+func NewGetClusterAddonsRequest(server string, clusterId string) (*http.Request, error) {
 	var err error
 
 	var pathParam0 string
@@ -2584,19 +2192,8 @@ func NewGetClusterAddonsRequest(server string, clusterId ClusterId) (*http.Reque
 	return req, nil
 }
 
-// NewConfigureClusterAddonsRequest calls the generic ConfigureClusterAddons builder with application/json body
-func NewConfigureClusterAddonsRequest(server string, clusterId ClusterId, body ConfigureClusterAddonsJSONRequestBody) (*http.Request, error) {
-	var bodyReader io.Reader
-	buf, err := json.Marshal(body)
-	if err != nil {
-		return nil, err
-	}
-	bodyReader = bytes.NewReader(buf)
-	return NewConfigureClusterAddonsRequestWithBody(server, clusterId, "application/json", bodyReader)
-}
-
-// NewConfigureClusterAddonsRequestWithBody generates requests for ConfigureClusterAddons with any type of body
-func NewConfigureClusterAddonsRequestWithBody(server string, clusterId ClusterId, contentType string, body io.Reader) (*http.Request, error) {
+// NewInstallClusterAddonRequest generates requests for InstallClusterAddon
+func NewInstallClusterAddonRequest(server string, clusterId string) (*http.Request, error) {
 	var err error
 
 	var pathParam0 string
@@ -2621,12 +2218,107 @@ func NewConfigureClusterAddonsRequestWithBody(server string, clusterId ClusterId
 		return nil, err
 	}
 
-	req, err := http.NewRequest("PATCH", queryUrl.String(), body)
+	req, err := http.NewRequest("POST", queryUrl.String(), nil)
 	if err != nil {
 		return nil, err
 	}
 
-	req.Header.Add("Content-Type", contentType)
+	return req, nil
+}
+
+// NewDeleteClusterAddonRequest generates requests for DeleteClusterAddon
+func NewDeleteClusterAddonRequest(server string, clusterId string, repository string, name string) (*http.Request, error) {
+	var err error
+
+	var pathParam0 string
+
+	pathParam0, err = runtime.StyleParam("simple", false, "clusterId", clusterId)
+	if err != nil {
+		return nil, err
+	}
+
+	var pathParam1 string
+
+	pathParam1, err = runtime.StyleParam("simple", false, "repository", repository)
+	if err != nil {
+		return nil, err
+	}
+
+	var pathParam2 string
+
+	pathParam2, err = runtime.StyleParam("simple", false, "name", name)
+	if err != nil {
+		return nil, err
+	}
+
+	queryUrl, err := url.Parse(server)
+	if err != nil {
+		return nil, err
+	}
+
+	basePath := fmt.Sprintf("/kubernetes/clusters/%s/addons/%s/%s", pathParam0, pathParam1, pathParam2)
+	if basePath[0] == '/' {
+		basePath = basePath[1:]
+	}
+
+	queryUrl, err = queryUrl.Parse(basePath)
+	if err != nil {
+		return nil, err
+	}
+
+	req, err := http.NewRequest("DELETE", queryUrl.String(), nil)
+	if err != nil {
+		return nil, err
+	}
+
+	return req, nil
+}
+
+// NewGetClusterAddonRequest generates requests for GetClusterAddon
+func NewGetClusterAddonRequest(server string, clusterId string, repository string, name string) (*http.Request, error) {
+	var err error
+
+	var pathParam0 string
+
+	pathParam0, err = runtime.StyleParam("simple", false, "clusterId", clusterId)
+	if err != nil {
+		return nil, err
+	}
+
+	var pathParam1 string
+
+	pathParam1, err = runtime.StyleParam("simple", false, "repository", repository)
+	if err != nil {
+		return nil, err
+	}
+
+	var pathParam2 string
+
+	pathParam2, err = runtime.StyleParam("simple", false, "name", name)
+	if err != nil {
+		return nil, err
+	}
+
+	queryUrl, err := url.Parse(server)
+	if err != nil {
+		return nil, err
+	}
+
+	basePath := fmt.Sprintf("/kubernetes/clusters/%s/addons/%s/%s", pathParam0, pathParam1, pathParam2)
+	if basePath[0] == '/' {
+		basePath = basePath[1:]
+	}
+
+	queryUrl, err = queryUrl.Parse(basePath)
+	if err != nil {
+		return nil, err
+	}
+
+	req, err := http.NewRequest("GET", queryUrl.String(), nil)
+	if err != nil {
+		return nil, err
+	}
+
 	return req, nil
 }
 
@@ -2834,6 +2526,87 @@ func NewGetClusterKubeconfigRequest(server string, clusterId ClusterId) (*http.R
 	return req, nil
 }
 
+// NewGetLegacyClusterAddonsRequest generates requests for GetLegacyClusterAddons
+func NewGetLegacyClusterAddonsRequest(server string, clusterId ClusterId) (*http.Request, error) {
+	var err error
+
+	var pathParam0 string
+
+	pathParam0, err = runtime.StyleParam("simple", false, "clusterId", clusterId)
+	if err != nil {
+		return nil, err
+	}
+
+	queryUrl, err := url.Parse(server)
+	if err != nil {
+		return nil, err
+	}
+
+	basePath := fmt.Sprintf("/kubernetes/clusters/%s/legacy-addons", pathParam0)
+	if basePath[0] == '/' {
+		basePath = basePath[1:]
+	}
+
+	queryUrl, err = queryUrl.Parse(basePath)
+	if err != nil {
+		return nil, err
+	}
+
+	req, err := http.NewRequest("GET", queryUrl.String(), nil)
+	if err != nil {
+		return nil, err
+	}
+
+	return req, nil
+}
+
+// NewConfigureClusterAddonsRequest calls the generic ConfigureClusterAddons builder with application/json body
+func NewConfigureClusterAddonsRequest(server string, clusterId ClusterId, body ConfigureClusterAddonsJSONRequestBody) (*http.Request, error) {
+	var bodyReader io.Reader
+	buf, err := json.Marshal(body)
+	if err != nil {
+		return nil, err
+	}
+	bodyReader = bytes.NewReader(buf)
+	return NewConfigureClusterAddonsRequestWithBody(server, clusterId, "application/json", bodyReader)
+}
+
+// NewConfigureClusterAddonsRequestWithBody generates requests for ConfigureClusterAddons with any type of body
+func NewConfigureClusterAddonsRequestWithBody(server string, clusterId ClusterId, contentType string, body io.Reader) (*http.Request, error) {
+	var err error
+
+	var pathParam0 string
+
+	pathParam0, err = runtime.StyleParam("simple", false, "clusterId", clusterId)
+	if err != nil {
+		return nil, err
+	}
+
+	queryUrl, err := url.Parse(server)
+	if err != nil {
+		return nil, err
+	}
+
+	basePath := fmt.Sprintf("/kubernetes/clusters/%s/legacy-addons", pathParam0)
+	if basePath[0] == '/' {
+		basePath = basePath[1:]
+	}
+
+	queryUrl, err = queryUrl.Parse(basePath)
+	if err != nil {
+		return nil, err
+	}
+
+	req, err := http.NewRequest("PATCH", queryUrl.String(), body)
+	if err != nil {
+		return nil, err
+	}
+
+	req.Header.Add("Content-Type", contentType)
+
+	return req, nil
+}
+
 // NewGetClusterMetricsRequest generates requests for GetClusterMetrics
 func NewGetClusterMetricsRequest(server string, clusterId ClusterId, params *GetClusterMetricsParams) (*http.Request, error) {
 	var err error
@@ -2965,6 +2738,7 @@ func NewAddClusterNodeRequestWithBody(server string, clusterId ClusterId, conten
 	}
 
 	req.Header.Add("Content-Type", contentType)
+
 	return req, nil
 }
 
@@ -3182,6 +2956,7 @@ func NewSetupNodeSshRequestWithBody(server string, clusterId ClusterId, nodeId s
 	}
 
 	req.Header.Add("Content-Type", contentType)
+
 	return req, nil
 }
 
@@ -3228,6 +3003,7 @@ func NewUpdateNodeListRequestWithBody(server string, clusterId ClusterId, conten
 	}
 
 	req.Header.Add("Content-Type", contentType)
+
 	return req, nil
 }
 
@@ -3274,6 +3050,7 @@ func NewPauseClusterRequestWithBody(server string, clusterId ClusterId, contentT
 	}
 
 	req.Header.Add("Content-Type", contentType)
+
 	return req, nil
 }
 
@@ -3307,6 +3084,121 @@ func NewPauseClusterReconcileRequest(server string, clusterId ClusterId) (*http.
 	if err != nil {
 		return nil, err
 	}
+
+	return req, nil
+}
+
+// NewDeleteClusterPauseScheduleRequest generates requests for DeleteClusterPauseSchedule
+func NewDeleteClusterPauseScheduleRequest(server string, clusterId ClusterId) (*http.Request, error) {
+	var err error
+
+	var pathParam0 string
+
+	pathParam0, err = runtime.StyleParam("simple", false, "clusterId", clusterId)
+	if err != nil {
+		return nil, err
+	}
+
+	queryUrl, err := url.Parse(server)
+	if err != nil {
+		return nil, err
+	}
+
+	basePath := fmt.Sprintf("/kubernetes/clusters/%s/pause-schedule", pathParam0)
+	if basePath[0] == '/' {
+		basePath = basePath[1:]
+	}
+
+	queryUrl, err = queryUrl.Parse(basePath)
+	if err != nil {
+		return nil, err
+	}
+
+	req, err := http.NewRequest("DELETE", queryUrl.String(), nil)
+	if err != nil {
+		return nil, err
+	}
+
+	return req, nil
+}
+
+// NewGetClusterPauseScheduleRequest generates requests for GetClusterPauseSchedule
+func NewGetClusterPauseScheduleRequest(server string, clusterId ClusterId) (*http.Request, error) {
+	var err error
+
+	var pathParam0 string
+
+	pathParam0, err = runtime.StyleParam("simple", false, "clusterId", clusterId)
+	if err != nil {
+		return nil, err
+	}
+
+	queryUrl, err := url.Parse(server)
+	if err != nil {
+		return nil, err
+	}
+
+	basePath := fmt.Sprintf("/kubernetes/clusters/%s/pause-schedule", pathParam0)
+	if basePath[0] == '/' {
+		basePath = basePath[1:]
+	}
+
+	queryUrl, err = queryUrl.Parse(basePath)
+	if err != nil {
+		return nil, err
+	}
+
+	req, err := http.NewRequest("GET", queryUrl.String(), nil)
+	if err != nil {
+		return nil, err
+	}
+
+	return req, nil
+}
+
+// NewSetClusterPauseScheduleRequest calls the generic SetClusterPauseSchedule builder with application/json body
+func NewSetClusterPauseScheduleRequest(server string, clusterId ClusterId, body SetClusterPauseScheduleJSONRequestBody) (*http.Request, error) {
+	var bodyReader io.Reader
+	buf, err := json.Marshal(body)
+	if err != nil {
+		return nil, err
+	}
+	bodyReader = bytes.NewReader(buf)
+	return NewSetClusterPauseScheduleRequestWithBody(server, clusterId, "application/json", bodyReader)
+}
+
+// NewSetClusterPauseScheduleRequestWithBody generates requests for SetClusterPauseSchedule with any type of body
+func NewSetClusterPauseScheduleRequestWithBody(server string, clusterId ClusterId, contentType string, body io.Reader) (*http.Request, error) {
+	var err error
+
+	var pathParam0 string
+
+	pathParam0, err = runtime.StyleParam("simple", false, "clusterId", clusterId)
+	if err != nil {
+		return nil, err
+	}
+
+	queryUrl, err := url.Parse(server)
+	if err != nil {
+		return nil, err
+	}
+
+	basePath := fmt.Sprintf("/kubernetes/clusters/%s/pause-schedule", pathParam0)
+	if basePath[0] == '/' {
+		basePath = basePath[1:]
+	}
+
+	queryUrl, err = queryUrl.Parse(basePath)
+	if err != nil {
+		return nil, err
+	}
+
+	req, err := http.NewRequest("POST", queryUrl.String(), body)
+	if err != nil {
+		return nil, err
+	}
+
+	req.Header.Add("Content-Type", contentType)
 
 	return req, nil
 }
@@ -3388,6 +3280,7 @@ func NewUpsertPoliciesRequestWithBody(server string, clusterId ClusterId, conten
 	}
 
 	req.Header.Add("Content-Type", contentType)
+
 	return req, nil
 }
 
@@ -3556,6 +3449,7 @@ func NewRegisterExternalClusterRequestWithBody(server string, contentType string
 	}
 
 	req.Header.Add("Content-Type", contentType)
+
 	return req, nil
 }
 
@@ -3636,6 +3530,7 @@ func NewUpdateExternalClusterRequestWithBody(server string, clusterId string, co
 	}
 
 	req.Header.Add("Content-Type", contentType)
+
 	return req, nil
 }
 
@@ -3716,6 +3611,7 @@ func NewAddExternalClusterNodeRequestWithBody(server string, clusterId string, c
 	}
 
 	req.Header.Add("Content-Type", contentType)
+
 	return req, nil
 }
 
@@ -3857,6 +3753,7 @@ func NewUpdateCurrentUserProfileRequestWithBody(server string, contentType strin
 	}
 
 	req.Header.Add("Content-Type", contentType)
+
 	return req, nil
 }
 
@@ -3993,6 +3890,21 @@ func NewGetUsageReportRequest(server string, params *GetUsageReportParams) (*htt
 	return req, nil
 }
 
+func (c *Client) applyEditors(ctx context.Context, req *http.Request, additionalEditors []RequestEditorFn) error {
+	req = req.WithContext(ctx)
+	for _, r := range c.RequestEditors {
+		if err := r(ctx, req); err != nil {
+			return err
+		}
+	}
+	for _, r := range additionalEditors {
+		if err := r(ctx, req); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
 // ClientWithResponses builds on ClientInterface to offer response payloads
 type ClientWithResponses struct {
 	ClientInterface
@@ -4022,20 +3934,11 @@ func WithBaseURL(baseURL string) ClientOption {
 
 // ClientWithResponsesInterface is the interface specification for the client with responses above.
 type ClientWithResponsesInterface interface {
+	// ListAddons request
+	ListAddonsWithResponse(ctx context.Context, params *ListAddonsParams) (*ListAddonsResponse, error)
+
 	// ListAuditEvents request
 	ListAuditEventsWithResponse(ctx context.Context, params *ListAuditEventsParams) (*ListAuditEventsResponse, error)
-
-	// LoginCallback request
-	LoginCallbackWithResponse(ctx context.Context) (*LoginCallbackResponse, error)
-
-	// Login request
-	LoginWithResponse(ctx context.Context, params *LoginParams) (*LoginResponse, error)
-
-	// Logout request
-	LogoutWithResponse(ctx context.Context, params *LogoutParams) (*LogoutResponse, error)
-
-	// GetSession request
-	GetSessionWithResponse(ctx context.Context) (*GetSessionResponse, error)
 
 	// ListAuthTokens request
 	ListAuthTokensWithResponse(ctx context.Context) (*ListAuthTokensResponse, error)
@@ -4055,15 +3958,6 @@ type ClientWithResponsesInterface interface {
 	UpdateAuthTokenWithBodyWithResponse(ctx context.Context, authTokenId AuthTokenId, contentType string, body io.Reader) (*UpdateAuthTokenResponse, error)
 
 	UpdateAuthTokenWithResponse(ctx context.Context, authTokenId AuthTokenId, body UpdateAuthTokenJSONRequestBody) (*UpdateAuthTokenResponse, error)
-
-	// BillingSso request
-	BillingSsoWithResponse(ctx context.Context, params *BillingSsoParams) (*BillingSsoResponse, error)
-
-	// Subscription request
-	SubscriptionWithResponse(ctx context.Context) (*SubscriptionResponse, error)
-
-	// SubscriptionCheckout request
-	SubscriptionCheckoutWithResponse(ctx context.Context) (*SubscriptionCheckoutResponse, error)
 
 	// PlanClusterPrice request  with any body
 	PlanClusterPriceWithBodyWithResponse(ctx context.Context, contentType string, body io.Reader) (*PlanClusterPriceResponse, error)
@@ -4111,13 +4005,22 @@ type ClientWithResponsesInterface interface {
 	// GetCluster request
 	GetClusterWithResponse(ctx context.Context, clusterId ClusterId) (*GetClusterResponse, error)
 
+	// UpdateCluster request  with any body
+	UpdateClusterWithBodyWithResponse(ctx context.Context, clusterId ClusterId, contentType string, body io.Reader) (*UpdateClusterResponse, error)
+
+	UpdateClusterWithResponse(ctx context.Context, clusterId ClusterId, body UpdateClusterJSONRequestBody) (*UpdateClusterResponse, error)
+
 	// GetClusterAddons request
-	GetClusterAddonsWithResponse(ctx context.Context, clusterId ClusterId) (*GetClusterAddonsResponse, error)
+	GetClusterAddonsWithResponse(ctx context.Context, clusterId string) (*GetClusterAddonsResponse, error)
 
-	// ConfigureClusterAddons request  with any body
-	ConfigureClusterAddonsWithBodyWithResponse(ctx context.Context, clusterId ClusterId, contentType string, body io.Reader) (*ConfigureClusterAddonsResponse, error)
+	// InstallClusterAddon request
+	InstallClusterAddonWithResponse(ctx context.Context, clusterId string) (*InstallClusterAddonResponse, error)
 
-	ConfigureClusterAddonsWithResponse(ctx context.Context, clusterId ClusterId, body ConfigureClusterAddonsJSONRequestBody) (*ConfigureClusterAddonsResponse, error)
+	// DeleteClusterAddon request
+	DeleteClusterAddonWithResponse(ctx context.Context, clusterId string, repository string, name string) (*DeleteClusterAddonResponse, error)
+
+	// GetClusterAddon request
+	GetClusterAddonWithResponse(ctx context.Context, clusterId string, repository string, name string) (*GetClusterAddonResponse, error)
 
 	// ArchiveCluster request
 	ArchiveClusterWithResponse(ctx context.Context, clusterId ClusterId) (*ArchiveClusterResponse, error)
@@ -4136,6 +4039,14 @@ type ClientWithResponsesInterface interface {
 
 	// GetClusterKubeconfig request
 	GetClusterKubeconfigWithResponse(ctx context.Context, clusterId ClusterId) (*GetClusterKubeconfigResponse, error)
+
+	// GetLegacyClusterAddons request
+	GetLegacyClusterAddonsWithResponse(ctx context.Context, clusterId ClusterId) (*GetLegacyClusterAddonsResponse, error)
+
+	// ConfigureClusterAddons request  with any body
+	ConfigureClusterAddonsWithBodyWithResponse(ctx context.Context, clusterId ClusterId, contentType string, body io.Reader) (*ConfigureClusterAddonsResponse, error)
+
+	ConfigureClusterAddonsWithResponse(ctx context.Context, clusterId ClusterId, body ConfigureClusterAddonsJSONRequestBody) (*ConfigureClusterAddonsResponse, error)
 
 	// GetClusterMetrics request
 	GetClusterMetricsWithResponse(ctx context.Context, clusterId ClusterId, params *GetClusterMetricsParams) (*GetClusterMetricsResponse, error)
@@ -4177,6 +4088,17 @@ type ClientWithResponsesInterface interface {
 
 	// PauseClusterReconcile request
 	PauseClusterReconcileWithResponse(ctx context.Context, clusterId ClusterId) (*PauseClusterReconcileResponse, error)
+
+	// DeleteClusterPauseSchedule request
+	DeleteClusterPauseScheduleWithResponse(ctx context.Context, clusterId ClusterId) (*DeleteClusterPauseScheduleResponse, error)
+
+	// GetClusterPauseSchedule request
+	GetClusterPauseScheduleWithResponse(ctx context.Context, clusterId ClusterId) (*GetClusterPauseScheduleResponse, error)
+
+	// SetClusterPauseSchedule request  with any body
+	SetClusterPauseScheduleWithBodyWithResponse(ctx context.Context, clusterId ClusterId, contentType string, body io.Reader) (*SetClusterPauseScheduleResponse, error)
+
+	SetClusterPauseScheduleWithResponse(ctx context.Context, clusterId ClusterId, body SetClusterPauseScheduleJSONRequestBody) (*SetClusterPauseScheduleResponse, error)
 
 	// GetPolicies request
 	GetPoliciesWithResponse(ctx context.Context, clusterId ClusterId) (*GetPoliciesResponse, error)
@@ -4252,6 +4174,36 @@ type Response interface {
 
 // TODO: </castai customization> to have common interface. https://github.com/deepmap/oapi-codegen/issues/240
 
+type ListAddonsResponse struct {
+	Body         []byte
+	HTTPResponse *http.Response
+	JSON200      *AddonList
+}
+
+// Status returns HTTPResponse.Status
+func (r ListAddonsResponse) Status() string {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.Status
+	}
+	return http.StatusText(0)
+}
+
+// StatusCode returns HTTPResponse.StatusCode
+func (r ListAddonsResponse) StatusCode() int {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.StatusCode
+	}
+	return 0
+}
+
+// TODO: <castai customization> to have common interface. https://github.com/deepmap/oapi-codegen/issues/240
+// Body returns body of byte array
+func (r ListAddonsResponse) GetBody() []byte {
+	return r.Body
+}
+
+// TODO: </castai customization> to have common interface. https://github.com/deepmap/oapi-codegen/issues/240
+
 type ListAuditEventsResponse struct {
 	Body         []byte
 	HTTPResponse *http.Response
@@ -4277,123 +4229,6 @@ func (r ListAuditEventsResponse) StatusCode() int {
 // TODO: <castai customization> to have common interface. https://github.com/deepmap/oapi-codegen/issues/240
 // Body returns body of byte array
 func (r ListAuditEventsResponse) GetBody() []byte {
-	return r.Body
-}
-
-// TODO: </castai customization> to have common interface. https://github.com/deepmap/oapi-codegen/issues/240
-
-type LoginCallbackResponse struct {
-	Body         []byte
-	HTTPResponse *http.Response
-}
-
-// Status returns HTTPResponse.Status
-func (r LoginCallbackResponse) Status() string {
-	if r.HTTPResponse != nil {
-		return r.HTTPResponse.Status
-	}
-	return http.StatusText(0)
-}
-
-// StatusCode returns HTTPResponse.StatusCode
-func (r LoginCallbackResponse) StatusCode() int {
-	if r.HTTPResponse != nil {
-		return r.HTTPResponse.StatusCode
-	}
-	return 0
-}
-
-// TODO: <castai customization> to have common interface. https://github.com/deepmap/oapi-codegen/issues/240
-// Body returns body of byte array
-func (r LoginCallbackResponse) GetBody() []byte {
-	return r.Body
-}
-
-// TODO: </castai customization> to have common interface. https://github.com/deepmap/oapi-codegen/issues/240
-
-type LoginResponse struct {
-	Body         []byte
-	HTTPResponse *http.Response
-}
-
-// Status returns HTTPResponse.Status
-func (r LoginResponse) Status() string {
-	if r.HTTPResponse != nil {
-		return r.HTTPResponse.Status
-	}
-	return http.StatusText(0)
-}
-
-// StatusCode returns HTTPResponse.StatusCode
-func (r LoginResponse) StatusCode() int {
-	if r.HTTPResponse != nil {
-		return r.HTTPResponse.StatusCode
-	}
-	return 0
-}
-
-// TODO: <castai customization> to have common interface. https://github.com/deepmap/oapi-codegen/issues/240
-// Body returns body of byte array
-func (r LoginResponse) GetBody() []byte {
-	return r.Body
-}
-
-// TODO: </castai customization> to have common interface. https://github.com/deepmap/oapi-codegen/issues/240
-
-type LogoutResponse struct {
-	Body         []byte
-	HTTPResponse *http.Response
-}
-
-// Status returns HTTPResponse.Status
-func (r LogoutResponse) Status() string {
-	if r.HTTPResponse != nil {
-		return r.HTTPResponse.Status
-	}
-	return http.StatusText(0)
-}
-
-// StatusCode returns HTTPResponse.StatusCode
-func (r LogoutResponse) StatusCode() int {
-	if r.HTTPResponse != nil {
-		return r.HTTPResponse.StatusCode
-	}
-	return 0
-}
-
-// TODO: <castai customization> to have common interface. https://github.com/deepmap/oapi-codegen/issues/240
-// Body returns body of byte array
-func (r LogoutResponse) GetBody() []byte {
-	return r.Body
-}
-
-// TODO: </castai customization> to have common interface. https://github.com/deepmap/oapi-codegen/issues/240
-
-type GetSessionResponse struct {
-	Body         []byte
-	HTTPResponse *http.Response
-	JSON200      *UserSession
-}
-
-// Status returns HTTPResponse.Status
-func (r GetSessionResponse) Status() string {
-	if r.HTTPResponse != nil {
-		return r.HTTPResponse.Status
-	}
-	return http.StatusText(0)
-}
-
-// StatusCode returns HTTPResponse.StatusCode
-func (r GetSessionResponse) StatusCode() int {
-	if r.HTTPResponse != nil {
-		return r.HTTPResponse.StatusCode
-	}
-	return 0
-}
-
-// TODO: <castai customization> to have common interface. https://github.com/deepmap/oapi-codegen/issues/240
-// Body returns body of byte array
-func (r GetSessionResponse) GetBody() []byte {
 	return r.Body
 }
 
@@ -4543,94 +4378,6 @@ func (r UpdateAuthTokenResponse) StatusCode() int {
 // TODO: <castai customization> to have common interface. https://github.com/deepmap/oapi-codegen/issues/240
 // Body returns body of byte array
 func (r UpdateAuthTokenResponse) GetBody() []byte {
-	return r.Body
-}
-
-// TODO: </castai customization> to have common interface. https://github.com/deepmap/oapi-codegen/issues/240
-
-type BillingSsoResponse struct {
-	Body         []byte
-	HTTPResponse *http.Response
-}
-
-// Status returns HTTPResponse.Status
-func (r BillingSsoResponse) Status() string {
-	if r.HTTPResponse != nil {
-		return r.HTTPResponse.Status
-	}
-	return http.StatusText(0)
-}
-
-// StatusCode returns HTTPResponse.StatusCode
-func (r BillingSsoResponse) StatusCode() int {
-	if r.HTTPResponse != nil {
-		return r.HTTPResponse.StatusCode
-	}
-	return 0
-}
-
-// TODO: <castai customization> to have common interface. https://github.com/deepmap/oapi-codegen/issues/240
-// Body returns body of byte array
-func (r BillingSsoResponse) GetBody() []byte {
-	return r.Body
-}
-
-// TODO: </castai customization> to have common interface. https://github.com/deepmap/oapi-codegen/issues/240
-
-type SubscriptionResponse struct {
-	Body         []byte
-	HTTPResponse *http.Response
-	JSON200      *Subscription
-}
-
-// Status returns HTTPResponse.Status
-func (r SubscriptionResponse) Status() string {
-	if r.HTTPResponse != nil {
-		return r.HTTPResponse.Status
-	}
-	return http.StatusText(0)
-}
-
-// StatusCode returns HTTPResponse.StatusCode
-func (r SubscriptionResponse) StatusCode() int {
-	if r.HTTPResponse != nil {
-		return r.HTTPResponse.StatusCode
-	}
-	return 0
-}
-
-// TODO: <castai customization> to have common interface. https://github.com/deepmap/oapi-codegen/issues/240
-// Body returns body of byte array
-func (r SubscriptionResponse) GetBody() []byte {
-	return r.Body
-}
-
-// TODO: </castai customization> to have common interface. https://github.com/deepmap/oapi-codegen/issues/240
-
-type SubscriptionCheckoutResponse struct {
-	Body         []byte
-	HTTPResponse *http.Response
-}
-
-// Status returns HTTPResponse.Status
-func (r SubscriptionCheckoutResponse) Status() string {
-	if r.HTTPResponse != nil {
-		return r.HTTPResponse.Status
-	}
-	return http.StatusText(0)
-}
-
-// StatusCode returns HTTPResponse.StatusCode
-func (r SubscriptionCheckoutResponse) StatusCode() int {
-	if r.HTTPResponse != nil {
-		return r.HTTPResponse.StatusCode
-	}
-	return 0
-}
-
-// TODO: <castai customization> to have common interface. https://github.com/deepmap/oapi-codegen/issues/240
-// Body returns body of byte array
-func (r SubscriptionCheckoutResponse) GetBody() []byte {
 	return r.Body
 }
 
@@ -4993,11 +4740,40 @@ func (r GetClusterResponse) GetBody() []byte {
 
 // TODO: </castai customization> to have common interface. https://github.com/deepmap/oapi-codegen/issues/240
 
+type UpdateClusterResponse struct {
+	Body         []byte
+	HTTPResponse *http.Response
+	JSON200      *KubernetesCluster
+}
+
+// Status returns HTTPResponse.Status
+func (r UpdateClusterResponse) Status() string {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.Status
+	}
+	return http.StatusText(0)
+}
+
+// StatusCode returns HTTPResponse.StatusCode
+func (r UpdateClusterResponse) StatusCode() int {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.StatusCode
+	}
+	return 0
+}
+
+// TODO: <castai customization> to have common interface. https://github.com/deepmap/oapi-codegen/issues/240
+// Body returns body of byte array
+func (r UpdateClusterResponse) GetBody() []byte {
+	return r.Body
+}
+
+// TODO: </castai customization> to have common interface. https://github.com/deepmap/oapi-codegen/issues/240
+
 type GetClusterAddonsResponse struct {
 	Body         []byte
 	HTTPResponse *http.Response
-	JSON200      *AddonsConfig
-	JSON404      *ErrorResponse
+	JSON200      *ClusterAddonsList
 }
 
 // Status returns HTTPResponse.Status
@@ -5024,16 +4800,14 @@ func (r GetClusterAddonsResponse) GetBody() []byte {
 
 // TODO: </castai customization> to have common interface. https://github.com/deepmap/oapi-codegen/issues/240
 
-type ConfigureClusterAddonsResponse struct {
+type InstallClusterAddonResponse struct {
 	Body         []byte
 	HTTPResponse *http.Response
-	JSON200      *AddonsConfig
-	JSON404      *ErrorResponse
-	JSON409      *ErrorResponse
+	JSON200      *ClusterAddon
 }
 
 // Status returns HTTPResponse.Status
-func (r ConfigureClusterAddonsResponse) Status() string {
+func (r InstallClusterAddonResponse) Status() string {
 	if r.HTTPResponse != nil {
 		return r.HTTPResponse.Status
 	}
@@ -5041,7 +4815,7 @@ func (r ConfigureClusterAddonsResponse) Status() string {
 }
 
 // StatusCode returns HTTPResponse.StatusCode
-func (r ConfigureClusterAddonsResponse) StatusCode() int {
+func (r InstallClusterAddonResponse) StatusCode() int {
 	if r.HTTPResponse != nil {
 		return r.HTTPResponse.StatusCode
 	}
@@ -5050,7 +4824,66 @@ func (r ConfigureClusterAddonsResponse) StatusCode() int {
 
 // TODO: <castai customization> to have common interface. https://github.com/deepmap/oapi-codegen/issues/240
 // Body returns body of byte array
-func (r ConfigureClusterAddonsResponse) GetBody() []byte {
+func (r InstallClusterAddonResponse) GetBody() []byte {
+	return r.Body
+}
+
+// TODO: </castai customization> to have common interface. https://github.com/deepmap/oapi-codegen/issues/240
+
+type DeleteClusterAddonResponse struct {
+	Body         []byte
+	HTTPResponse *http.Response
+}
+
+// Status returns HTTPResponse.Status
+func (r DeleteClusterAddonResponse) Status() string {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.Status
+	}
+	return http.StatusText(0)
+}
+
+// StatusCode returns HTTPResponse.StatusCode
+func (r DeleteClusterAddonResponse) StatusCode() int {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.StatusCode
+	}
+	return 0
+}
+
+// TODO: <castai customization> to have common interface. https://github.com/deepmap/oapi-codegen/issues/240
+// Body returns body of byte array
+func (r DeleteClusterAddonResponse) GetBody() []byte {
+	return r.Body
+}
+
+// TODO: </castai customization> to have common interface. https://github.com/deepmap/oapi-codegen/issues/240
+
+type GetClusterAddonResponse struct {
+	Body         []byte
+	HTTPResponse *http.Response
+	JSON200      *ClusterAddon
+}
+
+// Status returns HTTPResponse.Status
+func (r GetClusterAddonResponse) Status() string {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.Status
+	}
+	return http.StatusText(0)
+}
+
+// StatusCode returns HTTPResponse.StatusCode
+func (r GetClusterAddonResponse) StatusCode() int {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.StatusCode
+	}
+	return 0
+}
+
+// TODO: <castai customization> to have common interface. https://github.com/deepmap/oapi-codegen/issues/240
+// Body returns body of byte array
+func (r GetClusterAddonResponse) GetBody() []byte {
 	return r.Body
 }
 
@@ -5230,6 +5063,69 @@ func (r GetClusterKubeconfigResponse) StatusCode() int {
 // TODO: <castai customization> to have common interface. https://github.com/deepmap/oapi-codegen/issues/240
 // Body returns body of byte array
 func (r GetClusterKubeconfigResponse) GetBody() []byte {
+	return r.Body
+}
+
+// TODO: </castai customization> to have common interface. https://github.com/deepmap/oapi-codegen/issues/240
+
+type GetLegacyClusterAddonsResponse struct {
+	Body         []byte
+	HTTPResponse *http.Response
+	JSON200      *AddonsConfig
+	JSON404      *ErrorResponse
+}
+
+// Status returns HTTPResponse.Status
+func (r GetLegacyClusterAddonsResponse) Status() string {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.Status
+	}
+	return http.StatusText(0)
+}
+
+// StatusCode returns HTTPResponse.StatusCode
+func (r GetLegacyClusterAddonsResponse) StatusCode() int {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.StatusCode
+	}
+	return 0
+}
+
+// TODO: <castai customization> to have common interface. https://github.com/deepmap/oapi-codegen/issues/240
+// Body returns body of byte array
+func (r GetLegacyClusterAddonsResponse) GetBody() []byte {
+	return r.Body
+}
+
+// TODO: </castai customization> to have common interface. https://github.com/deepmap/oapi-codegen/issues/240
+
+type ConfigureClusterAddonsResponse struct {
+	Body         []byte
+	HTTPResponse *http.Response
+	JSON200      *AddonsConfig
+	JSON404      *ErrorResponse
+	JSON409      *ErrorResponse
+}
+
+// Status returns HTTPResponse.Status
+func (r ConfigureClusterAddonsResponse) Status() string {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.Status
+	}
+	return http.StatusText(0)
+}
+
+// StatusCode returns HTTPResponse.StatusCode
+func (r ConfigureClusterAddonsResponse) StatusCode() int {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.StatusCode
+	}
+	return 0
+}
+
+// TODO: <castai customization> to have common interface. https://github.com/deepmap/oapi-codegen/issues/240
+// Body returns body of byte array
+func (r ConfigureClusterAddonsResponse) GetBody() []byte {
 	return r.Body
 }
 
@@ -5557,6 +5453,96 @@ func (r PauseClusterReconcileResponse) StatusCode() int {
 // TODO: <castai customization> to have common interface. https://github.com/deepmap/oapi-codegen/issues/240
 // Body returns body of byte array
 func (r PauseClusterReconcileResponse) GetBody() []byte {
+	return r.Body
+}
+
+// TODO: </castai customization> to have common interface. https://github.com/deepmap/oapi-codegen/issues/240
+
+type DeleteClusterPauseScheduleResponse struct {
+	Body         []byte
+	HTTPResponse *http.Response
+	JSON200      *PauseSchedule
+}
+
+// Status returns HTTPResponse.Status
+func (r DeleteClusterPauseScheduleResponse) Status() string {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.Status
+	}
+	return http.StatusText(0)
+}
+
+// StatusCode returns HTTPResponse.StatusCode
+func (r DeleteClusterPauseScheduleResponse) StatusCode() int {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.StatusCode
+	}
+	return 0
+}
+
+// TODO: <castai customization> to have common interface. https://github.com/deepmap/oapi-codegen/issues/240
+// Body returns body of byte array
+func (r DeleteClusterPauseScheduleResponse) GetBody() []byte {
+	return r.Body
+}
+
+// TODO: </castai customization> to have common interface. https://github.com/deepmap/oapi-codegen/issues/240
+
+type GetClusterPauseScheduleResponse struct {
+	Body         []byte
+	HTTPResponse *http.Response
+	JSON200      *PauseSchedule
+}
+
+// Status returns HTTPResponse.Status
+func (r GetClusterPauseScheduleResponse) Status() string {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.Status
+	}
+	return http.StatusText(0)
+}
+
+// StatusCode returns HTTPResponse.StatusCode
+func (r GetClusterPauseScheduleResponse) StatusCode() int {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.StatusCode
+	}
+	return 0
+}
+
+// TODO: <castai customization> to have common interface. https://github.com/deepmap/oapi-codegen/issues/240
+// Body returns body of byte array
+func (r GetClusterPauseScheduleResponse) GetBody() []byte {
+	return r.Body
+}
+
+// TODO: </castai customization> to have common interface. https://github.com/deepmap/oapi-codegen/issues/240
+
+type SetClusterPauseScheduleResponse struct {
+	Body         []byte
+	HTTPResponse *http.Response
+	JSON200      *PauseSchedule
+}
+
+// Status returns HTTPResponse.Status
+func (r SetClusterPauseScheduleResponse) Status() string {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.Status
+	}
+	return http.StatusText(0)
+}
+
+// StatusCode returns HTTPResponse.StatusCode
+func (r SetClusterPauseScheduleResponse) StatusCode() int {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.StatusCode
+	}
+	return 0
+}
+
+// TODO: <castai customization> to have common interface. https://github.com/deepmap/oapi-codegen/issues/240
+// Body returns body of byte array
+func (r SetClusterPauseScheduleResponse) GetBody() []byte {
 	return r.Body
 }
 
@@ -6100,6 +6086,15 @@ func (r GetUsageReportResponse) GetBody() []byte {
 
 // TODO: </castai customization> to have common interface. https://github.com/deepmap/oapi-codegen/issues/240
 
+// ListAddonsWithResponse request returning *ListAddonsResponse
+func (c *ClientWithResponses) ListAddonsWithResponse(ctx context.Context, params *ListAddonsParams) (*ListAddonsResponse, error) {
+	rsp, err := c.ListAddons(ctx, params)
+	if err != nil {
+		return nil, err
+	}
+	return ParseListAddonsResponse(rsp)
+}
+
 // ListAuditEventsWithResponse request returning *ListAuditEventsResponse
 func (c *ClientWithResponses) ListAuditEventsWithResponse(ctx context.Context, params *ListAuditEventsParams) (*ListAuditEventsResponse, error) {
 	rsp, err := c.ListAuditEvents(ctx, params)
@@ -6107,42 +6102,6 @@ func (c *ClientWithResponses) ListAuditEventsWithResponse(ctx context.Context, p
 		return nil, err
 	}
 	return ParseListAuditEventsResponse(rsp)
-}
-
-// LoginCallbackWithResponse request returning *LoginCallbackResponse
-func (c *ClientWithResponses) LoginCallbackWithResponse(ctx context.Context) (*LoginCallbackResponse, error) {
-	rsp, err := c.LoginCallback(ctx)
-	if err != nil {
-		return nil, err
-	}
-	return ParseLoginCallbackResponse(rsp)
-}
-
-// LoginWithResponse request returning *LoginResponse
-func (c *ClientWithResponses) LoginWithResponse(ctx context.Context, params *LoginParams) (*LoginResponse, error) {
-	rsp, err := c.Login(ctx, params)
-	if err != nil {
-		return nil, err
-	}
-	return ParseLoginResponse(rsp)
-}
-
-// LogoutWithResponse request returning *LogoutResponse
-func (c *ClientWithResponses) LogoutWithResponse(ctx context.Context, params *LogoutParams) (*LogoutResponse, error) {
-	rsp, err := c.Logout(ctx, params)
-	if err != nil {
-		return nil, err
-	}
-	return ParseLogoutResponse(rsp)
-}
-
-// GetSessionWithResponse request returning *GetSessionResponse
-func (c *ClientWithResponses) GetSessionWithResponse(ctx context.Context) (*GetSessionResponse, error) {
-	rsp, err := c.GetSession(ctx)
-	if err != nil {
-		return nil, err
-	}
-	return ParseGetSessionResponse(rsp)
 }
 
 // ListAuthTokensWithResponse request returning *ListAuthTokensResponse
@@ -6204,33 +6163,6 @@ func (c *ClientWithResponses) UpdateAuthTokenWithResponse(ctx context.Context, a
 		return nil, err
 	}
 	return ParseUpdateAuthTokenResponse(rsp)
-}
-
-// BillingSsoWithResponse request returning *BillingSsoResponse
-func (c *ClientWithResponses) BillingSsoWithResponse(ctx context.Context, params *BillingSsoParams) (*BillingSsoResponse, error) {
-	rsp, err := c.BillingSso(ctx, params)
-	if err != nil {
-		return nil, err
-	}
-	return ParseBillingSsoResponse(rsp)
-}
-
-// SubscriptionWithResponse request returning *SubscriptionResponse
-func (c *ClientWithResponses) SubscriptionWithResponse(ctx context.Context) (*SubscriptionResponse, error) {
-	rsp, err := c.Subscription(ctx)
-	if err != nil {
-		return nil, err
-	}
-	return ParseSubscriptionResponse(rsp)
-}
-
-// SubscriptionCheckoutWithResponse request returning *SubscriptionCheckoutResponse
-func (c *ClientWithResponses) SubscriptionCheckoutWithResponse(ctx context.Context) (*SubscriptionCheckoutResponse, error) {
-	rsp, err := c.SubscriptionCheckout(ctx)
-	if err != nil {
-		return nil, err
-	}
-	return ParseSubscriptionCheckoutResponse(rsp)
 }
 
 // PlanClusterPriceWithBodyWithResponse request with arbitrary body returning *PlanClusterPriceResponse
@@ -6381,8 +6313,25 @@ func (c *ClientWithResponses) GetClusterWithResponse(ctx context.Context, cluste
 	return ParseGetClusterResponse(rsp)
 }
 
+// UpdateClusterWithBodyWithResponse request with arbitrary body returning *UpdateClusterResponse
+func (c *ClientWithResponses) UpdateClusterWithBodyWithResponse(ctx context.Context, clusterId ClusterId, contentType string, body io.Reader) (*UpdateClusterResponse, error) {
+	rsp, err := c.UpdateClusterWithBody(ctx, clusterId, contentType, body)
+	if err != nil {
+		return nil, err
+	}
+	return ParseUpdateClusterResponse(rsp)
+}
+
+func (c *ClientWithResponses) UpdateClusterWithResponse(ctx context.Context, clusterId ClusterId, body UpdateClusterJSONRequestBody) (*UpdateClusterResponse, error) {
+	rsp, err := c.UpdateCluster(ctx, clusterId, body)
+	if err != nil {
+		return nil, err
+	}
+	return ParseUpdateClusterResponse(rsp)
+}
+
 // GetClusterAddonsWithResponse request returning *GetClusterAddonsResponse
-func (c *ClientWithResponses) GetClusterAddonsWithResponse(ctx context.Context, clusterId ClusterId) (*GetClusterAddonsResponse, error) {
+func (c *ClientWithResponses) GetClusterAddonsWithResponse(ctx context.Context, clusterId string) (*GetClusterAddonsResponse, error) {
 	rsp, err := c.GetClusterAddons(ctx, clusterId)
 	if err != nil {
 		return nil, err
@@ -6390,21 +6339,31 @@ func (c *ClientWithResponses) GetClusterAddonsWithResponse(ctx context.Context, 
 	return ParseGetClusterAddonsResponse(rsp)
 }
 
-// ConfigureClusterAddonsWithBodyWithResponse request with arbitrary body returning *ConfigureClusterAddonsResponse
-func (c *ClientWithResponses) ConfigureClusterAddonsWithBodyWithResponse(ctx context.Context, clusterId ClusterId, contentType string, body io.Reader) (*ConfigureClusterAddonsResponse, error) {
-	rsp, err := c.ConfigureClusterAddonsWithBody(ctx, clusterId, contentType, body)
+// InstallClusterAddonWithResponse request returning *InstallClusterAddonResponse
+func (c *ClientWithResponses) InstallClusterAddonWithResponse(ctx context.Context, clusterId string) (*InstallClusterAddonResponse, error) {
+	rsp, err := c.InstallClusterAddon(ctx, clusterId)
 	if err != nil {
 		return nil, err
 	}
-	return ParseConfigureClusterAddonsResponse(rsp)
+	return ParseInstallClusterAddonResponse(rsp)
 }
 
-func (c *ClientWithResponses) ConfigureClusterAddonsWithResponse(ctx context.Context, clusterId ClusterId, body ConfigureClusterAddonsJSONRequestBody) (*ConfigureClusterAddonsResponse, error) {
-	rsp, err := c.ConfigureClusterAddons(ctx, clusterId, body)
+// DeleteClusterAddonWithResponse request returning *DeleteClusterAddonResponse
+func (c *ClientWithResponses) DeleteClusterAddonWithResponse(ctx context.Context, clusterId string, repository string, name string) (*DeleteClusterAddonResponse, error) {
+	rsp, err := c.DeleteClusterAddon(ctx, clusterId, repository, name)
 	if err != nil {
 		return nil, err
 	}
-	return ParseConfigureClusterAddonsResponse(rsp)
+	return ParseDeleteClusterAddonResponse(rsp)
+}
+
+// GetClusterAddonWithResponse request returning *GetClusterAddonResponse
+func (c *ClientWithResponses) GetClusterAddonWithResponse(ctx context.Context, clusterId string, repository string, name string) (*GetClusterAddonResponse, error) {
+	rsp, err := c.GetClusterAddon(ctx, clusterId, repository, name)
+	if err != nil {
+		return nil, err
+	}
+	return ParseGetClusterAddonResponse(rsp)
 }
 
 // ArchiveClusterWithResponse request returning *ArchiveClusterResponse
@@ -6459,6 +6418,32 @@ func (c *ClientWithResponses) GetClusterKubeconfigWithResponse(ctx context.Conte
 		return nil, err
 	}
 	return ParseGetClusterKubeconfigResponse(rsp)
+}
+
+// GetLegacyClusterAddonsWithResponse request returning *GetLegacyClusterAddonsResponse
+func (c *ClientWithResponses) GetLegacyClusterAddonsWithResponse(ctx context.Context, clusterId ClusterId) (*GetLegacyClusterAddonsResponse, error) {
+	rsp, err := c.GetLegacyClusterAddons(ctx, clusterId)
+	if err != nil {
+		return nil, err
+	}
+	return ParseGetLegacyClusterAddonsResponse(rsp)
+}
+
+// ConfigureClusterAddonsWithBodyWithResponse request with arbitrary body returning *ConfigureClusterAddonsResponse
+func (c *ClientWithResponses) ConfigureClusterAddonsWithBodyWithResponse(ctx context.Context, clusterId ClusterId, contentType string, body io.Reader) (*ConfigureClusterAddonsResponse, error) {
+	rsp, err := c.ConfigureClusterAddonsWithBody(ctx, clusterId, contentType, body)
+	if err != nil {
+		return nil, err
+	}
+	return ParseConfigureClusterAddonsResponse(rsp)
+}
+
+func (c *ClientWithResponses) ConfigureClusterAddonsWithResponse(ctx context.Context, clusterId ClusterId, body ConfigureClusterAddonsJSONRequestBody) (*ConfigureClusterAddonsResponse, error) {
+	rsp, err := c.ConfigureClusterAddons(ctx, clusterId, body)
+	if err != nil {
+		return nil, err
+	}
+	return ParseConfigureClusterAddonsResponse(rsp)
 }
 
 // GetClusterMetricsWithResponse request returning *GetClusterMetricsResponse
@@ -6590,6 +6575,41 @@ func (c *ClientWithResponses) PauseClusterReconcileWithResponse(ctx context.Cont
 		return nil, err
 	}
 	return ParsePauseClusterReconcileResponse(rsp)
+}
+
+// DeleteClusterPauseScheduleWithResponse request returning *DeleteClusterPauseScheduleResponse
+func (c *ClientWithResponses) DeleteClusterPauseScheduleWithResponse(ctx context.Context, clusterId ClusterId) (*DeleteClusterPauseScheduleResponse, error) {
+	rsp, err := c.DeleteClusterPauseSchedule(ctx, clusterId)
+	if err != nil {
+		return nil, err
+	}
+	return ParseDeleteClusterPauseScheduleResponse(rsp)
+}
+
+// GetClusterPauseScheduleWithResponse request returning *GetClusterPauseScheduleResponse
+func (c *ClientWithResponses) GetClusterPauseScheduleWithResponse(ctx context.Context, clusterId ClusterId) (*GetClusterPauseScheduleResponse, error) {
+	rsp, err := c.GetClusterPauseSchedule(ctx, clusterId)
+	if err != nil {
+		return nil, err
+	}
+	return ParseGetClusterPauseScheduleResponse(rsp)
+}
+
+// SetClusterPauseScheduleWithBodyWithResponse request with arbitrary body returning *SetClusterPauseScheduleResponse
+func (c *ClientWithResponses) SetClusterPauseScheduleWithBodyWithResponse(ctx context.Context, clusterId ClusterId, contentType string, body io.Reader) (*SetClusterPauseScheduleResponse, error) {
+	rsp, err := c.SetClusterPauseScheduleWithBody(ctx, clusterId, contentType, body)
+	if err != nil {
+		return nil, err
+	}
+	return ParseSetClusterPauseScheduleResponse(rsp)
+}
+
+func (c *ClientWithResponses) SetClusterPauseScheduleWithResponse(ctx context.Context, clusterId ClusterId, body SetClusterPauseScheduleJSONRequestBody) (*SetClusterPauseScheduleResponse, error) {
+	rsp, err := c.SetClusterPauseSchedule(ctx, clusterId, body)
+	if err != nil {
+		return nil, err
+	}
+	return ParseSetClusterPauseScheduleResponse(rsp)
 }
 
 // GetPoliciesWithResponse request returning *GetPoliciesResponse
@@ -6794,6 +6814,32 @@ func (c *ClientWithResponses) GetUsageReportWithResponse(ctx context.Context, pa
 	return ParseGetUsageReportResponse(rsp)
 }
 
+// ParseListAddonsResponse parses an HTTP response from a ListAddonsWithResponse call
+func ParseListAddonsResponse(rsp *http.Response) (*ListAddonsResponse, error) {
+	bodyBytes, err := ioutil.ReadAll(rsp.Body)
+	defer rsp.Body.Close()
+	if err != nil {
+		return nil, err
+	}
+
+	response := &ListAddonsResponse{
+		Body:         bodyBytes,
+		HTTPResponse: rsp,
+	}
+
+	switch {
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 200:
+		var dest AddonList
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON200 = &dest
+
+	}
+
+	return response, nil
+}
+
 // ParseListAuditEventsResponse parses an HTTP response from a ListAuditEventsWithResponse call
 func ParseListAuditEventsResponse(rsp *http.Response) (*ListAuditEventsResponse, error) {
 	bodyBytes, err := ioutil.ReadAll(rsp.Body)
@@ -6810,89 +6856,6 @@ func ParseListAuditEventsResponse(rsp *http.Response) (*ListAuditEventsResponse,
 	switch {
 	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 200:
 		var dest AuditEventList
-		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
-			return nil, err
-		}
-		response.JSON200 = &dest
-
-	}
-
-	return response, nil
-}
-
-// ParseLoginCallbackResponse parses an HTTP response from a LoginCallbackWithResponse call
-func ParseLoginCallbackResponse(rsp *http.Response) (*LoginCallbackResponse, error) {
-	bodyBytes, err := ioutil.ReadAll(rsp.Body)
-	defer rsp.Body.Close()
-	if err != nil {
-		return nil, err
-	}
-
-	response := &LoginCallbackResponse{
-		Body:         bodyBytes,
-		HTTPResponse: rsp,
-	}
-
-	switch {
-	}
-
-	return response, nil
-}
-
-// ParseLoginResponse parses an HTTP response from a LoginWithResponse call
-func ParseLoginResponse(rsp *http.Response) (*LoginResponse, error) {
-	bodyBytes, err := ioutil.ReadAll(rsp.Body)
-	defer rsp.Body.Close()
-	if err != nil {
-		return nil, err
-	}
-
-	response := &LoginResponse{
-		Body:         bodyBytes,
-		HTTPResponse: rsp,
-	}
-
-	switch {
-	}
-
-	return response, nil
-}
-
-// ParseLogoutResponse parses an HTTP response from a LogoutWithResponse call
-func ParseLogoutResponse(rsp *http.Response) (*LogoutResponse, error) {
-	bodyBytes, err := ioutil.ReadAll(rsp.Body)
-	defer rsp.Body.Close()
-	if err != nil {
-		return nil, err
-	}
-
-	response := &LogoutResponse{
-		Body:         bodyBytes,
-		HTTPResponse: rsp,
-	}
-
-	switch {
-	}
-
-	return response, nil
-}
-
-// ParseGetSessionResponse parses an HTTP response from a GetSessionWithResponse call
-func ParseGetSessionResponse(rsp *http.Response) (*GetSessionResponse, error) {
-	bodyBytes, err := ioutil.ReadAll(rsp.Body)
-	defer rsp.Body.Close()
-	if err != nil {
-		return nil, err
-	}
-
-	response := &GetSessionResponse{
-		Body:         bodyBytes,
-		HTTPResponse: rsp,
-	}
-
-	switch {
-	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 200:
-		var dest UserSession
 		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
 			return nil, err
 		}
@@ -7021,70 +6984,6 @@ func ParseUpdateAuthTokenResponse(rsp *http.Response) (*UpdateAuthTokenResponse,
 		}
 		response.JSON200 = &dest
 
-	}
-
-	return response, nil
-}
-
-// ParseBillingSsoResponse parses an HTTP response from a BillingSsoWithResponse call
-func ParseBillingSsoResponse(rsp *http.Response) (*BillingSsoResponse, error) {
-	bodyBytes, err := ioutil.ReadAll(rsp.Body)
-	defer rsp.Body.Close()
-	if err != nil {
-		return nil, err
-	}
-
-	response := &BillingSsoResponse{
-		Body:         bodyBytes,
-		HTTPResponse: rsp,
-	}
-
-	switch {
-	}
-
-	return response, nil
-}
-
-// ParseSubscriptionResponse parses an HTTP response from a SubscriptionWithResponse call
-func ParseSubscriptionResponse(rsp *http.Response) (*SubscriptionResponse, error) {
-	bodyBytes, err := ioutil.ReadAll(rsp.Body)
-	defer rsp.Body.Close()
-	if err != nil {
-		return nil, err
-	}
-
-	response := &SubscriptionResponse{
-		Body:         bodyBytes,
-		HTTPResponse: rsp,
-	}
-
-	switch {
-	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 200:
-		var dest Subscription
-		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
-			return nil, err
-		}
-		response.JSON200 = &dest
-
-	}
-
-	return response, nil
-}
-
-// ParseSubscriptionCheckoutResponse parses an HTTP response from a SubscriptionCheckoutWithResponse call
-func ParseSubscriptionCheckoutResponse(rsp *http.Response) (*SubscriptionCheckoutResponse, error) {
-	bodyBytes, err := ioutil.ReadAll(rsp.Body)
-	defer rsp.Body.Close()
-	if err != nil {
-		return nil, err
-	}
-
-	response := &SubscriptionCheckoutResponse{
-		Body:         bodyBytes,
-		HTTPResponse: rsp,
-	}
-
-	switch {
 	}
 
 	return response, nil
@@ -7381,6 +7280,32 @@ func ParseGetClusterResponse(rsp *http.Response) (*GetClusterResponse, error) {
 	return response, nil
 }
 
+// ParseUpdateClusterResponse parses an HTTP response from a UpdateClusterWithResponse call
+func ParseUpdateClusterResponse(rsp *http.Response) (*UpdateClusterResponse, error) {
+	bodyBytes, err := ioutil.ReadAll(rsp.Body)
+	defer rsp.Body.Close()
+	if err != nil {
+		return nil, err
+	}
+
+	response := &UpdateClusterResponse{
+		Body:         bodyBytes,
+		HTTPResponse: rsp,
+	}
+
+	switch {
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 200:
+		var dest KubernetesCluster
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON200 = &dest
+
+	}
+
+	return response, nil
+}
+
 // ParseGetClusterAddonsResponse parses an HTTP response from a GetClusterAddonsWithResponse call
 func ParseGetClusterAddonsResponse(rsp *http.Response) (*GetClusterAddonsResponse, error) {
 	bodyBytes, err := ioutil.ReadAll(rsp.Body)
@@ -7396,58 +7321,82 @@ func ParseGetClusterAddonsResponse(rsp *http.Response) (*GetClusterAddonsRespons
 
 	switch {
 	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 200:
-		var dest AddonsConfig
+		var dest ClusterAddonsList
 		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
 			return nil, err
 		}
 		response.JSON200 = &dest
-
-	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 404:
-		var dest ErrorResponse
-		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
-			return nil, err
-		}
-		response.JSON404 = &dest
 
 	}
 
 	return response, nil
 }
 
-// ParseConfigureClusterAddonsResponse parses an HTTP response from a ConfigureClusterAddonsWithResponse call
-func ParseConfigureClusterAddonsResponse(rsp *http.Response) (*ConfigureClusterAddonsResponse, error) {
+// ParseInstallClusterAddonResponse parses an HTTP response from a InstallClusterAddonWithResponse call
+func ParseInstallClusterAddonResponse(rsp *http.Response) (*InstallClusterAddonResponse, error) {
 	bodyBytes, err := ioutil.ReadAll(rsp.Body)
 	defer rsp.Body.Close()
 	if err != nil {
 		return nil, err
 	}
 
-	response := &ConfigureClusterAddonsResponse{
+	response := &InstallClusterAddonResponse{
 		Body:         bodyBytes,
 		HTTPResponse: rsp,
 	}
 
 	switch {
 	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 200:
-		var dest AddonsConfig
+		var dest ClusterAddon
 		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
 			return nil, err
 		}
 		response.JSON200 = &dest
 
-	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 404:
-		var dest ErrorResponse
-		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
-			return nil, err
-		}
-		response.JSON404 = &dest
+	}
 
-	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 409:
-		var dest ErrorResponse
+	return response, nil
+}
+
+// ParseDeleteClusterAddonResponse parses an HTTP response from a DeleteClusterAddonWithResponse call
+func ParseDeleteClusterAddonResponse(rsp *http.Response) (*DeleteClusterAddonResponse, error) {
+	bodyBytes, err := ioutil.ReadAll(rsp.Body)
+	defer rsp.Body.Close()
+	if err != nil {
+		return nil, err
+	}
+
+	response := &DeleteClusterAddonResponse{
+		Body:         bodyBytes,
+		HTTPResponse: rsp,
+	}
+
+	switch {
+	}
+
+	return response, nil
+}
+
+// ParseGetClusterAddonResponse parses an HTTP response from a GetClusterAddonWithResponse call
+func ParseGetClusterAddonResponse(rsp *http.Response) (*GetClusterAddonResponse, error) {
+	bodyBytes, err := ioutil.ReadAll(rsp.Body)
+	defer rsp.Body.Close()
+	if err != nil {
+		return nil, err
+	}
+
+	response := &GetClusterAddonResponse{
+		Body:         bodyBytes,
+		HTTPResponse: rsp,
+	}
+
+	switch {
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 200:
+		var dest ClusterAddon
 		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
 			return nil, err
 		}
-		response.JSON409 = &dest
+		response.JSON200 = &dest
 
 	}
 
@@ -7598,6 +7547,79 @@ func ParseGetClusterKubeconfigResponse(rsp *http.Response) (*GetClusterKubeconfi
 	}
 
 	switch {
+	}
+
+	return response, nil
+}
+
+// ParseGetLegacyClusterAddonsResponse parses an HTTP response from a GetLegacyClusterAddonsWithResponse call
+func ParseGetLegacyClusterAddonsResponse(rsp *http.Response) (*GetLegacyClusterAddonsResponse, error) {
+	bodyBytes, err := ioutil.ReadAll(rsp.Body)
+	defer rsp.Body.Close()
+	if err != nil {
+		return nil, err
+	}
+
+	response := &GetLegacyClusterAddonsResponse{
+		Body:         bodyBytes,
+		HTTPResponse: rsp,
+	}
+
+	switch {
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 200:
+		var dest AddonsConfig
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON200 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 404:
+		var dest ErrorResponse
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON404 = &dest
+
+	}
+
+	return response, nil
+}
+
+// ParseConfigureClusterAddonsResponse parses an HTTP response from a ConfigureClusterAddonsWithResponse call
+func ParseConfigureClusterAddonsResponse(rsp *http.Response) (*ConfigureClusterAddonsResponse, error) {
+	bodyBytes, err := ioutil.ReadAll(rsp.Body)
+	defer rsp.Body.Close()
+	if err != nil {
+		return nil, err
+	}
+
+	response := &ConfigureClusterAddonsResponse{
+		Body:         bodyBytes,
+		HTTPResponse: rsp,
+	}
+
+	switch {
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 200:
+		var dest AddonsConfig
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON200 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 404:
+		var dest ErrorResponse
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON404 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 409:
+		var dest ErrorResponse
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON409 = &dest
+
 	}
 
 	return response, nil
@@ -7858,6 +7880,84 @@ func ParsePauseClusterReconcileResponse(rsp *http.Response) (*PauseClusterReconc
 	switch {
 	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 200:
 		var dest KubernetesCluster
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON200 = &dest
+
+	}
+
+	return response, nil
+}
+
+// ParseDeleteClusterPauseScheduleResponse parses an HTTP response from a DeleteClusterPauseScheduleWithResponse call
+func ParseDeleteClusterPauseScheduleResponse(rsp *http.Response) (*DeleteClusterPauseScheduleResponse, error) {
+	bodyBytes, err := ioutil.ReadAll(rsp.Body)
+	defer rsp.Body.Close()
+	if err != nil {
+		return nil, err
+	}
+
+	response := &DeleteClusterPauseScheduleResponse{
+		Body:         bodyBytes,
+		HTTPResponse: rsp,
+	}
+
+	switch {
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 200:
+		var dest PauseSchedule
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON200 = &dest
+
+	}
+
+	return response, nil
+}
+
+// ParseGetClusterPauseScheduleResponse parses an HTTP response from a GetClusterPauseScheduleWithResponse call
+func ParseGetClusterPauseScheduleResponse(rsp *http.Response) (*GetClusterPauseScheduleResponse, error) {
+	bodyBytes, err := ioutil.ReadAll(rsp.Body)
+	defer rsp.Body.Close()
+	if err != nil {
+		return nil, err
+	}
+
+	response := &GetClusterPauseScheduleResponse{
+		Body:         bodyBytes,
+		HTTPResponse: rsp,
+	}
+
+	switch {
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 200:
+		var dest PauseSchedule
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON200 = &dest
+
+	}
+
+	return response, nil
+}
+
+// ParseSetClusterPauseScheduleResponse parses an HTTP response from a SetClusterPauseScheduleWithResponse call
+func ParseSetClusterPauseScheduleResponse(rsp *http.Response) (*SetClusterPauseScheduleResponse, error) {
+	bodyBytes, err := ioutil.ReadAll(rsp.Body)
+	defer rsp.Body.Close()
+	if err != nil {
+		return nil, err
+	}
+
+	response := &SetClusterPauseScheduleResponse{
+		Body:         bodyBytes,
+		HTTPResponse: rsp,
+	}
+
+	switch {
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 200:
+		var dest PauseSchedule
 		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
 			return nil, err
 		}

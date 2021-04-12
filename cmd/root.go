@@ -45,6 +45,7 @@ func NewRootCmd(log logrus.FieldLogger, cfg *config.Config, api client.Interface
 	clusterCmd.AddCommand(newClusterCreateCmd(log, cfg, api))
 	clusterCmd.AddCommand(newClusterGetKubeconfigCmd(log, api))
 	clusterCmd.AddCommand(newClusterDeleteCmd(log, api))
+	clusterCmd.AddCommand(newClusterReconcileCmd(log, api))
 	rootCmd.AddCommand(clusterCmd)
 	// Cluster nodes.
 	nodeCmd := newNodeCmd()

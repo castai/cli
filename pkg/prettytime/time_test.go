@@ -30,8 +30,8 @@ func TestFormat(t *testing.T) {
 		{name: "Tomorrow", t: time.Now().AddDate(0, 0, 1), want: "tomorrow"},
 		{name: "Yesterday", t: time.Now().AddDate(0, 0, -1), want: "yesterday"},
 		{name: "Days", t: time.Now().AddDate(0, 0, 5), want: "5 days from now"},
-		{name: "Month", t: time.Now().AddDate(0, 1, 0), want: "1 month from now"},
-		{name: "MonthAgo", t: time.Now().AddDate(0, -1, 0), want: "4 weeks ago"},
+		{name: "Month", t: time.Now().AddDate(0, 1, 2), want: "1 month from now"},
+		{name: "MonthAgo", t: time.Now().AddDate(0, -1, 2), want: "4 weeks ago"},
 		{name: "Year", t: time.Now().AddDate(50, 0, 0), want: "50 years from now"},
 		{name: "YearAgo", t: time.Now().AddDate(-2, 0, 0), want: "2 years ago"},
 	}
@@ -39,7 +39,7 @@ func TestFormat(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			if gotTimeSince := Format(tt.t); gotTimeSince != tt.want {
-				t.Errorf("Format() = %v, want %v", gotTimeSince, tt.want)
+				t.Errorf("expected=%v, got=%v", gotTimeSince, tt.want)
 			}
 		})
 	}
