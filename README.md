@@ -79,6 +79,13 @@ Flags:
 Use "cast [command] --help" for more information about a command.
 ```
 
+#### Autocompletion
+
+Run complection command help and follow instructions.
+```
+cast completion --help
+```
+
 #### Create and access cluster
 
 1. Create cluster
