@@ -69,7 +69,7 @@ func getNode(cmd *cobra.Command, api client.Interface, clusterID string) (*sdk.N
 		return nil, err
 	}
 	for _, node := range nodes {
-		if node.Name != nil && node.Id != nil && strings.ToLower(*node.Name) == strings.ToLower(value) {
+		if node.Name != nil && node.Id != nil && strings.EqualFold(*node.Name, value) {
 			return &node, nil
 		}
 	}

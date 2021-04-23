@@ -37,6 +37,7 @@ func newClusterCmd() *cobra.Command {
 	}
 }
 
+// getClusterIDFromArgs gets cluster ID from command line args, cast cluster get <UUID|NAME>
 func getClusterIDFromArgs(cmd *cobra.Command, api client.Interface) (string, error) {
 	ctx := cmd.Context()
 	if len(cmd.Flags().Args()) == 0 {
@@ -51,6 +52,7 @@ func getClusterIDFromArgs(cmd *cobra.Command, api client.Interface) (string, err
 	return getClusterID(ctx, api, value)
 }
 
+// getClusterIDFromFlag gets cluster ID from command line flags: eg: --cluster=name or -c=name or -c=<UUID>
 func getClusterIDFromFlag(cmd *cobra.Command, api client.Interface) (string, error) {
 	ctx := cmd.Context()
 	value, err := cmd.Flags().GetString(flagCluster)
@@ -69,8 +71,9 @@ func getClusterIDFromFlag(cmd *cobra.Command, api client.Interface) (string, err
 	return getClusterID(ctx, api, value)
 }
 
-func getClusterID(ctx context.Context, api client.Interface, value string) (string, error) {
-	uuidID, err := uuid.Parse(value)
+// getClusterID gets cluster from api and returns it's ID.
+func getClusterID(ctx context.Context, api client.Interface, clusterNameOrID string) (string, error) {
+	uuidID, err := uuid.Parse(clusterNameOrID)
 	if err == nil {
 		return uuidID.String(), nil
 	}
@@ -79,13 +82,50 @@ func getClusterID(ctx context.Context, api client.Interface, value string) (stri
 		return "", err
 	}
 	for _, cluster := range clusters {
-		if strings.ToLower(cluster.Name) == strings.ToLower(value) {
+		if strings.EqualFold(cluster.Name, clusterNameOrID) {
 			return cluster.Id, nil
 		}
 	}
-	return "", fmt.Errorf("clusterID for %s not found", value)
+	return "", fmt.Errorf("clusterID for %s not found", clusterNameOrID)
 }
 
+// getClusterFromArgs gets cluster from command line flags: eg: --cluster=name or -c=name or -c=<UUID>
+func getClusterFromArgs(cmd *cobra.Command, api client.Interface) (*sdk.KubernetesCluster, error) {
+	ctx := cmd.Context()
+	if len(cmd.Flags().Args()) == 0 {
+		cluster, err := selectCluster(ctx, api)
+		if err != nil {
+			return nil, err
+		}
+		return cluster, nil
+	}
+
+	value := cmd.Flags().Args()[0]
+	return getCluster(ctx, api, value)
+}
+
+// getCluster gets cluster from api by name or ID.
+func getCluster(ctx context.Context, api client.Interface, clusterNameOrID string) (*sdk.KubernetesCluster, error) {
+	// Get cluster by clusterID if valid uuid is passed.
+	uuidID, err := uuid.Parse(clusterNameOrID)
+	if err == nil {
+		return api.GetCluster(ctx, sdk.ClusterId(uuidID.String()))
+	}
+
+	// List all clusters and find by name.
+	clusters, err := api.ListKubernetesClusters(ctx, &sdk.ListKubernetesClustersParams{})
+	if err != nil {
+		return nil, err
+	}
+	for _, cluster := range clusters {
+		if strings.EqualFold(cluster.Name, clusterNameOrID) {
+			return &cluster, nil
+		}
+	}
+	return nil, fmt.Errorf("cluster not found, id=%s", clusterNameOrID)
+}
+
+// selectCluster shows interactive cluster selection list and returns selected cluster.
 func selectCluster(ctx context.Context, api client.Interface) (*sdk.KubernetesCluster, error) {
 	items, err := api.ListKubernetesClusters(ctx, &sdk.ListKubernetesClustersParams{})
 	if err != nil {
