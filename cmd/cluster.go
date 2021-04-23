@@ -82,7 +82,7 @@ func getClusterID(ctx context.Context, api client.Interface, clusterNameOrID str
 		return "", err
 	}
 	for _, cluster := range clusters {
-		if strings.ToLower(cluster.Name) == strings.ToLower(clusterNameOrID) {
+		if strings.EqualFold(cluster.Name, clusterNameOrID) {
 			return cluster.Id, nil
 		}
 	}
@@ -118,7 +118,7 @@ func getCluster(ctx context.Context, api client.Interface, clusterNameOrID strin
 		return nil, err
 	}
 	for _, cluster := range clusters {
-		if strings.ToLower(cluster.Name) == strings.ToLower(clusterNameOrID) {
+		if strings.EqualFold(cluster.Name, clusterNameOrID) {
 			return &cluster, nil
 		}
 	}
