@@ -30,8 +30,8 @@ func TestCommands(t *testing.T) {
 		out, err := executeCommand(root, "cluster", "list")
 		require.NoError(t, err)
 		fmt.Println(out)
-		expected := ` ID  NAME            STATUS  CLOUDS  REGION                       AGE      
- c1  test-cluster-1  ready   aws      Europe Central (Frankfurt)  just now`
+		expected := ` ID                                    NAME            STATUS  CLOUDS  REGION                       AGE      
+ 00000000-0000-0000-0000-000000000000  test-cluster-1  ready   aws      Europe Central (Frankfurt)  just now`
 		require.Equal(t, expected+" \n", out)
 	})
 
@@ -79,8 +79,8 @@ func TestCommands(t *testing.T) {
 		)
 		require.NoError(t, err)
 		fmt.Println(out)
-		expected := ` ID  NAME            STATUS  CLOUDS  REGION                       AGE      
- c1  test-cluster-1  ready   aws      Europe Central (Frankfurt)  just now`
+		expected := ` ID                                    NAME            STATUS  CLOUDS  REGION                       AGE      
+ 00000000-0000-0000-0000-000000000000  test-cluster-1  ready   aws      Europe Central (Frankfurt)  just now`
 		require.Equal(t, expected+" \n", out)
 	})
 

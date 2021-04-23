@@ -17,6 +17,7 @@ limitations under the License.
 package cmd
 
 import (
+	"fmt"
 	"io/ioutil"
 	"os"
 	"path/filepath"
@@ -68,19 +69,21 @@ func handleClusterGetKubeconfig(cmd *cobra.Command, log logrus.FieldLogger, api 
 		return err
 	}
 
-	clusterID, err := getClusterIDFromArgs(cmd, api)
+	cluster, err := getClusterFromArgs(cmd, api)
 	if err != nil {
 		return err
 	}
 
-	resp, err := api.GetClusterKubeconfig(cmd.Context(), sdk.ClusterId(clusterID))
+	resp, err := api.GetClusterKubeconfig(cmd.Context(), sdk.ClusterId(cluster.Id))
 	if err != nil {
 		return err
 	}
-	newConfig, err := getRawConfig(resp)
+
+	clusterConfig, err := getRawConfig(resp)
 	if err != nil {
 		return err
 	}
+	clusterConfig = fixClusterConfig(clusterConfig, cluster)
 
 	defer func() {
 		if err == nil {
@@ -90,7 +93,7 @@ func handleClusterGetKubeconfig(cmd *cobra.Command, log logrus.FieldLogger, api 
 
 	// If there is no already created kubconfig in given path create it and exit.
 	if _, err := os.Stat(kubeconfigPath); os.IsNotExist(err) {
-		if err := clientcmd.WriteToFile(newConfig, kubeconfigPath); err != nil {
+		if err := clientcmd.WriteToFile(clusterConfig, kubeconfigPath); err != nil {
 			return err
 		}
 		return nil
@@ -106,7 +109,7 @@ func handleClusterGetKubeconfig(cmd *cobra.Command, log logrus.FieldLogger, api 
 		return err
 	}
 
-	currentConfig = mergeConfigs(currentConfig, newConfig)
+	currentConfig = mergeConfigs(currentConfig, clusterConfig)
 	if err := clientcmd.WriteToFile(currentConfig, kubeconfigPath); err != nil {
 		return err
 	}
@@ -114,15 +117,47 @@ func handleClusterGetKubeconfig(cmd *cobra.Command, log logrus.FieldLogger, api 
 	return nil
 }
 
+// fixClusterConfig replaces random generated cluster, context and user names with unique cluster name + uuid[:8]
+// which solves conflicts when using multiple cast clusters in one kubeconfig.
+func fixClusterConfig(config api.Config, cluster *sdk.KubernetesCluster) api.Config {
+	clusterNameID := fmt.Sprintf("%s-%s", cluster.Name, cluster.Id[0:8])
+
+	config.CurrentContext = clusterNameID
+
+	for k, v := range config.Clusters {
+		delete(config.Clusters, k)
+		config.Clusters[clusterNameID] = v
+		break
+	}
+
+	for k, v := range config.Contexts {
+		delete(config.Contexts, k)
+		v.AuthInfo = clusterNameID
+		config.Contexts[clusterNameID] = v
+		break
+	}
+
+	for k, v := range config.AuthInfos {
+		delete(config.AuthInfos, k)
+		config.AuthInfos[clusterNameID] = v
+		break
+	}
+
+	return config
+}
+
 func mergeConfigs(current, other api.Config) api.Config {
 	for k, v := range other.Clusters {
 		current.Clusters[k] = v
+		break
 	}
 	for k, v := range other.Contexts {
 		current.Contexts[k] = v
+		break
 	}
 	for k, v := range other.AuthInfos {
 		current.AuthInfos[k] = v
+		break
 	}
 	current.CurrentContext = other.CurrentContext
 	return current

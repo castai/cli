@@ -12,8 +12,8 @@ import (
 
 func NewMock() Interface {
 	cred1, cred2, cred3 := "cred1", "cred2", "cred3"
-	c1 := "c1"
-	n1 := "n1"
+	c1 := "00000000-0000-0000-0000-000000000000"
+	n1 := "11111111-1111-1111-1111-111111111111"
 	now := time.Now()
 	c1Nodes := []sdk.Node{
 		{
