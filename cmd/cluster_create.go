@@ -20,17 +20,17 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"net"
+	"sort"
 	"strings"
 	"time"
 
 	"github.com/AlecAivazis/survey/v2"
-	"github.com/cheggaaa/pb/v3"
 	"github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
 
 	"github.com/castai/cli/pkg/client"
 	"github.com/castai/cli/pkg/client/sdk"
-	"github.com/castai/cli/pkg/command"
 	"github.com/castai/cli/pkg/config"
 )
 
@@ -40,9 +40,12 @@ type clusterCreateFlags struct {
 	Credentials   []string `survey:"credentials"`
 	Configuration string   `survey:"configuration"`
 	VPN           string   `survey:"vpn"`
-	Progress      bool     `survey:"progress"`
 	Nodes         []string
 	Wait          bool
+	AWSVPCCidr    string
+	GCPVPCCidr    string
+	AzureVPCCidr  string
+	DOVPCCidr     string
 }
 
 var clusterCreateFlagsData clusterCreateFlags
@@ -52,9 +55,8 @@ const (
 	vpnTypeWireGuardFullMesh          = "wireguard_full_mesh"
 	vpnTypeCloudProvider              = "cloud_provider"
 
-	clusterConfigurationStarter = "starter"
-	clusterConfigurationBasic   = "basic"
-	clusterConfigurationHA      = "ha"
+	clusterConfigurationBasic = "basic"
+	clusterConfigurationHA    = "ha"
 )
 
 func newClusterCreateCmd(log logrus.FieldLogger, cfg *config.Config, api client.Interface) *cobra.Command {
@@ -76,7 +78,7 @@ Examples:
     --credentials=aws --credentials=gcp --credentials=do \
     --configuration=ha \
     --vpn=wireguard_cross_location_mesh \
-    --wait --progress
+    --wait 
 
   # Create HA cluster with 3 clouds from custom nodes definitions.
   cast cluster create \
@@ -86,11 +88,11 @@ Examples:
     --node=aws,master,medium \
     --node=gcp,master,medium \
     --node=do,master,medium \
-    --node=aws,worker,smal \
+    --node=aws,worker,small \
     --node=gcp,worker,medium \
     --node=do,worker,large \
     --vpn=wireguard_full_mesh \
-    --wait --progress
+    --wait
 `,
 		Run: func(cmd *cobra.Command, args []string) {
 			if err := handleCreateCluster(cmd, log, api); err != nil {
@@ -102,10 +104,13 @@ Examples:
 	cmd.PersistentFlags().StringVar(&clusterCreateFlagsData.Region, "region", cfg.DefaultRegion, "region in which cluster will be created, eg. --region=eu-central")
 	cmd.PersistentFlags().StringSliceVar(&clusterCreateFlagsData.Credentials, "credentials", []string{}, "cloud credentials names, eg. --credentials=aws, --credentials=gcp")
 	cmd.PersistentFlags().StringSliceVar(&clusterCreateFlagsData.Nodes, "node", []string{}, "nodes configuration, eg. --node=aws,master,medium --node=gcp,worker,small")
-	cmd.PersistentFlags().StringVar(&clusterCreateFlagsData.Configuration, "configuration", clusterConfigurationBasic, "quick cluster nodes configuration, eg. --configuration=ha")
-	cmd.PersistentFlags().StringVar(&clusterCreateFlagsData.VPN, "vpn", vpnTypeWireGuardCrossLocationMesh, "virtual private network type between clouds, eg. --vpn=cloud_provider")
+	cmd.PersistentFlags().StringVar(&clusterCreateFlagsData.Configuration, "configuration", clusterConfigurationBasic, "quick cluster nodes configuration, available values: basic,ha")
+	cmd.PersistentFlags().StringVar(&clusterCreateFlagsData.VPN, "vpn", "", "virtual private network type between clouds, available values: cloud_provider, wireguard_cross_location_mesh, wireguard_full_mesh")
+	cmd.PersistentFlags().StringVar(&clusterCreateFlagsData.AWSVPCCidr, "aws-vpc-cidr", "", "optional custom AWS VPC IPv4 CIDR, eg. --aws-vpc-cidr=10.10.0.0/16")
+	cmd.PersistentFlags().StringVar(&clusterCreateFlagsData.GCPVPCCidr, "gcp-vpc-cidr", "", "optional custom GCP VPC IPv4 CIDR, eg. --gcp-vpc-cidr=10.0.0.0/16")
+	cmd.PersistentFlags().StringVar(&clusterCreateFlagsData.AzureVPCCidr, "azure-vpc-cidr", "", "optional custom AZURE VPC IPv4 CIDR, eg. --azure-vpc-cidr=10.20.0.0/16")
+	cmd.PersistentFlags().StringVar(&clusterCreateFlagsData.DOVPCCidr, "do-vpc-cidr", "", "optional custom DO IPv4 CIDR, eg. --do-vpc-cidr=10.100.0.0/16")
 	cmd.PersistentFlags().BoolVar(&clusterCreateFlagsData.Wait, "wait", false, "wait until operation finishes, eg. --wait=true")
-	cmd.PersistentFlags().BoolVar(&clusterCreateFlagsData.Progress, "progress", false, "show progress bar with estimated time for finish, eg. --progress=true")
 	return cmd
 }
 
@@ -129,87 +134,58 @@ func handleCreateCluster(cmd *cobra.Command, log logrus.FieldLogger, api client.
 		return err
 	}
 
-	estimatedDuration := estimateClusterCreationDuration(req)
-
-	if !clusterCreateFlagsData.Wait && !clusterCreateFlagsData.Progress {
-		log.Infof("Great! Cluster creation is now in progress and should be ready after ~ %s.", estimatedDuration)
+	if !clusterCreateFlagsData.Wait {
+		log.Infof("Cluster creation is now in progress. Check status by running 'cast cluster get %s'", cluster.Name)
 		return nil
 	}
 
-	if clusterCreateFlagsData.Wait && !clusterCreateFlagsData.Progress {
-		err := waitClusterCreated(cmd.Context(), cluster.Id, api)
-		if err != nil {
-			return err
-		}
-		log.Info("Great! Cluster is ready.")
-		return nil
-	}
-
-	if err := waitClusterCreatedWithProgress(cmd.Context(), estimatedDuration, cluster.Id, api); err != nil {
+	log.Info("Cluster creation is now in progress. It is safe to close this terminal.")
+	if err := waitClusterCreatedWithProgress(cmd.Context(), log, api, cluster.Id); err != nil {
 		return err
 	}
-	log.Info("Great! Cluster is ready.")
+	log.Infof("Cluster is ready. Check status by running 'cast cluster get %s'", cluster.Name)
 	return nil
 }
 
-func estimateClusterCreationDuration(req *sdk.CreateNewClusterJSONRequestBody) time.Duration {
-	if req.Network.Vpn.WireGuard != nil {
-		return 10 * time.Minute
-	}
+func waitClusterCreatedWithProgress(ctx context.Context, log logrus.FieldLogger, api client.Interface, clusterID string) (err error) {
+	written := make(map[string]struct{})
 
-	clouds := map[string]struct{}{}
-	for _, node := range req.Nodes {
-		clouds[string(node.Cloud)] = struct{}{}
-	}
-	if len(clouds) == 1 {
-		return 10 * time.Minute
-	}
-	for c := range clouds {
-		if c == "azure" {
-			return 30 * time.Minute
-		}
-	}
-	return 12 * time.Minute
-}
-
-func waitClusterCreated(ctx context.Context, clusterID string, api client.Interface) error {
 	for {
-		cluster, err := api.GetCluster(ctx, sdk.ClusterId(clusterID))
-		if err != nil {
-			return err
-		}
-		if cluster.Status == "ready" {
-			return nil
-		}
-
 		select {
-		case <-time.After(20 * time.Second):
 		case <-ctx.Done():
-			return nil
+			return ctx.Err()
+		case <-time.After(10 * time.Second):
+			// Check if cluster is ready.
+			cluster, err := api.GetCluster(ctx, sdk.ClusterId(clusterID))
+			if err != nil {
+				log.Warn(err)
+				continue
+			}
+			if cluster.Status == "ready" {
+				return nil
+			}
+
+			// Print feedback events.
+			events, err := api.GetClusterFeedbackEvents(ctx, sdk.ClusterId(clusterID))
+			if err != nil {
+				log.Warn(err)
+				continue
+			}
+			sort.Slice(events, func(i, j int) bool {
+				return events[i].CreatedAt.Before(events[j].CreatedAt)
+			})
+			for _, e := range events {
+				if _, ok := written[e.Id]; !ok {
+					logFn := log.Infof
+					if e.Severity == "error" {
+						logFn = log.Errorf
+					}
+					logFn("%s %s", e.CreatedAt.Format(time.RFC3339), e.Message)
+					written[e.Id] = struct{}{}
+				}
+			}
 		}
 	}
-}
-
-func waitClusterCreatedWithProgress(ctx context.Context, duration time.Duration, clusterID string, api client.Interface) (err error) {
-	waitErr := make(chan error)
-	go func() {
-		waitErr <- waitClusterCreated(ctx, clusterID, api)
-	}()
-
-	command.ShowProgress(ctx, command.ProgressConfig{
-		Title:        fmt.Sprintf("Estimated time: %s", duration),
-		TotalTimeETA: duration,
-		TickInterval: 1 * time.Second,
-		StopFunc: func(tick int, bar *pb.ProgressBar) bool {
-			select {
-			case err = <-waitErr:
-				return true
-			default:
-				return false
-			}
-		},
-	})
-	return nil
 }
 
 func parseDeclarativeClusterForm(ctx context.Context, api client.Interface) (*sdk.CreateNewClusterJSONRequestBody, error) {
@@ -281,9 +257,9 @@ func parseInteractiveClusterForm(ctx context.Context, api client.Interface) (*sd
 	}
 
 	if err := survey.AskOne(&survey.Confirm{
-		Message: "Wait for creation and show progress?",
+		Message: "Wait for cluster creation?",
 		Default: true,
-	}, &clusterCreateFlagsData.Progress); err != nil {
+	}, &clusterCreateFlagsData.Wait); err != nil {
 		return nil, err
 	}
 
@@ -321,25 +297,20 @@ func toCreateClusterRequest(lists *clusterCreationSelectLists, flags clusterCrea
 	if len(flags.Credentials) == 0 {
 		return nil, errors.New("cloud credentials are required, eg. --credentials=gcp-creds-1")
 	}
-	cloudCredentials := selectOptionList{}
-	cloudCredentialIDs := make([]string, len(flags.Credentials))
-	for i, credential := range flags.Credentials {
+	selectedCloudCredentialIDs := make([]string, 0, len(flags.Credentials))
+	selectedClouds := make([]string, 0, len(flags.Credentials))
+	for _, credential := range flags.Credentials {
 		v, ok := lists.credentials.find(credential)
 		if !ok {
-			return nil, fmt.Errorf("cloud credentials value %s is not valid, available values: %s", credential, strings.Join(lists.credentials.names(), ", "))
+			return nil, fmt.Errorf("cloud credentials value '%s' is not valid, available values: %s", credential, strings.Join(lists.credentials.names(), ", "))
 		}
-		cloudCredentials = append(cloudCredentials, v)
-		cloudCredentialIDs[i] = v.extra["id"]
+		selectedClouds = append(selectedClouds, v.extra["cloud"])
+		selectedCloudCredentialIDs = append(selectedCloudCredentialIDs, v.extra["id"])
 	}
 
 	region, ok := lists.regions.find(flags.Region)
 	if !ok {
-		return nil, fmt.Errorf("region value %s is not valid, available values: %s", flags.Region, strings.Join(lists.regions.names(), ", "))
-	}
-
-	vpn, ok := lists.vpns.find(flags.VPN)
-	if !ok {
-		return nil, fmt.Errorf("vpn value %s is not valid, available values: %s", flags.VPN, strings.Join(lists.vpns.names(), ", "))
+		return nil, fmt.Errorf("region value '%s' is not valid, available values: %s", flags.Region, strings.Join(lists.regions.names(), ", "))
 	}
 
 	if flags.Configuration == "" && len(flags.Nodes) == 0 {
@@ -356,35 +327,82 @@ func toCreateClusterRequest(lists *clusterCreationSelectLists, flags clusterCrea
 	} else {
 		configuration, ok := lists.clusterConfigurations.find(flags.Configuration)
 		if !ok {
-			return nil, fmt.Errorf("configuration value %s is not valid", flags.VPN)
+			return nil, fmt.Errorf("configuration value '%s' is not valid, available values: %s", flags.Configuration, strings.Join(lists.clusterConfigurations.names(), ", "))
 		}
-		nodes = toAPINodesFromConfiguration(cloudCredentials, configuration.name)
+		nodes = toAPINodesFromConfiguration(selectedClouds, configuration.name)
+	}
+
+	networkSpec, err := toNetwork(lists, flags, len(selectedCloudCredentialIDs))
+	if err != nil {
+		return nil, err
 	}
 
 	return &sdk.CreateNewClusterJSONRequestBody{
 		Name:                flags.Name,
-		CloudCredentialsIDs: cloudCredentialIDs,
+		CloudCredentialsIDs: selectedCloudCredentialIDs,
 		Region:              region.name,
-		Network:             toNetwork(vpn.name),
+		Network:             networkSpec,
 		Addons:              defaultAddons(),
 		Nodes:               nodes,
 	}, nil
 }
 
-func toNetwork(name string) *sdk.Network {
-	switch name {
+func toNetwork(lists *clusterCreationSelectLists, flags clusterCreateFlags, clouds int) (*sdk.Network, error) {
+	res := &sdk.Network{}
+
+	// Set VPN type.
+	vpn, ok := lists.vpns.find(flags.VPN)
+	if !ok && clouds > 1 {
+		return nil, fmt.Errorf("vpn value '%s' is not valid, available values: %s", flags.VPN, strings.Join(lists.vpns.names(), ", "))
+	}
+	switch vpn.name {
 	case vpnTypeWireGuardFullMesh:
-		return &sdk.Network{Vpn: sdk.VpnConfig{
+		res.Vpn = &sdk.VpnConfig{
 			WireGuard: &sdk.WireGuardConfig{Topology: "fullMesh"},
-		}}
+		}
 	case vpnTypeWireGuardCrossLocationMesh:
-		return &sdk.Network{Vpn: sdk.VpnConfig{
+		res.Vpn = &sdk.VpnConfig{
 			WireGuard: &sdk.WireGuardConfig{Topology: "crossLocationMesh"},
-		}}
+		}
 	case vpnTypeCloudProvider:
-		return &sdk.Network{Vpn: sdk.VpnConfig{
+		res.Vpn = &sdk.VpnConfig{
 			IpSec: &sdk.IpSecConfig{},
-		}}
+		}
+	}
+
+	// Set custom VPC CIDR's.
+	if cidr := flags.AWSVPCCidr; cidr != "" {
+		if err := validateCIDR(cidr); err != nil {
+			return nil, err
+		}
+		res.Aws = &sdk.CloudNetworkConfig{VpcCidr: cidr}
+	}
+	if cidr := flags.GCPVPCCidr; cidr != "" {
+		if err := validateCIDR(cidr); err != nil {
+			return nil, err
+		}
+		res.Gcp = &sdk.CloudNetworkConfig{VpcCidr: cidr}
+	}
+	if cidr := flags.AzureVPCCidr; cidr != "" {
+		if err := validateCIDR(cidr); err != nil {
+			return nil, err
+		}
+		res.Azure = &sdk.CloudNetworkConfig{VpcCidr: cidr}
+	}
+	if cidr := flags.DOVPCCidr; cidr != "" {
+		if err := validateCIDR(cidr); err != nil {
+			return nil, err
+		}
+		res.Do = &sdk.CloudNetworkConfig{VpcCidr: cidr}
+	}
+
+	return res, nil
+}
+
+func validateCIDR(s string) error {
+	_, _, err := net.ParseCIDR(s)
+	if err != nil {
+		return fmt.Errorf("invalid cidr: %w", err)
 	}
 	return nil
 }
@@ -392,7 +410,7 @@ func toNetwork(name string) *sdk.Network {
 func toAPINodesFromFlags(nodes []string) ([]sdk.Node, error) {
 	res := make([]sdk.Node, len(nodes))
 	for i, s := range nodes {
-		node, err := parseNodeFromString(s)
+		node, err := parseNode(s)
 		if err != nil {
 			return nil, err
 		}
@@ -401,7 +419,7 @@ func toAPINodesFromFlags(nodes []string) ([]sdk.Node, error) {
 	return res, nil
 }
 
-func parseNodeFromString(n string) (sdk.Node, error) {
+func parseNode(n string) (sdk.Node, error) {
 	p := strings.Split(n, ",")
 	if len(p) < 2 {
 		return sdk.Node{}, fmt.Errorf("unknown node format %q, it should contain cloud, type and shape, eg. --node=aws,master,medium or --node=aws,worker,small", n)
@@ -441,63 +459,49 @@ func parseNodeFromString(n string) (sdk.Node, error) {
 	}, nil
 }
 
-func toAPINodesFromConfiguration(cloudCredentials selectOptionList, clusterConfigurationName string) []sdk.Node {
+func toAPINodesFromConfiguration(selectedClouds []string, clusterConfigurationName string) []sdk.Node {
 	var nodes []sdk.Node
 	switch clusterConfigurationName {
-	case clusterConfigurationStarter:
-		// Add master node on first cloud.
-		firstCloudCredential := cloudCredentials[0]
-		nodes = append(nodes, sdk.Node{
-			Cloud: sdk.CloudType(firstCloudCredential.extra["cloud"]),
-			Role:  "master",
-			Shape: "medium",
-		})
-		// Add worker node on first cloud.
-		nodes = append(nodes, sdk.Node{
-			Cloud: sdk.CloudType(firstCloudCredential.extra["cloud"]),
-			Role:  "worker",
-			Shape: "medium",
-		})
 	case clusterConfigurationBasic:
 		// Add master node on first cloud.
-		firstCloudCredential := cloudCredentials[0]
+		firstCloud := selectedClouds[0]
 		nodes = append(nodes, sdk.Node{
-			Cloud: sdk.CloudType(firstCloudCredential.extra["cloud"]),
+			Cloud: sdk.CloudType(firstCloud),
 			Role:  "master",
 			Shape: "medium",
 		})
 		// Add worker nodes on each cloud.
-		for _, credential := range cloudCredentials {
+		for _, cloud := range selectedClouds {
 			nodes = append(nodes, sdk.Node{
-				Cloud: sdk.CloudType(credential.extra["cloud"]),
+				Cloud: sdk.CloudType(cloud),
 				Role:  "worker",
 				Shape: "small",
 			})
 		}
 	case clusterConfigurationHA:
 		// Add master node on each cloud.
-		for i := 0; i < len(cloudCredentials); i++ {
+		for _, cloud := range selectedClouds {
 			nodes = append(nodes, sdk.Node{
-				Cloud: sdk.CloudType(cloudCredentials[i].extra["cloud"]),
+				Cloud: sdk.CloudType(cloud),
 				Role:  "master",
 				Shape: "medium",
 			})
 		}
 		// In case user selected 1 or 2 cloud credentials add additional master on first cloud.
 		if len(nodes) < 3 {
-			firstCloudCredential := cloudCredentials[0]
+			firstCloud := selectedClouds[0]
 			for i := len(nodes); i < 3; i++ {
 				nodes = append(nodes, sdk.Node{
-					Cloud: sdk.CloudType(firstCloudCredential.extra["cloud"]),
+					Cloud: sdk.CloudType(firstCloud),
 					Role:  "master",
 					Shape: "medium",
 				})
 			}
 		}
 		// Add worker nodes on each cloud.
-		for _, credential := range cloudCredentials {
+		for _, cloud := range selectedClouds {
 			nodes = append(nodes, sdk.Node{
-				Cloud: sdk.CloudType(credential.extra["cloud"]),
+				Cloud: sdk.CloudType(cloud),
 				Role:  "worker",
 				Shape: "small",
 			})

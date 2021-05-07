@@ -57,12 +57,12 @@ func newNodeSSHCmd(log logrus.FieldLogger, api client.Interface, terminal ssh.Te
 
 func handleNodeSSH(cmd *cobra.Command, log logrus.FieldLogger, api client.Interface, terminal ssh.Terminal, ipify ipify.Client) error {
 	ctx := cmd.Context()
-	clusterID, err := getClusterIDFromFlag(cmd, api)
+	cluster, err := getClusterFromFlag(cmd, api)
 	if err != nil {
 		return err
 	}
 
-	node, err := getNode(cmd, api, clusterID)
+	node, err := getNode(cmd, api, cluster.Id)
 	if err != nil {
 		return err
 	}
@@ -82,7 +82,7 @@ func handleNodeSSH(cmd *cobra.Command, log logrus.FieldLogger, api client.Interf
 	if err != nil {
 		return fmt.Errorf("getting public IP: %w", err)
 	}
-	err = api.SetupNodeSSH(ctx, sdk.ClusterId(clusterID), *node.Id, sdk.SetupNodeSshJSONRequestBody{
+	err = api.SetupNodeSSH(ctx, sdk.ClusterId(cluster.Id), *node.Id, sdk.SetupNodeSshJSONRequestBody{
 		PublicKey: base64.StdEncoding.EncodeToString(keys.Public),
 		SourceIp:  publicIP,
 	})
@@ -107,7 +107,7 @@ func handleNodeSSH(cmd *cobra.Command, log logrus.FieldLogger, api client.Interf
 	}
 
 	log.Info("Closing firewall access")
-	if err := api.CloseNodeSSH(ctx, sdk.ClusterId(clusterID), *node.Id); err != nil {
+	if err := api.CloseNodeSSH(ctx, sdk.ClusterId(cluster.Id), *node.Id); err != nil {
 		return err
 	}
 

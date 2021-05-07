@@ -117,6 +117,10 @@ type mockClient struct {
 	feedbackEvents []sdk.KubernetesClusterFeedbackEvent
 }
 
+func (m *mockClient) GetClusterFeedbackEvents(ctx context.Context, clusterID sdk.ClusterId) ([]sdk.KubernetesClusterFeedbackEvent, error) {
+	return []sdk.KubernetesClusterFeedbackEvent{}, nil
+}
+
 func (m *mockClient) TriggerClusterReconcile(ctx context.Context, clusterID sdk.ClusterId) error {
 	return nil
 }

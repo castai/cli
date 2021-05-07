@@ -20,10 +20,13 @@ const (
 type AddExternalClusterNode struct {
 
 	// Instance type for the new VM.
-	InstanceType *string `json:"instanceType,omitempty"`
+	InstanceType string `json:"instanceType"`
 
 	// Spot instance configuration.
 	SpotConfig *NodeSpotConfig `json:"spotConfig,omitempty"`
+
+	// Zone for the new VM. Must be a zone for one of the subnets in the cluster.
+	Zone *string `json:"zone,omitempty"`
 }
 
 // AddNodeResult defines model for AddNodeResult.
@@ -103,11 +106,20 @@ type AddonList struct {
 // AddonsConfig defines model for AddonsConfig.
 type AddonsConfig struct {
 
+	// Cert-Manager
+	CertManager *CertManagerConfig `json:"certManager,omitempty"`
+
 	// Grafana -- UI for Loki and Prometheus
+	Grafana *GrafanaConfig `json:"grafana,omitempty"`
+
+	// Grafana Bundle -- UI for Loki and Prometheus
 	GrafanaBundle *GrafanaBundleConfig `json:"grafanaBundle,omitempty"`
 
+	// Grafana Loki
+	GrafanaLoki *GrafanaLokiConfig `json:"grafanaLoki,omitempty"`
+
 	// Nginx-based ingress controller and cert manager
-	IngressBundle *IngressBundleConfig `json:"ingressBundle,omitempty"`
+	IngressNginx *IngressNginxConfig `json:"ingressNginx,omitempty"`
 
 	// KEDA (keda.sh) an event-based k8s resources autoscaler
 	Keda *KedaConfig `json:"keda,omitempty"`
@@ -253,6 +265,13 @@ type CastRegionList struct {
 	Items []CastRegion `json:"items"`
 }
 
+// CertManagerConfig defines model for CertManagerConfig.
+type CertManagerConfig struct {
+
+	// Whether this addon is enabled
+	Enabled bool `json:"enabled"`
+}
+
 // Cloud defines model for Cloud.
 type Cloud struct {
 
@@ -296,6 +315,13 @@ type CloudCredentialsReservation struct {
 
 	// Name of the object which uses credentials.
 	Name string `json:"name"`
+}
+
+// CloudNetworkConfig defines model for CloudNetworkConfig.
+type CloudNetworkConfig struct {
+
+	// Optional AWS VPC IPv4 CIDR. If not specified default CIDR is used. (GCP - 10.0.0.0/16, AWS - 10.10.0.0/16, Azure - 10.20.0.0/16, DO - Any available)
+	VpcCidr string `json:"vpcCidr"`
 }
 
 // CloudType defines model for CloudType.
@@ -540,6 +566,23 @@ type ExternalCluster struct {
 	Token *string `json:"token,omitempty"`
 }
 
+// ExternalClusterAddNodeResult defines model for ExternalClusterAddNodeResult.
+type ExternalClusterAddNodeResult struct {
+
+	// Node UUID.
+	NodeId string `json:"nodeId"`
+
+	// Node add operation ID for checking actualy operation status.
+	OperationId string `json:"operationId"`
+}
+
+// ExternalClusterDeleteNodeResult defines model for ExternalClusterDeleteNodeResult.
+type ExternalClusterDeleteNodeResult struct {
+
+	// Node deletion operation ID for checking actualy operation status.
+	OperationId string `json:"operationId"`
+}
+
 // ExternalClusterEditParams defines model for ExternalClusterEditParams.
 type ExternalClusterEditParams struct {
 
@@ -560,11 +603,23 @@ type ExternalClusterEksConfiguration struct {
 // ExternalClusterNode defines model for ExternalClusterNode.
 type ExternalClusterNode struct {
 
+	// cloud provider of this node.
+	Cloud string `json:"cloud"`
+
 	// node ID.
-	NodeId string `json:"nodeId"`
+	Id string `json:"id"`
+
+	// node instance type.
+	InstanceType string `json:"instanceType"`
+
+	// node name.
+	Name string `json:"name"`
 
 	// Spot instance configuration.
-	SpotConfig *NodeSpotConfig `json:"spotConfig,omitempty"`
+	SpotConfig NodeSpotConfig `json:"spotConfig"`
+
+	// datacenter availability zone of the node.
+	Zone string `json:"zone"`
 }
 
 // ExternalClusterNodes defines model for ExternalClusterNodes.
@@ -633,6 +688,20 @@ type GrafanaBundleConfig struct {
 	Enabled bool `json:"enabled"`
 }
 
+// GrafanaConfig defines model for GrafanaConfig.
+type GrafanaConfig struct {
+
+	// Whether this addon is enabled
+	Enabled bool `json:"enabled"`
+}
+
+// GrafanaLokiConfig defines model for GrafanaLokiConfig.
+type GrafanaLokiConfig struct {
+
+	// Whether this addon is enabled
+	Enabled bool `json:"enabled"`
+}
+
 // Headroom defines model for Headroom.
 type Headroom struct {
 
@@ -653,13 +722,6 @@ type Heartbeat struct {
 	System *string `json:"system,omitempty"`
 }
 
-// IngressBundleConfig defines model for IngressBundleConfig.
-type IngressBundleConfig struct {
-
-	// Whether this addon is enabled
-	Enabled bool `json:"enabled"`
-}
-
 // IngressLoadBalancer defines model for IngressLoadBalancer.
 type IngressLoadBalancer struct {
 
@@ -668,6 +730,26 @@ type IngressLoadBalancer struct {
 
 	// Type/origin of load balancer.
 	Type string `json:"type"`
+}
+
+// IngressNginxConfig defines model for IngressNginxConfig.
+type IngressNginxConfig struct {
+
+	// Whether this addon is enabled
+	Enabled bool `json:"enabled"`
+}
+
+// InstallAddonRequest defines model for InstallAddonRequest.
+type InstallAddonRequest struct {
+	Name            *string                              `json:"name,omitempty"`
+	Repository      *string                              `json:"repository,omitempty"`
+	ValuesOverrides *InstallAddonRequest_ValuesOverrides `json:"valuesOverrides,omitempty"`
+	Version         *string                              `json:"version,omitempty"`
+}
+
+// InstallAddonRequest_ValuesOverrides defines model for InstallAddonRequest.ValuesOverrides.
+type InstallAddonRequest_ValuesOverrides struct {
+	AdditionalProperties map[string]string `json:"-"`
 }
 
 // InstanceType defines model for InstanceType.
@@ -740,7 +822,8 @@ type KubernetesCluster struct {
 	Network *Network `json:"network,omitempty"`
 
 	// Cluster nodes.
-	Nodes []Node `json:"nodes"`
+	Nodes         []Node         `json:"nodes"`
+	PauseSchedule *PauseSchedule `json:"pauseSchedule,omitempty"`
 
 	// Optional notes added when pausing the cluster.
 	PausedNotes   *string `json:"pausedNotes,omitempty"`
@@ -811,7 +894,11 @@ type KubernetesIngressController struct {
 
 // Network defines model for Network.
 type Network struct {
-	Vpn VpnConfig `json:"vpn"`
+	Aws   *CloudNetworkConfig `json:"aws,omitempty"`
+	Azure *CloudNetworkConfig `json:"azure,omitempty"`
+	Do    *CloudNetworkConfig `json:"do,omitempty"`
+	Gcp   *CloudNetworkConfig `json:"gcp,omitempty"`
+	Vpn   *VpnConfig          `json:"vpn,omitempty"`
 }
 
 // Node defines model for Node.
@@ -967,7 +1054,7 @@ type PauseSchedule struct {
 	Enabled bool `json:"enabled"`
 
 	// optional name for the schedule
-	Name     *string             `json:"name,omitempty"`
+	Name     string              `json:"name"`
 	Spans    []PauseScheduleSpan `json:"spans"`
 	TimeZone string              `json:"timeZone"`
 }
@@ -976,11 +1063,11 @@ type PauseSchedule struct {
 type PauseScheduleSpan struct {
 
 	// actual time in provided time zone when to resume the cluster
-	ActiveFrom *string `json:"activeFrom,omitempty"`
+	ActiveFrom string `json:"activeFrom"`
 
 	// actual time in provided time zone when to suspend the cluster
-	ActiveTo     *string `json:"activeTo,omitempty"`
-	DayOfTheWeek *string `json:"dayOfTheWeek,omitempty"`
+	ActiveTo     string `json:"activeTo"`
+	DayOfTheWeek string `json:"dayOfTheWeek"`
 }
 
 // PoliciesConfig defines model for PoliciesConfig.
@@ -1047,6 +1134,17 @@ type UnschedulablePodsPolicy struct {
 
 	// Additional headroom based on cluster's total available capacity.
 	Headroom Headroom `json:"headroom"`
+}
+
+// UpdateAddonRequest defines model for UpdateAddonRequest.
+type UpdateAddonRequest struct {
+	ValuesOverrides *UpdateAddonRequest_ValuesOverrides `json:"valuesOverrides,omitempty"`
+	Version         *string                             `json:"version,omitempty"`
+}
+
+// UpdateAddonRequest_ValuesOverrides defines model for UpdateAddonRequest.ValuesOverrides.
+type UpdateAddonRequest_ValuesOverrides struct {
+	AdditionalProperties map[string]string `json:"-"`
 }
 
 // UpdateCluster defines model for UpdateCluster.
@@ -1228,6 +1326,12 @@ type CreateNewClusterJSONBody CreateCluster
 // UpdateClusterJSONBody defines parameters for UpdateCluster.
 type UpdateClusterJSONBody UpdateCluster
 
+// InstallClusterAddonJSONBody defines parameters for InstallClusterAddon.
+type InstallClusterAddonJSONBody InstallAddonRequest
+
+// UpdateClusterAddonJSONBody defines parameters for UpdateClusterAddon.
+type UpdateClusterAddonJSONBody UpdateAddonRequest
+
 // ConfigureClusterAddonsJSONBody defines parameters for ConfigureClusterAddons.
 type ConfigureClusterAddonsJSONBody AddonsConfig
 
@@ -1311,6 +1415,12 @@ type CreateNewClusterJSONRequestBody CreateNewClusterJSONBody
 
 // UpdateClusterJSONRequestBody defines body for UpdateCluster for application/json ContentType.
 type UpdateClusterJSONRequestBody UpdateClusterJSONBody
+
+// InstallClusterAddonJSONRequestBody defines body for InstallClusterAddon for application/json ContentType.
+type InstallClusterAddonJSONRequestBody InstallClusterAddonJSONBody
+
+// UpdateClusterAddonJSONRequestBody defines body for UpdateClusterAddon for application/json ContentType.
+type UpdateClusterAddonJSONRequestBody UpdateClusterAddonJSONBody
 
 // ConfigureClusterAddonsJSONRequestBody defines body for ConfigureClusterAddons for application/json ContentType.
 type ConfigureClusterAddonsJSONRequestBody ConfigureClusterAddonsJSONBody
@@ -1398,6 +1508,59 @@ func (a CostsPerTypeEstimate) MarshalJSON() ([]byte, error) {
 	return json.Marshal(object)
 }
 
+// Getter for additional properties for InstallAddonRequest_ValuesOverrides. Returns the specified
+// element and whether it was found
+func (a InstallAddonRequest_ValuesOverrides) Get(fieldName string) (value string, found bool) {
+	if a.AdditionalProperties != nil {
+		value, found = a.AdditionalProperties[fieldName]
+	}
+	return
+}
+
+// Setter for additional properties for InstallAddonRequest_ValuesOverrides
+func (a *InstallAddonRequest_ValuesOverrides) Set(fieldName string, value string) {
+	if a.AdditionalProperties == nil {
+		a.AdditionalProperties = make(map[string]string)
+	}
+	a.AdditionalProperties[fieldName] = value
+}
+
+// Override default JSON handling for InstallAddonRequest_ValuesOverrides to handle AdditionalProperties
+func (a *InstallAddonRequest_ValuesOverrides) UnmarshalJSON(b []byte) error {
+	object := make(map[string]json.RawMessage)
+	err := json.Unmarshal(b, &object)
+	if err != nil {
+		return err
+	}
+
+	if len(object) != 0 {
+		a.AdditionalProperties = make(map[string]string)
+		for fieldName, fieldBuf := range object {
+			var fieldVal string
+			err := json.Unmarshal(fieldBuf, &fieldVal)
+			if err != nil {
+				return errors.Wrap(err, fmt.Sprintf("error unmarshaling field %s", fieldName))
+			}
+			a.AdditionalProperties[fieldName] = fieldVal
+		}
+	}
+	return nil
+}
+
+// Override default JSON handling for InstallAddonRequest_ValuesOverrides to handle AdditionalProperties
+func (a InstallAddonRequest_ValuesOverrides) MarshalJSON() ([]byte, error) {
+	var err error
+	object := make(map[string]json.RawMessage)
+
+	for fieldName, field := range a.AdditionalProperties {
+		object[fieldName], err = json.Marshal(field)
+		if err != nil {
+			return nil, errors.Wrap(err, fmt.Sprintf("error marshaling '%s'", fieldName))
+		}
+	}
+	return json.Marshal(object)
+}
+
 // Getter for additional properties for KubernetesCluster_Heartbeats. Returns the specified
 // element and whether it was found
 func (a KubernetesCluster_Heartbeats) Get(fieldName string) (value Heartbeat, found bool) {
@@ -1439,6 +1602,59 @@ func (a *KubernetesCluster_Heartbeats) UnmarshalJSON(b []byte) error {
 
 // Override default JSON handling for KubernetesCluster_Heartbeats to handle AdditionalProperties
 func (a KubernetesCluster_Heartbeats) MarshalJSON() ([]byte, error) {
+	var err error
+	object := make(map[string]json.RawMessage)
+
+	for fieldName, field := range a.AdditionalProperties {
+		object[fieldName], err = json.Marshal(field)
+		if err != nil {
+			return nil, errors.Wrap(err, fmt.Sprintf("error marshaling '%s'", fieldName))
+		}
+	}
+	return json.Marshal(object)
+}
+
+// Getter for additional properties for UpdateAddonRequest_ValuesOverrides. Returns the specified
+// element and whether it was found
+func (a UpdateAddonRequest_ValuesOverrides) Get(fieldName string) (value string, found bool) {
+	if a.AdditionalProperties != nil {
+		value, found = a.AdditionalProperties[fieldName]
+	}
+	return
+}
+
+// Setter for additional properties for UpdateAddonRequest_ValuesOverrides
+func (a *UpdateAddonRequest_ValuesOverrides) Set(fieldName string, value string) {
+	if a.AdditionalProperties == nil {
+		a.AdditionalProperties = make(map[string]string)
+	}
+	a.AdditionalProperties[fieldName] = value
+}
+
+// Override default JSON handling for UpdateAddonRequest_ValuesOverrides to handle AdditionalProperties
+func (a *UpdateAddonRequest_ValuesOverrides) UnmarshalJSON(b []byte) error {
+	object := make(map[string]json.RawMessage)
+	err := json.Unmarshal(b, &object)
+	if err != nil {
+		return err
+	}
+
+	if len(object) != 0 {
+		a.AdditionalProperties = make(map[string]string)
+		for fieldName, fieldBuf := range object {
+			var fieldVal string
+			err := json.Unmarshal(fieldBuf, &fieldVal)
+			if err != nil {
+				return errors.Wrap(err, fmt.Sprintf("error unmarshaling field %s", fieldName))
+			}
+			a.AdditionalProperties[fieldName] = fieldVal
+		}
+	}
+	return nil
+}
+
+// Override default JSON handling for UpdateAddonRequest_ValuesOverrides to handle AdditionalProperties
+func (a UpdateAddonRequest_ValuesOverrides) MarshalJSON() ([]byte, error) {
 	var err error
 	object := make(map[string]json.RawMessage)
 
