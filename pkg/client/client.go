@@ -36,6 +36,7 @@ type Interface interface {
 	CloseNodeSSH(ctx context.Context, clusterID sdk.ClusterId, nodeID string) error
 	GetClusterNode(ctx context.Context, clusterID sdk.ClusterId, nodeID string) (*sdk.Node, error)
 	TriggerClusterReconcile(ctx context.Context, clusterID sdk.ClusterId) error
+	GetClusterFeedbackEvents(ctx context.Context, clusterID sdk.ClusterId) ([]sdk.KubernetesClusterFeedbackEvent, error)
 }
 
 func New(cfg *config.Config, log logrus.FieldLogger) (Interface, error) {
@@ -73,6 +74,17 @@ type client struct {
 	apiURL   string
 	hostname string
 	api      sdk.ClientWithResponsesInterface
+}
+
+func (c *client) GetClusterFeedbackEvents(ctx context.Context, clusterID sdk.ClusterId) ([]sdk.KubernetesClusterFeedbackEvent, error) {
+	resp, err := c.api.GetClusterFeedbackEventsWithResponse(ctx, clusterID)
+	if err != nil {
+		return nil, err
+	}
+	if err := c.checkResponse(resp, err, http.StatusOK); err != nil {
+		return nil, err
+	}
+	return resp.JSON200.Items, nil
 }
 
 func (c *client) TriggerClusterReconcile(ctx context.Context, clusterID sdk.ClusterId) error {

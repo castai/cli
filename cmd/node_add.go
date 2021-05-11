@@ -64,22 +64,18 @@ Examples:
 	}
 	cmd.PersistentFlags().StringP(flagCluster, "c", "", "cluster name or ID")
 	cmd.PersistentFlags().StringVar(&addNodeFlagsData.Cloud, "cloud", "", fmt.Sprintf("node cloud name, possible values: %s)", strings.Join(supportedClouds, ",")))
-	cmd.PersistentFlags().StringVar(&addNodeFlagsData.Role, "role", "", fmt.Sprintf("node role, possible values: %s)", strings.Join(supportedNodeRoles, ",")))
-	cmd.PersistentFlags().StringVar(&addNodeFlagsData.Shape, "shape", "", fmt.Sprintf("node shape, possible values: %s)", strings.Join(supportedNodeShapes, ",")))
+	cmd.PersistentFlags().StringVar(&addNodeFlagsData.Role, "role", "worker", fmt.Sprintf("node role, possible values: %s)", strings.Join(supportedNodeRoles, ",")))
+	cmd.PersistentFlags().StringVar(&addNodeFlagsData.Shape, "shape", "medium", fmt.Sprintf("node shape, possible values: %s)", strings.Join(supportedNodeShapes, ",")))
 	cmd.PersistentFlags().StringVar(&addNodeFlagsData.Shape, "instance-type", "", fmt.Sprintf("node instance type"))
 	return cmd
 }
 
 func handleAddNode(cmd *cobra.Command, log logrus.FieldLogger, api client.Interface) error {
-	clusterID, err := getClusterIDFromFlag(cmd, api)
+	cluster, err := getClusterFromFlag(cmd, api)
 	if err != nil {
 		return err
 	}
 	ctx := cmd.Context()
-	cluster, err := api.GetCluster(ctx, sdk.ClusterId(clusterID))
-	if err != nil {
-		return err
-	}
 
 	var node *sdk.Node
 	if cmd.Flags().NFlag() == 1 {
@@ -100,7 +96,7 @@ func handleAddNode(cmd *cobra.Command, log logrus.FieldLogger, api client.Interf
 		}
 	}
 
-	if err := api.AddClusterNode(ctx, sdk.ClusterId(clusterID), *node); err != nil {
+	if err := api.AddClusterNode(ctx, sdk.ClusterId(cluster.Id), *node); err != nil {
 		return err
 	}
 

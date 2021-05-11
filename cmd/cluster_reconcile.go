@@ -38,12 +38,12 @@ func newClusterReconcileCmd(log logrus.FieldLogger, api client.Interface) *cobra
 }
 
 func handleClusterReconcile(cmd *cobra.Command, log logrus.FieldLogger, api client.Interface) error {
-	clusterID, err := getClusterIDFromArgs(cmd, api)
+	cluster, err := getClusterFromArgs(cmd, api)
 	if err != nil {
 		return err
 	}
 
-	if err := api.TriggerClusterReconcile(cmd.Context(), sdk.ClusterId(clusterID)); err != nil {
+	if err := api.TriggerClusterReconcile(cmd.Context(), sdk.ClusterId(cluster.Id)); err != nil {
 		return err
 	}
 

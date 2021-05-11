@@ -40,21 +40,16 @@ func newClusterGetCmd(log logrus.FieldLogger, api client.Interface) *cobra.Comma
 }
 
 func handleGetCluster(cmd *cobra.Command, api client.Interface) error {
-	clusterID, err := getClusterIDFromArgs(cmd, api)
-	if err != nil {
-		return err
-	}
-
-	res, err := api.GetCluster(cmd.Context(), sdk.ClusterId(clusterID))
+	cluster, err := getClusterFromArgs(cmd, api)
 	if err != nil {
 		return err
 	}
 
 	if command.OutputJSON() {
-		command.PrintOutput(res)
+		command.PrintOutput(cluster)
 		return nil
 	}
 
-	printClustersListTable(cmd.OutOrStdout(), []sdk.KubernetesCluster{*res})
+	printClustersListTable(cmd.OutOrStdout(), []sdk.KubernetesCluster{*cluster})
 	return nil
 }

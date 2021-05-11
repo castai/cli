@@ -45,11 +45,11 @@ func newNodeListCmd(log logrus.FieldLogger, api client.Interface) *cobra.Command
 }
 
 func handleListNodes(cmd *cobra.Command, api client.Interface) error {
-	clusterID, err := getClusterIDFromFlag(cmd, api)
+	cluster, err := getClusterFromFlag(cmd, api)
 	if err != nil {
 		return err
 	}
-	res, err := api.ListClusterNodes(cmd.Context(), sdk.ClusterId(clusterID))
+	res, err := api.ListClusterNodes(cmd.Context(), sdk.ClusterId(cluster.Id))
 	if err != nil {
 		return err
 	}
