@@ -1,4 +1,4 @@
-# CAST AI cli (Beta)
+# CAST CLI (Beta)
 
 NOTE: CAST AI CLI is in it's early stage. Feel free to contribute, ask questions, give feedback.
 
