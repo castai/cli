@@ -554,10 +554,6 @@ func (d *clusterCreationSelectLists) load(ctx context.Context, api client.Interf
 	// Setup cluster configurations.
 	d.clusterConfigurations = selectOptionList{
 		{
-			name:        "starter",
-			displayName: "Starter (1 Control Plane Node, 1 Node)",
-		},
-		{
 			name:        "basic",
 			displayName: "Basic (1 Control Plane Node, 1 Node on each cloud)",
 		},
