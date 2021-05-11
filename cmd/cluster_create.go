@@ -545,7 +545,7 @@ func (d *clusterCreationSelectLists) load(ctx context.Context, api client.Interf
 	d.credentials = make([]selectOption, len(credentials))
 	for i, item := range credentials {
 		d.credentials[i] = selectOption{
-			name:        item.Cloud,
+			name:        item.Name,
 			displayName: fmt.Sprintf("(%s) %s", item.Cloud, item.Name),
 			extra:       map[string]string{"cloud": item.Cloud, "id": item.Id},
 		}
