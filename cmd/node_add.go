@@ -83,7 +83,7 @@ func handleAddNode(cmd *cobra.Command, log logrus.FieldLogger, api client.Interf
 		if err != nil {
 			return err
 		}
-		node, err = parseDeclarativeAddNodeForm(cluster, creds)
+		node, err = parseInteractiveAddNodeForm(cluster, creds)
 		if err != nil {
 			return err
 		}
@@ -105,12 +105,12 @@ func handleAddNode(cmd *cobra.Command, log logrus.FieldLogger, api client.Interf
 	return nil
 }
 
-func parseDeclarativeAddNodeForm(cluster *sdk.KubernetesCluster, creds []sdk.CloudCredentials) (*sdk.Node, error) {
+func parseInteractiveAddNodeForm(cluster *sdk.KubernetesCluster, creds []sdk.CloudCredentials) (*sdk.Node, error) {
 	var clusterClouds []string
 	for _, credID := range cluster.CloudCredentialsIDs {
 		for _, cred := range creds {
 			if cred.Id == credID {
-				clusterClouds = append(clusterClouds, cred.Name)
+				clusterClouds = append(clusterClouds, cred.Cloud)
 				break
 			}
 		}
