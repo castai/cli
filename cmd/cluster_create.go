@@ -75,7 +75,7 @@ Examples:
   cast cluster create \
     --name=my-demo-cluster \
     --region=eu-central \
-    --credentials=aws --credentials=gcp --credentials=do \
+    --credentials=aws,gcp,do \
     --configuration=ha \
     --vpn=wireguard_cross_location_mesh \
     --wait 
@@ -84,13 +84,13 @@ Examples:
   cast cluster create \
     --name=my-demo-cluster \
     --region=eu-central \
-    --credentials=aws --credentials=gcp --credentials=do \
-    --node=aws,master,medium \
-    --node=gcp,master,medium \
-    --node=do,master,medium \
-    --node=aws,worker,small \
-    --node=gcp,worker,medium \
-    --node=do,worker,large \
+    --credentials=aws,gcp,do \
+    --node=aws-master-medium \
+    --node=gcp-master-medium \
+    --node=do-master-medium \
+    --node=aws-worker-small \
+    --node=gcp-worker-medium \
+    --node=do-worker-large \
     --vpn=wireguard_full_mesh \
     --wait
 `,
@@ -103,7 +103,7 @@ Examples:
 	cmd.PersistentFlags().StringVar(&clusterCreateFlagsData.Name, "name", "", "cluster name, eg. --name=my-demo-cluster")
 	cmd.PersistentFlags().StringVar(&clusterCreateFlagsData.Region, "region", cfg.DefaultRegion, "region in which cluster will be created, eg. --region=eu-central")
 	cmd.PersistentFlags().StringSliceVar(&clusterCreateFlagsData.Credentials, "credentials", []string{}, "cloud credentials names, eg. --credentials=aws, --credentials=gcp")
-	cmd.PersistentFlags().StringSliceVar(&clusterCreateFlagsData.Nodes, "node", []string{}, "nodes configuration, eg. --node=aws,master,medium --node=gcp,worker,small")
+	cmd.PersistentFlags().StringSliceVar(&clusterCreateFlagsData.Nodes, "node", []string{}, "nodes configuration, eg. --node=aws-master-medium --node=gcp-worker-small")
 	cmd.PersistentFlags().StringVar(&clusterCreateFlagsData.Configuration, "configuration", clusterConfigurationBasic, "quick cluster nodes configuration, available values: basic,ha")
 	cmd.PersistentFlags().StringVar(&clusterCreateFlagsData.VPN, "vpn", "", "virtual private network type between clouds, available values: cloud_provider, wireguard_cross_location_mesh, wireguard_full_mesh")
 	cmd.PersistentFlags().StringVar(&clusterCreateFlagsData.AWSVPCCidr, "aws-vpc-cidr", "", "optional custom AWS VPC IPv4 CIDR, eg. --aws-vpc-cidr=10.10.0.0/16")
@@ -317,6 +317,8 @@ func toCreateClusterRequest(lists *clusterCreationSelectLists, flags clusterCrea
 		return nil, errors.New("configuration or nodes are required")
 	}
 
+	fmt.Println("nodes", flags.Nodes, len(flags.Nodes))
+
 	var nodes []sdk.Node
 	if len(flags.Nodes) > 0 {
 		var err error
@@ -420,7 +422,7 @@ func toAPINodesFromFlags(nodes []string) ([]sdk.Node, error) {
 }
 
 func parseNode(n string) (sdk.Node, error) {
-	p := strings.Split(n, ",")
+	p := strings.Split(n, "-")
 	if len(p) < 2 {
 		return sdk.Node{}, fmt.Errorf("unknown node format %q, it should contain cloud, type and shape, eg. --node=aws,master,medium or --node=aws,worker,small", n)
 	}

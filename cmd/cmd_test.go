@@ -62,8 +62,8 @@ func TestCommands(t *testing.T) {
 			"--region", "eu-central",
 			"--credentials", "gcp",
 			"--vpn", "wireguard_cross_location_mesh",
-			"--node", `"aws,master,medium"`,
-			"--node", `"aws,worker,small"`,
+			"--node", `"aws-master-medium"`,
+			"--node", `"aws-worker-small"`,
 			"--wait",
 		)
 		require.NoError(t, err)
