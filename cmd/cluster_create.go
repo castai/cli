@@ -317,8 +317,6 @@ func toCreateClusterRequest(lists *clusterCreationSelectLists, flags clusterCrea
 		return nil, errors.New("configuration or nodes are required")
 	}
 
-	fmt.Println("nodes", flags.Nodes, len(flags.Nodes))
-
 	var nodes []sdk.Node
 	if len(flags.Nodes) > 0 {
 		var err error
