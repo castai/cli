@@ -34,21 +34,20 @@ import (
 	"github.com/castai/cli/pkg/config"
 )
 
-type clusterCreateFlags struct {
-	Name          string   `survey:"name"`
-	Region        string   `survey:"region"`
-	Credentials   []string `survey:"credentials"`
-	Configuration string   `survey:"configuration"`
-	VPN           string   `survey:"vpn"`
-	Nodes         []string
-	Wait          bool
-	AWSVPCCidr    string
-	GCPVPCCidr    string
-	AzureVPCCidr  string
-	DOVPCCidr     string
+type clusterCreateOptions struct {
+	Name               string   `survey:"name"`
+	Region             string   `survey:"region"`
+	Credentials        []string `survey:"credentials"`
+	Configuration      string   `survey:"configuration"`
+	VPN                string   `survey:"vpn"`
+	Nodes              []string
+	Wait               bool
+	AWSVPCCidr         string
+	PrivateWorkerNodes bool
+	GCPVPCCidr         string
+	AzureVPCCidr       string
+	DOVPCCidr          string
 }
-
-var clusterCreateFlagsData clusterCreateFlags
 
 const (
 	vpnTypeWireGuardCrossLocationMesh = "wireguard_cross_location_mesh"
@@ -60,6 +59,7 @@ const (
 )
 
 func newClusterCreateCmd(log logrus.FieldLogger, cfg *config.Config, api client.Interface) *cobra.Command {
+	opts := clusterCreateOptions{}
 	cmd := &cobra.Command{
 		Use:   "create",
 		Short: "Create kubernetes cluster",
@@ -95,35 +95,36 @@ Examples:
     --wait
 `,
 		Run: func(cmd *cobra.Command, args []string) {
-			if err := handleCreateCluster(cmd, log, api); err != nil {
+			if err := handleCreateCluster(cmd, log, api, opts); err != nil {
 				log.Fatal(err)
 			}
 		},
 	}
-	cmd.PersistentFlags().StringVar(&clusterCreateFlagsData.Name, "name", "", "cluster name, eg. --name=my-demo-cluster")
-	cmd.PersistentFlags().StringVar(&clusterCreateFlagsData.Region, "region", cfg.DefaultRegion, "region in which cluster will be created, eg. --region=eu-central")
-	cmd.PersistentFlags().StringSliceVar(&clusterCreateFlagsData.Credentials, "credentials", []string{}, "cloud credentials names, eg. --credentials=aws, --credentials=gcp")
-	cmd.PersistentFlags().StringSliceVar(&clusterCreateFlagsData.Nodes, "node", []string{}, "nodes configuration, eg. --node=aws-master-medium --node=gcp-worker-small")
-	cmd.PersistentFlags().StringVar(&clusterCreateFlagsData.Configuration, "configuration", clusterConfigurationBasic, "quick cluster nodes configuration, available values: basic,ha")
-	cmd.PersistentFlags().StringVar(&clusterCreateFlagsData.VPN, "vpn", "", "virtual private network type between clouds, available values: cloud_provider, wireguard_cross_location_mesh, wireguard_full_mesh")
-	cmd.PersistentFlags().StringVar(&clusterCreateFlagsData.AWSVPCCidr, "aws-vpc-cidr", "", "optional custom AWS VPC IPv4 CIDR, eg. --aws-vpc-cidr=10.10.0.0/16")
-	cmd.PersistentFlags().StringVar(&clusterCreateFlagsData.GCPVPCCidr, "gcp-vpc-cidr", "", "optional custom GCP VPC IPv4 CIDR, eg. --gcp-vpc-cidr=10.0.0.0/16")
-	cmd.PersistentFlags().StringVar(&clusterCreateFlagsData.AzureVPCCidr, "azure-vpc-cidr", "", "optional custom AZURE VPC IPv4 CIDR, eg. --azure-vpc-cidr=10.20.0.0/16")
-	cmd.PersistentFlags().StringVar(&clusterCreateFlagsData.DOVPCCidr, "do-vpc-cidr", "", "optional custom DO IPv4 CIDR, eg. --do-vpc-cidr=10.100.0.0/16")
-	cmd.PersistentFlags().BoolVar(&clusterCreateFlagsData.Wait, "wait", false, "wait until operation finishes, eg. --wait=true")
+	cmd.PersistentFlags().StringVar(&opts.Name, "name", "", "cluster name, eg. --name=my-demo-cluster")
+	cmd.PersistentFlags().StringVar(&opts.Region, "region", cfg.DefaultRegion, "region in which cluster will be created, eg. --region=eu-central")
+	cmd.PersistentFlags().StringSliceVar(&opts.Credentials, "credentials", []string{}, "cloud credentials names, eg. --credentials=aws, --credentials=gcp")
+	cmd.PersistentFlags().StringSliceVar(&opts.Nodes, "node", []string{}, "nodes configuration, eg. --node=aws-master-medium --node=gcp-worker-small")
+	cmd.PersistentFlags().StringVar(&opts.Configuration, "configuration", clusterConfigurationBasic, "quick cluster nodes configuration, available values: basic,ha")
+	cmd.PersistentFlags().StringVar(&opts.VPN, "vpn", "", "virtual private network type between clouds, available values: cloud_provider, wireguard_cross_location_mesh, wireguard_full_mesh")
+	cmd.PersistentFlags().StringVar(&opts.AWSVPCCidr, "aws-vpc-cidr", "", "optional custom AWS VPC IPv4 CIDR, eg. --aws-vpc-cidr=10.10.0.0/16")
+	cmd.PersistentFlags().BoolVar(&opts.PrivateWorkerNodes, "private-worker-nodes", false, "if set to true NAT Gateway will be provisioned for worker nodes egress traffic")
+	cmd.PersistentFlags().StringVar(&opts.GCPVPCCidr, "gcp-vpc-cidr", "", "optional custom GCP VPC IPv4 CIDR, eg. --gcp-vpc-cidr=10.0.0.0/16")
+	cmd.PersistentFlags().StringVar(&opts.AzureVPCCidr, "azure-vpc-cidr", "", "optional custom AZURE VPC IPv4 CIDR, eg. --azure-vpc-cidr=10.20.0.0/16")
+	cmd.PersistentFlags().StringVar(&opts.DOVPCCidr, "do-vpc-cidr", "", "optional custom DO IPv4 CIDR, eg. --do-vpc-cidr=10.100.0.0/16")
+	cmd.PersistentFlags().BoolVar(&opts.Wait, "wait", false, "wait until operation finishes, eg. --wait=true")
 	return cmd
 }
 
-func handleCreateCluster(cmd *cobra.Command, log logrus.FieldLogger, api client.Interface) error {
+func handleCreateCluster(cmd *cobra.Command, log logrus.FieldLogger, api client.Interface, opts clusterCreateOptions) error {
 	req := &sdk.CreateNewClusterJSONRequestBody{}
 	var err error
 	if cmd.Flags().NFlag() == 0 {
-		req, err = parseInteractiveClusterForm(cmd.Context(), api)
+		req, err = parseInteractiveClusterForm(cmd.Context(), api, opts)
 		if err != nil {
 			return err
 		}
 	} else {
-		req, err = parseDeclarativeClusterForm(cmd.Context(), api)
+		req, err = parseDeclarativeClusterForm(cmd.Context(), api, opts)
 		if err != nil {
 			return err
 		}
@@ -134,7 +135,7 @@ func handleCreateCluster(cmd *cobra.Command, log logrus.FieldLogger, api client.
 		return err
 	}
 
-	if !clusterCreateFlagsData.Wait {
+	if !opts.Wait {
 		log.Infof("Cluster creation is now in progress. Check status by running 'cast cluster get %s'", cluster.Name)
 		return nil
 	}
@@ -188,13 +189,13 @@ func waitClusterCreatedWithProgress(ctx context.Context, log logrus.FieldLogger,
 	}
 }
 
-func parseDeclarativeClusterForm(ctx context.Context, api client.Interface) (*sdk.CreateNewClusterJSONRequestBody, error) {
+func parseDeclarativeClusterForm(ctx context.Context, api client.Interface, opts clusterCreateOptions) (*sdk.CreateNewClusterJSONRequestBody, error) {
 	lists := &clusterCreationSelectLists{}
 	if err := lists.load(ctx, api); err != nil {
 		return nil, err
 	}
 
-	req, err := toCreateClusterRequest(lists, clusterCreateFlagsData)
+	req, err := toCreateClusterRequest(lists, opts)
 	if err != nil {
 		return nil, err
 	}
@@ -202,7 +203,7 @@ func parseDeclarativeClusterForm(ctx context.Context, api client.Interface) (*sd
 	return req, nil
 }
 
-func parseInteractiveClusterForm(ctx context.Context, api client.Interface) (*sdk.CreateNewClusterJSONRequestBody, error) {
+func parseInteractiveClusterForm(ctx context.Context, api client.Interface, opts clusterCreateOptions) (*sdk.CreateNewClusterJSONRequestBody, error) {
 	lists := &clusterCreationSelectLists{}
 	if err := lists.load(ctx, api); err != nil {
 		return nil, err
@@ -242,16 +243,16 @@ func parseInteractiveClusterForm(ctx context.Context, api client.Interface) (*sd
 		},
 	}
 
-	err := survey.Ask(qs, &clusterCreateFlagsData)
+	err := survey.Ask(qs, &opts)
 	if err != nil {
 		return nil, err
 	}
 
-	if len(clusterCreateFlagsData.Credentials) > 1 {
+	if len(opts.Credentials) > 1 {
 		if err := survey.AskOne(&survey.Select{
 			Message: "Select virtual private network:",
-			Options: filterVPNOptions(lists, clusterCreateFlagsData.Credentials).displayNames(),
-		}, &clusterCreateFlagsData.VPN, survey.WithValidator(survey.Required)); err != nil {
+			Options: filterVPNOptions(lists, opts.Credentials).displayNames(),
+		}, &opts.VPN, survey.WithValidator(survey.Required)); err != nil {
 			return nil, err
 		}
 	}
@@ -259,11 +260,11 @@ func parseInteractiveClusterForm(ctx context.Context, api client.Interface) (*sd
 	if err := survey.AskOne(&survey.Confirm{
 		Message: "Wait for cluster creation?",
 		Default: true,
-	}, &clusterCreateFlagsData.Wait); err != nil {
+	}, &opts.Wait); err != nil {
 		return nil, err
 	}
 
-	req, err := toCreateClusterRequest(lists, clusterCreateFlagsData)
+	req, err := toCreateClusterRequest(lists, opts)
 	if err != nil {
 		return nil, err
 	}
@@ -293,7 +294,7 @@ func filterVPNOptions(lists *clusterCreationSelectLists, selectedClouds []string
 	return res
 }
 
-func toCreateClusterRequest(lists *clusterCreationSelectLists, flags clusterCreateFlags) (*sdk.CreateNewClusterJSONRequestBody, error) {
+func toCreateClusterRequest(lists *clusterCreationSelectLists, flags clusterCreateOptions) (*sdk.CreateNewClusterJSONRequestBody, error) {
 	if len(flags.Credentials) == 0 {
 		return nil, errors.New("cloud credentials are required, eg. --credentials=gcp-creds-1")
 	}
@@ -342,18 +343,18 @@ func toCreateClusterRequest(lists *clusterCreationSelectLists, flags clusterCrea
 		CloudCredentialsIDs: selectedCloudCredentialIDs,
 		Region:              region.name,
 		Network:             networkSpec,
-		Addons:              defaultAddons(),
+		Addons:              &sdk.AddonsConfig{},
 		Nodes:               nodes,
 	}, nil
 }
 
-func toNetwork(lists *clusterCreationSelectLists, flags clusterCreateFlags, clouds int) (*sdk.Network, error) {
+func toNetwork(lists *clusterCreationSelectLists, opts clusterCreateOptions, clouds int) (*sdk.Network, error) {
 	res := &sdk.Network{}
 
 	// Set VPN type.
-	vpn, ok := lists.vpns.find(flags.VPN)
+	vpn, ok := lists.vpns.find(opts.VPN)
 	if !ok && clouds > 1 {
-		return nil, fmt.Errorf("vpn value '%s' is not valid, available values: %s", flags.VPN, strings.Join(lists.vpns.names(), ", "))
+		return nil, fmt.Errorf("vpn value '%s' is not valid, available values: %s", opts.VPN, strings.Join(lists.vpns.names(), ", "))
 	}
 	switch vpn.name {
 	case vpnTypeWireGuardFullMesh:
@@ -370,26 +371,36 @@ func toNetwork(lists *clusterCreationSelectLists, flags clusterCreateFlags, clou
 		}
 	}
 
+	// Currently only aws supports private worker nodes network.
+	if opts.PrivateWorkerNodes {
+		res.Aws = &sdk.CloudNetworkConfig{
+			PrivateWorkerNodes: true,
+		}
+	}
+
 	// Set custom VPC CIDR's.
-	if cidr := flags.AWSVPCCidr; cidr != "" {
+	if cidr := opts.AWSVPCCidr; cidr != "" {
 		if err := validateCIDR(cidr); err != nil {
 			return nil, err
 		}
-		res.Aws = &sdk.CloudNetworkConfig{VpcCidr: cidr}
+		if res.Aws == nil {
+			res.Aws = &sdk.CloudNetworkConfig{}
+		}
+		res.Aws.VpcCidr = cidr
 	}
-	if cidr := flags.GCPVPCCidr; cidr != "" {
+	if cidr := opts.GCPVPCCidr; cidr != "" {
 		if err := validateCIDR(cidr); err != nil {
 			return nil, err
 		}
 		res.Gcp = &sdk.CloudNetworkConfig{VpcCidr: cidr}
 	}
-	if cidr := flags.AzureVPCCidr; cidr != "" {
+	if cidr := opts.AzureVPCCidr; cidr != "" {
 		if err := validateCIDR(cidr); err != nil {
 			return nil, err
 		}
 		res.Azure = &sdk.CloudNetworkConfig{VpcCidr: cidr}
 	}
-	if cidr := flags.DOVPCCidr; cidr != "" {
+	if cidr := opts.DOVPCCidr; cidr != "" {
 		if err := validateCIDR(cidr); err != nil {
 			return nil, err
 		}
@@ -422,7 +433,7 @@ func toAPINodesFromFlags(nodes []string) ([]sdk.Node, error) {
 func parseNode(n string) (sdk.Node, error) {
 	p := strings.Split(n, "-")
 	if len(p) < 2 {
-		return sdk.Node{}, fmt.Errorf("unknown node format %q, it should contain cloud, type and shape, eg. --node=aws,master,medium or --node=aws,worker,small", n)
+		return sdk.Node{}, fmt.Errorf("unknown node format %q, it should contain cloud, type and shape, eg. --node=aws-master-medium or --node=aws-worker-small", n)
 	}
 
 	cloud := strings.TrimSpace(p[0])
@@ -508,11 +519,6 @@ func toAPINodesFromConfiguration(selectedClouds []string, clusterConfigurationNa
 		}
 	}
 	return nodes
-}
-
-func defaultAddons() *sdk.AddonsConfig {
-	// TODO (anjmao): Allow to pass only selected addons during cluster creation.
-	return &sdk.AddonsConfig{}
 }
 
 type clusterCreationSelectLists struct {

@@ -291,6 +291,9 @@ type ClientInterface interface {
 	// GetExternalClusterOperation request
 	GetExternalClusterOperation(ctx context.Context, id string, reqEditors ...RequestEditorFn) (*http.Response, error)
 
+	// DeleteExternalCluster request
+	DeleteExternalCluster(ctx context.Context, clusterId string, reqEditors ...RequestEditorFn) (*http.Response, error)
+
 	// GetExternalCluster request
 	GetExternalCluster(ctx context.Context, clusterId string, reqEditors ...RequestEditorFn) (*http.Response, error)
 
@@ -1125,6 +1128,17 @@ func (c *Client) RegisterExternalCluster(ctx context.Context, body RegisterExter
 
 func (c *Client) GetExternalClusterOperation(ctx context.Context, id string, reqEditors ...RequestEditorFn) (*http.Response, error) {
 	req, err := NewGetExternalClusterOperationRequest(c.Server, id)
+	if err != nil {
+		return nil, err
+	}
+	if err := c.applyEditors(ctx, req, reqEditors); err != nil {
+		return nil, err
+	}
+	return c.Client.Do(req)
+}
+
+func (c *Client) DeleteExternalCluster(ctx context.Context, clusterId string, reqEditors ...RequestEditorFn) (*http.Response, error) {
+	req, err := NewDeleteExternalClusterRequest(c.Server, clusterId)
 	if err != nil {
 		return nil, err
 	}
@@ -3615,6 +3629,40 @@ func NewGetExternalClusterOperationRequest(server string, id string) (*http.Requ
 	return req, nil
 }
 
+// NewDeleteExternalClusterRequest generates requests for DeleteExternalCluster
+func NewDeleteExternalClusterRequest(server string, clusterId string) (*http.Request, error) {
+	var err error
+
+	var pathParam0 string
+
+	pathParam0, err = runtime.StyleParam("simple", false, "clusterId", clusterId)
+	if err != nil {
+		return nil, err
+	}
+
+	queryUrl, err := url.Parse(server)
+	if err != nil {
+		return nil, err
+	}
+
+	basePath := fmt.Sprintf("/kubernetes/external-clusters/%s", pathParam0)
+	if basePath[0] == '/' {
+		basePath = basePath[1:]
+	}
+
+	queryUrl, err = queryUrl.Parse(basePath)
+	if err != nil {
+		return nil, err
+	}
+
+	req, err := http.NewRequest("DELETE", queryUrl.String(), nil)
+	if err != nil {
+		return nil, err
+	}
+
+	return req, nil
+}
+
 // NewGetExternalClusterRequest generates requests for GetExternalCluster
 func NewGetExternalClusterRequest(server string, clusterId string) (*http.Request, error) {
 	var err error
@@ -4296,6 +4344,9 @@ type ClientWithResponsesInterface interface {
 
 	// GetExternalClusterOperation request
 	GetExternalClusterOperationWithResponse(ctx context.Context, id string) (*GetExternalClusterOperationResponse, error)
+
+	// DeleteExternalCluster request
+	DeleteExternalClusterWithResponse(ctx context.Context, clusterId string) (*DeleteExternalClusterResponse, error)
 
 	// GetExternalCluster request
 	GetExternalClusterWithResponse(ctx context.Context, clusterId string) (*GetExternalClusterResponse, error)
@@ -5397,6 +5448,8 @@ type AddClusterNodeResponse struct {
 	Body         []byte
 	HTTPResponse *http.Response
 	JSON201      *AddNodeResult
+	JSON400      *ErrorResponse
+	JSON412      *ErrorResponse
 }
 
 // Status returns HTTPResponse.Status
@@ -5427,6 +5480,8 @@ type DeleteClusterNodeResponse struct {
 	Body         []byte
 	HTTPResponse *http.Response
 	JSON201      *DeleteNodeResult
+	JSON400      *ErrorResponse
+	JSON412      *ErrorResponse
 }
 
 // Status returns HTTPResponse.Status
@@ -5574,6 +5629,8 @@ type UpdateNodeListResponse struct {
 	Body         []byte
 	HTTPResponse *http.Response
 	JSON200      *NodeList
+	JSON400      *ErrorResponse
+	JSON412      *ErrorResponse
 }
 
 // Status returns HTTPResponse.Status
@@ -5984,6 +6041,35 @@ func (r GetExternalClusterOperationResponse) StatusCode() int {
 // TODO: <castai customization> to have common interface. https://github.com/deepmap/oapi-codegen/issues/240
 // Body returns body of byte array
 func (r GetExternalClusterOperationResponse) GetBody() []byte {
+	return r.Body
+}
+
+// TODO: </castai customization> to have common interface. https://github.com/deepmap/oapi-codegen/issues/240
+
+type DeleteExternalClusterResponse struct {
+	Body         []byte
+	HTTPResponse *http.Response
+}
+
+// Status returns HTTPResponse.Status
+func (r DeleteExternalClusterResponse) Status() string {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.Status
+	}
+	return http.StatusText(0)
+}
+
+// StatusCode returns HTTPResponse.StatusCode
+func (r DeleteExternalClusterResponse) StatusCode() int {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.StatusCode
+	}
+	return 0
+}
+
+// TODO: <castai customization> to have common interface. https://github.com/deepmap/oapi-codegen/issues/240
+// Body returns body of byte array
+func (r DeleteExternalClusterResponse) GetBody() []byte {
 	return r.Body
 }
 
@@ -6956,6 +7042,15 @@ func (c *ClientWithResponses) GetExternalClusterOperationWithResponse(ctx contex
 		return nil, err
 	}
 	return ParseGetExternalClusterOperationResponse(rsp)
+}
+
+// DeleteExternalClusterWithResponse request returning *DeleteExternalClusterResponse
+func (c *ClientWithResponses) DeleteExternalClusterWithResponse(ctx context.Context, clusterId string) (*DeleteExternalClusterResponse, error) {
+	rsp, err := c.DeleteExternalCluster(ctx, clusterId)
+	if err != nil {
+		return nil, err
+	}
+	return ParseDeleteExternalClusterResponse(rsp)
 }
 
 // GetExternalClusterWithResponse request returning *GetExternalClusterResponse
@@ -7991,6 +8086,20 @@ func ParseAddClusterNodeResponse(rsp *http.Response) (*AddClusterNodeResponse, e
 		}
 		response.JSON201 = &dest
 
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 400:
+		var dest ErrorResponse
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON400 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 412:
+		var dest ErrorResponse
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON412 = &dest
+
 	}
 
 	return response, nil
@@ -8016,6 +8125,20 @@ func ParseDeleteClusterNodeResponse(rsp *http.Response) (*DeleteClusterNodeRespo
 			return nil, err
 		}
 		response.JSON201 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 400:
+		var dest ErrorResponse
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON400 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 412:
+		var dest ErrorResponse
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON412 = &dest
 
 	}
 
@@ -8125,6 +8248,20 @@ func ParseUpdateNodeListResponse(rsp *http.Response) (*UpdateNodeListResponse, e
 			return nil, err
 		}
 		response.JSON200 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 400:
+		var dest ErrorResponse
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON400 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 412:
+		var dest ErrorResponse
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON412 = &dest
 
 	}
 
@@ -8457,6 +8594,25 @@ func ParseGetExternalClusterOperationResponse(rsp *http.Response) (*GetExternalC
 		}
 		response.JSON200 = &dest
 
+	}
+
+	return response, nil
+}
+
+// ParseDeleteExternalClusterResponse parses an HTTP response from a DeleteExternalClusterWithResponse call
+func ParseDeleteExternalClusterResponse(rsp *http.Response) (*DeleteExternalClusterResponse, error) {
+	bodyBytes, err := ioutil.ReadAll(rsp.Body)
+	defer rsp.Body.Close()
+	if err != nil {
+		return nil, err
+	}
+
+	response := &DeleteExternalClusterResponse{
+		Body:         bodyBytes,
+		HTTPResponse: rsp,
+	}
+
+	switch {
 	}
 
 	return response, nil
