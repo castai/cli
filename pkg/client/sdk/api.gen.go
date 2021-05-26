@@ -64,10 +64,8 @@ type Addon struct {
 		Icon *string `json:"icon,omitempty"`
 
 		// Chart name.
-		Name *string `json:"name,omitempty"`
-
-		// Chart source url.
-		Sources *string `json:"sources,omitempty"`
+		Name    *string   `json:"name,omitempty"`
+		Sources *[]string `json:"sources,omitempty"`
 
 		// Array of archive urls for chart version.
 		Urls *[]string `json:"urls,omitempty"`
@@ -79,53 +77,38 @@ type Addon struct {
 	// Array of features this addon brings.
 	Features *[]string `json:"features,omitempty"`
 
+	// Unique add-on ID. Same add-on with different versions will also have different ID.
+	Id string `json:"id"`
+
 	// Long description.
 	LongDescription *string `json:"longDescription,omitempty"`
 
 	// Name.
-	Name *string `json:"name,omitempty"`
+	Name string `json:"name"`
 
 	// The repository this add-on comes from (example: official-addons).
-	Repository *string `json:"repository,omitempty"`
+	Repository string `json:"repository"`
 
 	// Short description.
 	ShortDescription *string `json:"shortDescription,omitempty"`
 
 	// Title.
-	Title *string `json:"title,omitempty"`
+	Title string `json:"title"`
 
 	// Version.
-	Version *string `json:"version,omitempty"`
+	Version string `json:"version"`
 }
 
 // AddonList defines model for AddonList.
 type AddonList struct {
-	Items []Addon `json:"items"`
+	List []Addon `json:"list"`
 }
 
 // AddonsConfig defines model for AddonsConfig.
 type AddonsConfig struct {
 
-	// Cert-Manager
-	CertManager *CertManagerConfig `json:"certManager,omitempty"`
-
-	// Grafana -- UI for Loki and Prometheus
-	Grafana *GrafanaConfig `json:"grafana,omitempty"`
-
-	// Grafana Bundle -- UI for Loki and Prometheus
-	GrafanaBundle *GrafanaBundleConfig `json:"grafanaBundle,omitempty"`
-
-	// Grafana Loki
-	GrafanaLoki *GrafanaLokiConfig `json:"grafanaLoki,omitempty"`
-
-	// Nginx-based ingress controller and cert manager
-	IngressNginx *IngressNginxConfig `json:"ingressNginx,omitempty"`
-
 	// KEDA (keda.sh) an event-based k8s resources autoscaler
 	Keda *KedaConfig `json:"keda,omitempty"`
-
-	// Kubernetes dashboard
-	KubernetesDashboard *KubernetesDashboardConfig `json:"kubernetesDashboard,omitempty"`
 }
 
 // AuditEvent defines model for AuditEvent.
@@ -265,13 +248,6 @@ type CastRegionList struct {
 	Items []CastRegion `json:"items"`
 }
 
-// CertManagerConfig defines model for CertManagerConfig.
-type CertManagerConfig struct {
-
-	// Whether this addon is enabled
-	Enabled bool `json:"enabled"`
-}
-
 // Cloud defines model for Cloud.
 type Cloud struct {
 
@@ -337,18 +313,18 @@ const (
 
 // ClusterAddon defines model for ClusterAddon.
 type ClusterAddon struct {
-	Addon *Addon `json:"addon,omitempty"`
+	Addon Addon `json:"addon"`
 
 	// URL to open addon exposed UI dashboard if supported.
-	ClusterGatewayUrl *string `json:"clusterGatewayUrl,omitempty"`
+	ClusterGatewayUrl string `json:"clusterGatewayUrl"`
 
 	// Installed add-on status (unknown, deployed, uninstalled, superseded, failed, uninstalling, pending-install, pending-upgrade, pending-rollback)
-	Status *string `json:"status,omitempty"`
+	Status string `json:"status"`
 }
 
 // ClusterAddonsList defines model for ClusterAddonsList.
 type ClusterAddonsList struct {
-	Items []ClusterAddon `json:"items"`
+	List []ClusterAddon `json:"list"`
 }
 
 // ClusterCostEstimate defines model for ClusterCostEstimate.
@@ -483,6 +459,12 @@ type CreateCluster struct {
 // DeleteNodeResult defines model for DeleteNodeResult.
 type DeleteNodeResult struct {
 
+	// specifies how long should drain be attempted (in seconds).
+	DrainTimeout *int `json:"drainTimeout,omitempty"`
+
+	// when set to false, node deletion will be aborted if drain timeout expires.
+	Force *bool `json:"force,omitempty"`
+
 	// id for long running operation
 	OperationId string `json:"operationId"`
 }
@@ -552,8 +534,9 @@ type EstimatedPriceAmount struct {
 // ExternalCluster defines model for ExternalCluster.
 type ExternalCluster struct {
 	Eks *ExternalClusterEksConfiguration `json:"eks,omitempty"`
+	Gke *ExternalClusterGkeConfiguration `json:"gke,omitempty"`
 
-	// Cluster ID, generated at the time of creation
+	// Cluster ID, generated at the time of creation; can be provided as part of onboarding request
 	Id string `json:"id"`
 
 	// Name of this infrastructure object. Needs to be unique per organization.
@@ -561,6 +544,9 @@ type ExternalCluster struct {
 
 	// Organization ID to register cluster for.
 	OrganizationId *string `json:"organizationId,omitempty"`
+
+	// Current status of the cluster
+	Status *string `json:"status,omitempty"`
 
 	// agent token to use when registering the cluster
 	Token *string `json:"token,omitempty"`
@@ -597,6 +583,16 @@ type ExternalClusterEksConfiguration struct {
 	ClusterName *string `json:"clusterName,omitempty"`
 
 	// EKS cluster region
+	Region *string `json:"region,omitempty"`
+}
+
+// ExternalClusterGkeConfiguration defines model for ExternalClusterGkeConfiguration.
+type ExternalClusterGkeConfiguration struct {
+
+	// GKE cluster name
+	ClusterName *string `json:"clusterName,omitempty"`
+
+	// GKE cluster region
 	Region *string `json:"region,omitempty"`
 }
 
@@ -681,27 +677,6 @@ type GSLBResponse struct {
 	Dns string `json:"dns"`
 }
 
-// GrafanaBundleConfig defines model for GrafanaBundleConfig.
-type GrafanaBundleConfig struct {
-
-	// Whether this addon is enabled
-	Enabled bool `json:"enabled"`
-}
-
-// GrafanaConfig defines model for GrafanaConfig.
-type GrafanaConfig struct {
-
-	// Whether this addon is enabled
-	Enabled bool `json:"enabled"`
-}
-
-// GrafanaLokiConfig defines model for GrafanaLokiConfig.
-type GrafanaLokiConfig struct {
-
-	// Whether this addon is enabled
-	Enabled bool `json:"enabled"`
-}
-
 // Headroom defines model for Headroom.
 type Headroom struct {
 
@@ -732,19 +707,12 @@ type IngressLoadBalancer struct {
 	Type string `json:"type"`
 }
 
-// IngressNginxConfig defines model for IngressNginxConfig.
-type IngressNginxConfig struct {
-
-	// Whether this addon is enabled
-	Enabled bool `json:"enabled"`
-}
-
 // InstallAddonRequest defines model for InstallAddonRequest.
 type InstallAddonRequest struct {
-	Name            *string                              `json:"name,omitempty"`
-	Repository      *string                              `json:"repository,omitempty"`
+	Name            string                               `json:"name"`
+	Repository      string                               `json:"repository"`
 	ValuesOverrides *InstallAddonRequest_ValuesOverrides `json:"valuesOverrides,omitempty"`
-	Version         *string                              `json:"version,omitempty"`
+	Version         string                               `json:"version"`
 }
 
 // InstallAddonRequest_ValuesOverrides defines model for InstallAddonRequest.ValuesOverrides.
@@ -875,13 +843,6 @@ type KubernetesClusterList struct {
 	Items []KubernetesCluster `json:"items"`
 }
 
-// KubernetesDashboardConfig defines model for KubernetesDashboardConfig.
-type KubernetesDashboardConfig struct {
-
-	// Whether this addon is enabled
-	Enabled bool `json:"enabled"`
-}
-
 // KubernetesIngressController defines model for KubernetesIngressController.
 type KubernetesIngressController struct {
 
@@ -898,7 +859,10 @@ type Network struct {
 	Azure *CloudNetworkConfig `json:"azure,omitempty"`
 	Do    *CloudNetworkConfig `json:"do,omitempty"`
 	Gcp   *CloudNetworkConfig `json:"gcp,omitempty"`
-	Vpn   *VpnConfig          `json:"vpn,omitempty"`
+
+	// If set to true worker nodes will use private networking and NAT gateways for node egress traffic. Currently this is supported only on AWS.
+	PrivateWorkerNodes bool       `json:"privateWorkerNodes"`
+	Vpn                *VpnConfig `json:"vpn,omitempty"`
 }
 
 // Node defines model for Node.
