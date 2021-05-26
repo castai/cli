@@ -296,9 +296,6 @@ type CloudCredentialsReservation struct {
 // CloudNetworkConfig defines model for CloudNetworkConfig.
 type CloudNetworkConfig struct {
 
-	// If set to true worker nodes will use private networking and NAT gateways for node traffic to external internet. Currently this is supported only on AWS.
-	PrivateWorkerNodes bool `json:"privateWorkerNodes"`
-
 	// Optional AWS VPC IPv4 CIDR. If not specified default CIDR is used. (GCP - 10.0.0.0/16, AWS - 10.10.0.0/16, Azure - 10.20.0.0/16, DO - Any available)
 	VpcCidr string `json:"vpcCidr"`
 }
@@ -537,8 +534,9 @@ type EstimatedPriceAmount struct {
 // ExternalCluster defines model for ExternalCluster.
 type ExternalCluster struct {
 	Eks *ExternalClusterEksConfiguration `json:"eks,omitempty"`
+	Gke *ExternalClusterGkeConfiguration `json:"gke,omitempty"`
 
-	// Cluster ID, generated at the time of creation
+	// Cluster ID, generated at the time of creation; can be provided as part of onboarding request
 	Id string `json:"id"`
 
 	// Name of this infrastructure object. Needs to be unique per organization.
@@ -585,6 +583,16 @@ type ExternalClusterEksConfiguration struct {
 	ClusterName *string `json:"clusterName,omitempty"`
 
 	// EKS cluster region
+	Region *string `json:"region,omitempty"`
+}
+
+// ExternalClusterGkeConfiguration defines model for ExternalClusterGkeConfiguration.
+type ExternalClusterGkeConfiguration struct {
+
+	// GKE cluster name
+	ClusterName *string `json:"clusterName,omitempty"`
+
+	// GKE cluster region
 	Region *string `json:"region,omitempty"`
 }
 
@@ -851,7 +859,10 @@ type Network struct {
 	Azure *CloudNetworkConfig `json:"azure,omitempty"`
 	Do    *CloudNetworkConfig `json:"do,omitempty"`
 	Gcp   *CloudNetworkConfig `json:"gcp,omitempty"`
-	Vpn   *VpnConfig          `json:"vpn,omitempty"`
+
+	// If set to true worker nodes will use private networking and NAT gateways for node egress traffic. Currently this is supported only on AWS.
+	PrivateWorkerNodes bool       `json:"privateWorkerNodes"`
+	Vpn                *VpnConfig `json:"vpn,omitempty"`
 }
 
 // Node defines model for Node.

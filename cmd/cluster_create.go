@@ -372,21 +372,16 @@ func toNetwork(lists *clusterCreationSelectLists, opts clusterCreateOptions, clo
 	}
 
 	// Currently only aws supports private worker nodes network.
-	if opts.PrivateWorkerNodes {
-		res.Aws = &sdk.CloudNetworkConfig{
-			PrivateWorkerNodes: true,
-		}
-	}
+	res.PrivateWorkerNodes = opts.PrivateWorkerNodes
 
 	// Set custom VPC CIDR's.
 	if cidr := opts.AWSVPCCidr; cidr != "" {
 		if err := validateCIDR(cidr); err != nil {
 			return nil, err
 		}
-		if res.Aws == nil {
-			res.Aws = &sdk.CloudNetworkConfig{}
+		res.Aws = &sdk.CloudNetworkConfig{
+			VpcCidr: cidr,
 		}
-		res.Aws.VpcCidr = cidr
 	}
 	if cidr := opts.GCPVPCCidr; cidr != "" {
 		if err := validateCIDR(cidr); err != nil {
